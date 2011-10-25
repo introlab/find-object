@@ -44,6 +44,43 @@
 			</storageModule>
 			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
 			<storageModule moduleId="org.eclipse.cdt.core.language.mapping"/>
+			<storageModule moduleId="scannerConfiguration"/>
+			<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets">
+				<buildTargets>
+					<target name="CMake-MinGW-Debug" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
+						<buildCommand>cmake</buildCommand>
+						<buildArguments>-E chdir build/ cmake -G "MinGW Makefiles" -D CMAKE_BUILD_TYPE=Debug ../</buildArguments>
+						<buildTarget/>
+						<stopOnError>true</stopOnError>
+						<useDefaultCommand>false</useDefaultCommand>
+						<runAllBuilders>true</runAllBuilders>
+					</target>
+					<target name="CMake-MinGW-Release" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
+						<buildCommand>cmake</buildCommand>
+						<buildArguments>-E chdir build/ cmake -G "MinGW Makefiles" -D CMAKE_BUILD_TYPE=Release ../</buildArguments>
+						<buildTarget/>
+						<stopOnError>true</stopOnError>
+						<useDefaultCommand>false</useDefaultCommand>
+						<runAllBuilders>true</runAllBuilders>
+					</target>
+					<target name="CMake-Unix-Debug" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
+						<buildCommand>cmake</buildCommand>
+						<buildArguments>-E chdir build/ cmake -G "Unix Makefiles" -D CMAKE_BUILD_TYPE=Debug ../</buildArguments>
+						<buildTarget/>
+						<stopOnError>true</stopOnError>
+						<useDefaultCommand>false</useDefaultCommand>
+						<runAllBuilders>true</runAllBuilders>
+					</target>
+					<target name="CMake-Unix-Release" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
+						<buildCommand>cmake</buildCommand>
+						<buildArguments>-E chdir build/ cmake -G "Unix Makefiles" -D CMAKE_BUILD_TYPE=Release ../</buildArguments>
+						<buildTarget/>
+						<stopOnError>true</stopOnError>
+						<useDefaultCommand>false</useDefaultCommand>
+						<runAllBuilders>true</runAllBuilders>
+					</target>
+				</buildTargets>
+			</storageModule>
 		</cconfiguration>
 	</storageModule>
 	<storageModule moduleId="cdtBuildSystem" version="4.0.0">
