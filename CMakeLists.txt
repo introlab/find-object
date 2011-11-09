@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 2.8.2)
 PROJECT( FindObject )
 SET(PROJECT_PREFIX find_object)
 
-ADD_DEFINITIONS(-DPROJECT_NAME="${PROJECT_NAME}")
+ADD_DEFINITIONS(-DPROJECT_PREFIX="${PROJECT_PREFIX}")
 
 #######################
 # VERSION
@@ -36,6 +36,24 @@ SET(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
 ####### DEPENDENCIES #######
 FIND_PACKAGE(OpenCV REQUIRED) # tested on 2.3.1
 FIND_PACKAGE(Qt4 COMPONENTS QtCore QtGui) # tested on Qt4.7
+
+####### OSX BUNDLE CMAKE_INSTALL_PREFIX #######
+OPTION(BUILD_AS_BUNDLE "Set to ON to build as bundle (DragNDrop)" OFF)
+IF(APPLE AND BUILD_AS_BUNDLE)
+    #Force to Off, easiest to package into the bundle
+    SET( BUILD_SHARED_LIBS OFF )
+  
+    # Required when packaging, and set CMAKE_INSTALL_PREFIX to "/".
+    SET(CPACK_SET_DESTDIR TRUE) 
+  
+    SET(CMAKE_BUNDLE_NAME
+      "${PROJECT_NAME}")
+    SET(CMAKE_BUNDLE_LOCATION "/")
+    
+    # make sure CMAKE_INSTALL_PREFIX ends in /
+    SET(CMAKE_INSTALL_PREFIX 
+      "/${CMAKE_BUNDLE_NAME}.app/Contents")
+ENDIF(APPLE AND BUILD_AS_BUNDLE)
 
 ####### SOURCES (Projects) #######
 ADD_SUBDIRECTORY( src )
@@ -81,12 +99,31 @@ IF(WIN32)
   #SET(CPACK_NSIS_INSTALLED_ICON_NAME bin\\\\${PROJECT_NAME}.exe)
   SET(CPACK_PACKAGE_EXECUTABLES "${PROJECT_NAME}" "${PROJECT_NAME}" ${CPACK_PACKAGE_EXECUTABLES}) 
   SET(CPACK_CREATE_DESKTOP_LINKS "${PROJECT_NAME}" ${CPACK_CREATE_DESKTOP_LINKS}) 
-ENDIF(WIN32)
+ELSEIF(APPLE)
+  IF(BUILD_AS_BUNDLE)
+    # On APPLE and if BUILD_AS_BUNDLE=ON, the project is created as a bundle 
+    # over the main app (see ./src).Here we package only this bundle. Note 
+    # that we set CMAKE_INSTALL_PREFIX to "/" when packaging to DragNDrop...
+    SET(CPACK_GENERATOR "DragNDrop")
+  ELSE()
+    SET(CPACK_GENERATOR "PackageMaker;TBZ2")
+  ENDIF()
+  
+  SET(CPACK_SOURCE_GENERATOR "TBZ2")
+
+  #SET(CPACK_PACKAGE_ICON "${PROJECT_SOURCE_DIR}/app/src/${PROJECT_NAME}.icns")
+ENDIF()
 
 INCLUDE(CPack)
 
+#######################
+# OUTPUT INFO
+#######################
 MESSAGE(STATUS "--------------------------------------------")
 MESSAGE(STATUS "Info :")
 MESSAGE(STATUS "  CMAKE_INSTALL_PREFIX = ${CMAKE_INSTALL_PREFIX}")
 MESSAGE(STATUS "  CMAKE_BUILD_TYPE = ${CMAKE_BUILD_TYPE}")
+IF(APPLE)
+MESSAGE(STATUS "  BUILD_AS_BUNDLE = ${BUILD_AS_BUNDLE}")
+ENDIF(APPLE)
 MESSAGE(STATUS "--------------------------------------------")

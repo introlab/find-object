@@ -1,13 +1,38 @@
 
++---------------------------------------------------
++ Build from source
++---------------------------------------------------
 Requirements :
 -Cmake (tested on 2.8.2)
 -Qt4 (tested on 4.7)
 -OpenCV (tested on 2.3.1)
+-MinGW (only on Windows)
 
-Build from source:
+Ubuntu / Mac OS X
  $ cd find_object/build
  $ cmake ..
  $ make
  $ cd ../bin
  $ ./find_object
- (enjoy!)
+ 
+Windows
+ $ cd find_object/build
+ $ cmake -G"MinGW Makefiles" ..
+ $ make
+ $ cd ../bin
+ $ find_object
+ 
++---------------------------------------------------
++ Packaging
++---------------------------------------------------
+MacOSX (DragNDrop) :
+ > cd build
+ > cmake -DBUILD_AS_BUNDLE=ON ..
+ > make -j4
+ > make package
+ 
+Windows :
+ > cd build
+ > cmake -G"MinGW Makefiles"  ..
+ > make -j4
+ > make package

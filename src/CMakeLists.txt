@@ -29,8 +29,6 @@ QT4_WRAP_CPP(moc_srcs ${headers_ui})
 ### Qt Gui stuff  end###
 
 
-
-
 SET(SRC_FILES 
 	./MainWindow.cpp
 	./AddObjectDialog.cpp
@@ -63,15 +61,24 @@ SET(LIBRARIES
 INCLUDE_DIRECTORIES(${INCLUDE_DIRS})
 
 # create an executable file
-ADD_EXECUTABLE(find_object WIN32 ${SRC_FILES})
+IF(APPLE AND BUILD_AS_BUNDLE)
+  ADD_EXECUTABLE(find_object MACOSX_BUNDLE ${SRC_FILES})
+ELSE()
+  ADD_EXECUTABLE(find_object WIN32 ${SRC_FILES})
+ENDIF()
 # Linking with Qt libraries
 TARGET_LINK_LIBRARIES(find_object ${LIBRARIES})
 
-IF(WIN32)
+IF(APPLE AND BUILD_AS_BUNDLE)
+  SET_TARGET_PROPERTIES(find_object PROPERTIES
+    OUTPUT_NAME ${CMAKE_BUNDLE_NAME})
+ELSEIF(WIN32)
   SET_TARGET_PROPERTIES(find_object PROPERTIES
     OUTPUT_NAME ${PROJECT_NAME})
-ENDIF(WIN32)
-
+ELSE()
+  SET_TARGET_PROPERTIES(find_object PROPERTIES
+    OUTPUT_NAME ${PROJECT_PREFIX})
+ENDIF()
 
 #---------------------------
 # Installation stuff
@@ -79,12 +86,25 @@ ENDIF(WIN32)
 INSTALL(TARGETS find_object
         RUNTIME DESTINATION bin COMPONENT runtime
         BUNDLE DESTINATION "${CMAKE_BUNDLE_LOCATION}" COMPONENT runtime)
-            
+        
+#---------------------------
+# Dependencies packaging
+#---------------------------
+IF(APPLE AND BUILD_AS_BUNDLE)
+  INSTALL(CODE "execute_process(COMMAND ln -s \"../MacOS/${CMAKE_BUNDLE_NAME}\" ${PROJECT_NAME}
+        WORKING_DIRECTORY \$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/bin)")
+ENDIF(APPLE AND BUILD_AS_BUNDLE)
+
 SET(APPS "\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/bin/${PROJECT_NAME}${CMAKE_EXECUTABLE_SUFFIX}")
-IF(WIN32)
+IF((APPLE AND BUILD_AS_BUNDLE) OR WIN32)
   SET(plugin_dest_dir bin)
   SET(qtconf_dest_dir bin)
-
+  IF(APPLE)
+    SET(plugin_dest_dir MacOS)
+    SET(qtconf_dest_dir Resources)
+    SET(APPS "\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/MacOS/${CMAKE_BUNDLE_NAME}")
+  ENDIF(APPLE)
+  
   # Install needed Qt plugins by copying directories from the qt installation
   # One can cull what gets copied by using 'REGEX "..." EXCLUDE'
   # Exclude debug libraries
@@ -97,6 +117,9 @@ IF(WIN32)
   # install a qt.conf file
   # this inserts some cmake code into the install script to write the file
   SET(QT_CONF_FILE [Paths]\nPlugins=plugins)
+  IF(APPLE)
+    SET(QT_CONF_FILE [Paths]\nPlugins=MacOS/plugins)
+  ENDIF(APPLE)
   INSTALL(CODE "
     file(WRITE \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${qtconf_dest_dir}/qt.conf\" \"${QT_CONF_FILE}\")
     " COMPONENT runtime)
@@ -115,5 +138,5 @@ IF(WIN32)
     include(\"BundleUtilities\")
     fixup_bundle(\"${APPS}\" \"\${QTPLUGINS}\" \"${DIRS}\")
   " COMPONENT runtime)
-ENDIF(WIN32)
+ENDIF((APPLE AND BUILD_AS_BUNDLE) OR WIN32)
 

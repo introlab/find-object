@@ -116,7 +116,7 @@ class Settings
 public:
 	virtual ~Settings(){}
 
-	static const char * iniDefaultFileName; // "./" PROJECT_NAME ".ini"
+	static const char * iniDefaultFileName; // "config.ini"
 
 	static void loadSettings(const QString & fileName = iniDefaultFileName, QByteArray * windowGeometry = 0);
 	static void saveSettings(const QString & fileName = iniDefaultFileName, const QByteArray & windowGeometry = QByteArray());

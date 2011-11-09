@@ -16,7 +16,7 @@ ParametersMap Settings::defaultParameters_;
 ParametersMap Settings::parameters_;
 ParametersType Settings::parametersType_;
 Settings Settings::dummyInit_;
-const char * Settings::iniDefaultFileName = "./" PROJECT_NAME ".ini";
+const char * Settings::iniDefaultFileName = "config.ini";
 
 void Settings::loadSettings(const QString & fileName, QByteArray * windowGeometry)
 {

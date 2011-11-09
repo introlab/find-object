@@ -381,10 +381,17 @@ void Object::contextMenuEvent(QContextMenuEvent * event)
 	if(action == _saveImage)
 	{
 		QString text;
+		if(_savedFileName.isEmpty())
+		{
+#ifndef WIN32
+			_savedFileName = QDir::homePath();
+#endif
+			_savedFileName+="/figure.png";
+		}
 		text = QFileDialog::getSaveFileName(this, tr("Save figure to ..."), _savedFileName, "*.png *.xpm *.jpg *.pdf");
 		if(!text.isEmpty())
 		{
-			if(!text.endsWith(".png") && !text.endsWith(".png") && !text.endsWith(".png") && !text.endsWith(".png"))
+			if(!text.endsWith(".png") && !text.endsWith(".xpm") && !text.endsWith(".jpg") && !text.endsWith(".pdf"))
 			{
 				text.append(".png");//default
 			}
