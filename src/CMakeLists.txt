@@ -63,7 +63,57 @@ SET(LIBRARIES
 INCLUDE_DIRECTORIES(${INCLUDE_DIRS})
 
 # create an executable file
-ADD_EXECUTABLE(find_object ${SRC_FILES})
+ADD_EXECUTABLE(find_object WIN32 ${SRC_FILES})
 # Linking with Qt libraries
 TARGET_LINK_LIBRARIES(find_object ${LIBRARIES})
+
+IF(WIN32)
+  SET_TARGET_PROPERTIES(find_object PROPERTIES
+    OUTPUT_NAME ${PROJECT_NAME})
+ENDIF(WIN32)
+
+
+#---------------------------
+# Installation stuff
+#--------------------------- 
+INSTALL(TARGETS find_object
+        RUNTIME DESTINATION bin COMPONENT runtime
+        BUNDLE DESTINATION "${CMAKE_BUNDLE_LOCATION}" COMPONENT runtime)
+            
+SET(APPS "\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/bin/${PROJECT_NAME}${CMAKE_EXECUTABLE_SUFFIX}")
+IF(WIN32)
+  SET(plugin_dest_dir bin)
+  SET(qtconf_dest_dir bin)
+
+  # Install needed Qt plugins by copying directories from the qt installation
+  # One can cull what gets copied by using 'REGEX "..." EXCLUDE'
+  # Exclude debug libraries
+  INSTALL(DIRECTORY "${QT_PLUGINS_DIR}/imageformats" 
+          DESTINATION ${plugin_dest_dir}/plugins 
+          COMPONENT runtime 
+          REGEX ".*d4.dll" EXCLUDE
+          REGEX ".*d4.a" EXCLUDE)
+  
+  # install a qt.conf file
+  # this inserts some cmake code into the install script to write the file
+  SET(QT_CONF_FILE [Paths]\nPlugins=plugins)
+  INSTALL(CODE "
+    file(WRITE \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${qtconf_dest_dir}/qt.conf\" \"${QT_CONF_FILE}\")
+    " COMPONENT runtime)
+
+  # directories to look for dependencies
+  SET(DIRS ${QT_LIBRARY_DIRS} ${PROJECT_SOURCE_DIR}/bin)
+
+  # Now the work of copying dependencies into the bundle/package
+  # The quotes are escaped and variables to use at install time have their $ escaped
+  # An alternative is the do a configure_file() on a script and use install(SCRIPT  ...).
+  # Note that the image plugins depend on QtSvg and QtXml, and it got those copied
+  # over.
+  # To find dependencies, cmake use "otool" on Apple and "dumpbin" on Windows (make sure you have one of them).
+  install(CODE "
+   file(GLOB_RECURSE QTPLUGINS \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${plugin_dest_dir}/plugins/*${CMAKE_SHARED_LIBRARY_SUFFIX}\")
+    include(\"BundleUtilities\")
+    fixup_bundle(\"${APPS}\" \"\${QTPLUGINS}\" \"${DIRS}\")
+  " COMPONENT runtime)
+ENDIF(WIN32)
 

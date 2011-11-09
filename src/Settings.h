@@ -42,11 +42,11 @@ class Settings
 	PARAMETER(Camera, deviceId, int, 0);
 	PARAMETER(Camera, imageWidth, int, 640);
 	PARAMETER(Camera, imageHeight, int, 480);
-	PARAMETER(Camera, imageRate, int, 5); // Hz
+	PARAMETER(Camera, imageRate, int, 2); // Hz
 
 	//List format : [Index:item0;item1;item3;...]
-	PARAMETER(Detector, Type, QString, "1:Dense;Fast;GoodFeaturesToTrack;Mser;Orb;Sift;Star;Surf");
-	PARAMETER(Descriptor, Type, QString, "0:Brief;Orb;Sift;Surf");
+	PARAMETER(Detector, Type, QString, "7:Dense;Fast;GoodFeaturesToTrack;Mser;Orb;Sift;Star;Surf");
+	PARAMETER(Descriptor, Type, QString, "3:Brief;Orb;Sift;Surf");
 
 	PARAMETER(Brief, bytes, int, 32);
 
@@ -100,7 +100,7 @@ class Settings
 	PARAMETER(Star, lineThresholdBinarized, int, cvStarDetectorParams().lineThresholdBinarized);
 	PARAMETER(Star, suppressNonmaxSize, int, cvStarDetectorParams().suppressNonmaxSize);
 
-	PARAMETER(Surf, hessianThreshold, double, 400.0);
+	PARAMETER(Surf, hessianThreshold, double, 600.0);
 	PARAMETER(Surf, octaves, int, 3);
 	PARAMETER(Surf, octaveLayers, int, 4);
 	PARAMETER(Surf, upright, bool, false);
