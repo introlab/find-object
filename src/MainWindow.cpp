@@ -20,6 +20,7 @@
 #include <QtGui/QFileDialog>
 #include <QtGui/QMessageBox>
 #include <QtGui/QGraphicsScene>
+#include <QtGui/QGraphicsRectItem>
 
 MainWindow::MainWindow(QWidget * parent) :
 	QMainWindow(parent),
@@ -430,8 +431,11 @@ void MainWindow::update()
 										H.at<double>(0,2), H.at<double>(1,2), H.at<double>(2,2));
 								QPen rectPen(color);
 								rectPen.setWidth(4);
-								QGraphicsRectItem * rectItem = ui_->imageView_source->scene()->addRect(objects_.at(j)->image().rect(), rectPen);
+								QGraphicsRectItem * rectItem = new QGraphicsRectItem(objects_.at(j)->image().rect());
+								rectItem->setPen(rectPen);
 								rectItem->setTransform(hTransform);
+								ui_->imageView_source->addRect(rectItem);
+
 							}
 							else
 							{

@@ -33,7 +33,7 @@ AddObjectDialog::AddObjectDialog(QList<Object*> * objects, QWidget * parent, Qt:
 	connect(ui_->pushButton_next, SIGNAL(clicked()), this, SLOT(next()));
 	connect(ui_->pushButton_takePicture, SIGNAL(clicked()), this, SLOT(takePicture()));
 
-	connect(ui_->cameraView->scene(), SIGNAL(selectionChanged()), this, SLOT(updateNextButton()));
+	connect(ui_->cameraView, SIGNAL(selectionChanged()), this, SLOT(updateNextButton()));
 
 	this->setState(kTakePicture);
 }
@@ -77,7 +77,7 @@ void AddObjectDialog::updateNextButton()
 {
 	if(state_ == kSelectFeatures)
 	{
-		if(ui_->cameraView->scene()->selectedItems().size() > 0)
+		if(ui_->cameraView->selectedItems().size() > 0)
 		{
 			ui_->pushButton_next->setEnabled(true);
 		}

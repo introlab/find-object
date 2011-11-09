@@ -28,6 +28,7 @@
 #include <QtGui/QGraphicsView>
 #include <QtGui/QGraphicsScene>
 #include <QtGui/QVBoxLayout>
+#include <QtGui/QGraphicsRectItem>
 
 #include <QtCore/QDir>
 
@@ -104,6 +105,8 @@ void Object::setupUi()
 
 	graphicsView_->setRubberBandSelectionMode(Qt::ContainsItemShape);
 	graphicsView_->setDragMode(QGraphicsView::RubberBandDrag);
+
+	connect(graphicsView_->scene(), SIGNAL(selectionChanged()), this, SIGNAL(selectionChanged()));
 }
 
 void Object::setId(int id)
@@ -139,13 +142,13 @@ void Object::setGraphicsViewMode(bool on)
 	this->update();
 }
 
-// ownership transferred
 void Object::setData(const std::vector<cv::KeyPoint> & keypoints, const cv::Mat & descriptors, const IplImage * image)
 {
 	keypoints_ = keypoints;
 	descriptors_ = descriptors;
 	kptColors_ = QVector<QColor>(keypoints.size(), defaultColor());
 	keypointItems_.clear();
+	rectItems_.clear();
 	if(iplImage_)
 	{
 		cvReleaseImage(&iplImage_);
@@ -181,6 +184,7 @@ void Object::resetKptsColor()
 			keypointItems_[i]->setColor(this->defaultColor());
 		}
 	}
+	rectItems_.clear();
 }
 
 void Object::setKptColor(unsigned int index, const QColor & color)
@@ -199,6 +203,17 @@ void Object::setKptColor(unsigned int index, const QColor & color)
 	}
 }
 
+void Object::addRect(QGraphicsRectItem * rect)
+{
+	graphicsView_->scene()->addItem(rect);
+	rectItems_.append(rect);
+}
+
+QList<QGraphicsItem*> Object::selectedItems() const
+{
+	return graphicsView_->scene()->selectedItems();
+}
+
 bool Object::isImageShown() const
 {
 	return _showImage->isChecked();
@@ -212,11 +227,6 @@ bool Object::isFeaturesShown() const
 bool Object::isMirrorView() const
 {
 	return _mirrorView->isChecked();
-}
-
-QGraphicsScene * Object::scene() const
-{
-	return graphicsView_->scene();
 }
 
 void Object::setDeletable(bool deletable)
@@ -342,6 +352,15 @@ void Object::paintEvent(QPaintEvent *event)
 			if(_showFeatures->isChecked())
 			{
 				drawKeypoints(&painter);
+			}
+
+			for(int i=0; i<rectItems_.size(); ++i)
+			{
+				painter.save();
+				painter.setTransform(rectItems_.at(i)->transform(), true);
+				painter.setPen(rectItems_.at(i)->pen());
+				painter.drawRect(rectItems_.at(i)->rect());
+				painter.restore();
 			}
 		}
 	}

@@ -17,6 +17,8 @@ class QAction;
 class QMenu;
 class QGraphicsView;
 class QGraphicsScene;
+class QGraphicsRectItem;
+class QGraphicsItem;
 
 class Object : public QWidget
 {
@@ -41,6 +43,7 @@ public:
 	void setKptColor(unsigned int index, const QColor & color);
 	void setGraphicsViewMode(bool on);
 	void setDeletable(bool deletable);
+	void addRect(QGraphicsRectItem * rect);
 
 	const std::vector<cv::KeyPoint> & keypoints() const {return keypoints_;}
 	const cv::Mat & descriptors() const {return descriptors_;}
@@ -51,10 +54,11 @@ public:
 	bool isImageShown() const;
 	bool isFeaturesShown() const;
 	bool isMirrorView() const;
-	QGraphicsScene * scene() const;
+	//QGraphicsScene * scene() const;
 	std::vector<cv::KeyPoint> selectedKeypoints() const;
 	const QString & detectorType() const {return detectorType_;}
 	const QString & descriptorType() const {return descriptorType_;}
+	QList<QGraphicsItem*> selectedItems() const;
 
 	QPixmap getSceneAsPixmap();
 
@@ -68,6 +72,7 @@ protected:
 
 signals:
 	void removalTriggered(Object *);
+	void selectionChanged();
 
 private:
 	void setupGraphicsView();
@@ -87,6 +92,7 @@ private:
 	QVector<QColor> kptColors_;
 	QString detectorType_;
 	QString descriptorType_;
+	QList<QGraphicsRectItem*> rectItems_;
 
 	// menu stuff
 	QString _savedFileName;
