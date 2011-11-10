@@ -16,6 +16,7 @@
 #include "Object.h"
 #include "KeypointItem.h"
 #include "qtipl.h"
+#include "Settings.h"
 
 #include <opencv2/highgui/highgui.hpp>
 
@@ -383,7 +384,7 @@ void Object::contextMenuEvent(QContextMenuEvent * event)
 		QString text;
 		if(_savedFileName.isEmpty())
 		{
-			_savedFileName=QDir::homePath()+"/figure.png";
+			_savedFileName=Settings::workingDirectory()+"/figure.png";
 		}
 		text = QFileDialog::getSaveFileName(this, tr("Save figure to ..."), _savedFileName, "*.png *.xpm *.jpg *.pdf");
 		if(!text.isEmpty())

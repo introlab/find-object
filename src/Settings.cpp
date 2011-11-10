@@ -10,17 +10,40 @@
 #include "Camera.h"
 #include <QtCore/QSettings>
 #include <QtCore/QStringList>
+#include <QtCore/QDir>
 #include <stdio.h>
 
 ParametersMap Settings::defaultParameters_;
 ParametersMap Settings::parameters_;
 ParametersType Settings::parametersType_;
 Settings Settings::dummyInit_;
-const char * Settings::iniDefaultFileName = "config.ini";
+
+QString Settings::workingDirectory()
+{
+#ifdef WIN32
+	return QString("%1/Documents/%2").arg(QDir::homePath()).arg(PROJECT_NAME);
+#else
+	return QString("%1").arg(QDir::homePath());
+#endif
+}
+
+QString Settings::iniDefaultPath()
+{
+#ifdef WIN32
+	return QString("%1/Documents/%2/%3").arg(QDir::homePath()).arg(PROJECT_NAME).arg(Settings::iniDefaultFileName());
+#else
+	return QString("%1/.%2/%3").arg(QDir::homePath()).arg(PROJECT_PREFIX).arg(Settings::iniDefaultFileName());
+#endif
+}
 
 void Settings::loadSettings(const QString & fileName, QByteArray * windowGeometry)
 {
-	QSettings ini(fileName, QSettings::IniFormat);
+	QString path = fileName;
+	if(fileName.isEmpty())
+	{
+		path = iniDefaultPath();
+	}
+	QSettings ini(path, QSettings::IniFormat);
 	for(ParametersMap::const_iterator iter = defaultParameters_.begin(); iter!=defaultParameters_.end(); ++iter)
 	{
 		const QString & key = iter.key();
@@ -40,12 +63,17 @@ void Settings::loadSettings(const QString & fileName, QByteArray * windowGeometr
 		}
 	}
 
-	printf("Settings loaded from %s\n", fileName.toStdString().c_str());
+	printf("Settings loaded from %s\n", path.toStdString().c_str());
 }
 
 void Settings::saveSettings(const QString & fileName, const QByteArray & windowGeometry)
 {
-	QSettings ini(fileName, QSettings::IniFormat);
+	QString path = fileName;
+	if(fileName.isEmpty())
+	{
+		path = iniDefaultPath();
+	}
+	QSettings ini(path, QSettings::IniFormat);
 	for(ParametersMap::const_iterator iter = parameters_.begin(); iter!=parameters_.end(); ++iter)
 	{
 		QString type = Settings::getParametersType().value(iter.key());
@@ -62,7 +90,7 @@ void Settings::saveSettings(const QString & fileName, const QByteArray & windowG
 	{
 		ini.setValue("windowGeometry", windowGeometry);
 	}
-	printf("Settings saved to %s\n", fileName.toStdString().c_str());
+	printf("Settings saved to %s\n", path.toStdString().c_str());
 }
 
 cv::FeatureDetector * Settings::createFeaturesDetector()

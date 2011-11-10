@@ -116,10 +116,12 @@ class Settings
 public:
 	virtual ~Settings(){}
 
-	static const char * iniDefaultFileName; // "config.ini"
+	static QString workingDirectory();
+	static QString iniDefaultPath();
+	static QString iniDefaultFileName() {return "config.ini";}
 
-	static void loadSettings(const QString & fileName = iniDefaultFileName, QByteArray * windowGeometry = 0);
-	static void saveSettings(const QString & fileName = iniDefaultFileName, const QByteArray & windowGeometry = QByteArray());
+	static void loadSettings(const QString & fileName = QString(), QByteArray * windowGeometry = 0);
+	static void saveSettings(const QString & fileName = QString(), const QByteArray & windowGeometry = QByteArray());
 
 	static const ParametersMap & getDefaultParameters() {return defaultParameters_;}
 	static const ParametersMap & getParameters() {return parameters_;}

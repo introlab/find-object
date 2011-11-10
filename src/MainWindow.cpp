@@ -32,12 +32,7 @@ MainWindow::MainWindow(QWidget * parent) :
 	connect(&cameraTimer_, SIGNAL(timeout()), this, SLOT(update()));
 
 	QByteArray geometry;
-#ifdef WIN32
-	//TODO Maybe use the Documents and Settings
-	Settings::loadSettings(Settings::iniDefaultFileName, &geometry);
-#else
-	Settings::loadSettings(QString("%1/.%2/%3").arg(QDir::homePath()).arg(PROJECT_PREFIX).arg(Settings::iniDefaultFileName), &geometry);
-#endif
+	Settings::loadSettings(Settings::iniDefaultPath(), &geometry);
 	this->restoreGeometry(geometry);
 
 	ui_->toolBox->setupUi();
@@ -78,18 +73,13 @@ MainWindow::~MainWindow()
 
 void MainWindow::closeEvent(QCloseEvent * event)
 {
-#ifdef WIN32
-	//TODO Maybe use the Documents and Settings
-	Settings::saveSettings(Settings::iniDefaultFileName, this->saveGeometry());
-#else
-	Settings::saveSettings(QString("%1/.%2/%3").arg(QDir::homePath()).arg(PROJECT_PREFIX).arg(Settings::iniDefaultFileName), this->saveGeometry());
-#endif
+	Settings::saveSettings(Settings::iniDefaultPath(), this->saveGeometry());
 	QMainWindow::closeEvent(event);
 }
 
 void MainWindow::loadObjects()
 {
-	QString fileName = QFileDialog::getOpenFileName(this, tr("Load objects..."), QDir::homePath(), "*.obj");
+	QString fileName = QFileDialog::getOpenFileName(this, tr("Load objects..."), Settings::workingDirectory(), "*.obj");
 	if(!fileName.isEmpty())
 	{
 		QFile file(fileName);
@@ -123,7 +113,7 @@ void MainWindow::loadObjects()
 }
 void MainWindow::saveObjects()
 {
-	QString fileName = QFileDialog::getSaveFileName(this, tr("Save objects..."), (QDir::homePath() + "/") +Settings::currentDetectorType()+Settings::currentDescriptorType()+QString("%1.obj").arg(objects_.size()), "*.obj");
+	QString fileName = QFileDialog::getSaveFileName(this, tr("Save objects..."), (Settings::workingDirectory() + "/") +Settings::currentDetectorType()+Settings::currentDescriptorType()+QString("%1.obj").arg(objects_.size()), "*.obj");
 	if(!fileName.isEmpty())
 	{
 		if(!fileName.endsWith(".obj"))
