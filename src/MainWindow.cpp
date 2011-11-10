@@ -318,9 +318,9 @@ void MainWindow::update()
 			detector->detect(img, keypoints);
 			delete detector;
 			ui_->label_timeDetection->setText(QString::number(time.elapsed()));
+			time.start();
 
 			// EXTRACT DESCRIPTORS
-			time.start();
 			cv::Mat descriptors;
 			cv::DescriptorExtractor * extractor = Settings::createDescriptorsExtractor();
 			extractor->compute(img, keypoints, descriptors);
@@ -334,30 +334,30 @@ void MainWindow::update()
 				cvReleaseImage(&imageGrayScale);
 			}
 			ui_->label_timeExtraction->setText(QString::number(time.elapsed()));
+			time.start();
 
 			// COMPARE
 			int alpha = 20*255/100;
 			if(!dataTree_.empty())
 			{
 				// CREATE INDEX
-				time.start();
 				cv::Mat environment(descriptors.rows, descriptors.cols, CV_32F);
 				descriptors.convertTo(environment, CV_32F);
 				cv::flann::Index treeFlannIndex(environment, cv::flann::KDTreeIndexParams());
 				ui_->label_timeIndexing->setText(QString::number(time.elapsed()));
+				time.start();
 
 				// DO NEAREST NEIGHBOR
-				time.start();
 				int k = 2;
 				int emax = 64;
 				cv::Mat results(dataTree_.rows, k, CV_32SC1); // results index
 				cv::Mat dists(dataTree_.rows, k, CV_32FC1); // Distance results are CV_32FC1
 				treeFlannIndex.knnSearch(dataTree_, results, dists, k, cv::flann::SearchParams(emax) ); // maximum number of leafs checked
 				ui_->label_timeMatching->setText(QString::number(time.elapsed()));
+				time.start();
 
 
 				// PROCESS RESULTS
-				time.start();
 				ui_->imageView_source->setData(keypoints, cv::Mat(), cvImage);
 				int j=0;
 				std::vector<cv::Point2f> mpts_1, mpts_2;
@@ -474,7 +474,7 @@ void MainWindow::update()
 		}
 	}
 	ui_->label_detectorDescriptorType->setText(QString("%1/%2").arg(Settings::currentDetectorType()).arg(Settings::currentDescriptorType()));
-	ui_->label_timeRefreshRate->setText(QString("(%1 Hz - %2 Hz)").arg(QString::number(1000/cameraTimer_.interval())).arg(QString::number(int(1000.0f/(float)(updateRate_.elapsed())))));
+	ui_->label_timeRefreshRate->setText(QString("(%1 Hz - %2 Hz)").arg(QString::number(1000/cameraTimer_.interval())).arg(QString::number(int(1000.0f/(float)(updateRate_.elapsed()) + 1))));
 	//printf("GUI refresh rate %f Hz\n", 1000.0f/(float)(updateRate_.elapsed()));
 	updateRate_.start();
 }
