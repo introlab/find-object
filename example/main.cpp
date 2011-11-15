@@ -144,11 +144,13 @@ int main(int argc, char * argv[])
 		int minInliers = 8;
 		if(mpts_1.size() >= minInliers)
 		{
+			time.start();
 			cv::Mat H = findHomography(mpts_1,
 					mpts_2,
 					cv::RANSAC,
 					1.0,
 					outlier_mask);
+			printf("Time finding homography = %d ms\n", time.restart());
 			int inliers=0, outliers=0;
 			for(int k=0; k<mpts_1.size();++k)
 			{
@@ -203,7 +205,7 @@ int main(int argc, char * argv[])
 		sceneWidget.setWindowTitle("Scene");
 		sceneWidget.show();
 		int r = app.exec();
-
+		printf("Closing...\n");
 		////////////////////////////
 		//Cleanup
 		////////////////////////////
