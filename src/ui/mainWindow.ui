@@ -116,7 +116,7 @@
           <number>0</number>
          </property>
          <item>
-          <widget class="Object" name="imageView_source" native="true"/>
+          <widget class="ObjWidget" name="imageView_source" native="true"/>
          </item>
         </layout>
        </widget>
@@ -433,9 +433,9 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>Object</class>
+   <class>ObjWidget</class>
    <extends>QWidget</extends>
-   <header>Object.h</header>
+   <header>ObjWidget.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>

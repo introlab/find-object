@@ -24,10 +24,10 @@
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_2">
      <item>
-      <widget class="Object" name="cameraView" native="true"/>
+      <widget class="ObjWidget" name="cameraView" native="true"/>
      </item>
      <item>
-      <widget class="Object" name="objectView" native="true"/>
+      <widget class="ObjWidget" name="objectView" native="true"/>
      </item>
     </layout>
    </item>
@@ -80,9 +80,9 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>Object</class>
+   <class>ObjWidget</class>
    <extends>QWidget</extends>
-   <header>Object.h</header>
+   <header>ObjWidget.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

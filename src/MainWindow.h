@@ -13,7 +13,7 @@
 #include <opencv2/imgproc/imgproc_c.h>
 
 class Ui_mainWindow;
-class Object;
+class ObjWidget;
 class Camera;
 class ParametersToolBox;
 class QLabel;
@@ -37,15 +37,15 @@ private slots:
 	void saveObjects();
 	void update();
 	void updateData();
-	void removeObject(Object * object);
+	void removeObject(ObjWidget * object);
 
 private:
-	void showObject(Object * obj);
+	void showObject(ObjWidget * obj);
 
 private:
 	Ui_mainWindow * ui_;
 	Camera * camera_;
-	QList<Object*> objects_;
+	QList<ObjWidget*> objects_;
 	QTimer cameraTimer_;
 	cv::Mat dataTree_;
 	QList<int> dataRange_;

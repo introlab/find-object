@@ -1,7 +1,7 @@
 
 #include "AddObjectDialog.h"
 #include "ui_addObjectDialog.h"
-#include "Object.h"
+#include "ObjWidget.h"
 #include "KeypointItem.h"
 #include "Camera.h"
 #include "qtipl.h"
@@ -15,7 +15,7 @@
 #include <opencv2/imgproc/imgproc_c.h>
 #include <opencv2/highgui/highgui_c.h>
 
-AddObjectDialog::AddObjectDialog(QList<Object*> * objects, QWidget * parent, Qt::WindowFlags f) :
+AddObjectDialog::AddObjectDialog(QList<ObjWidget*> * objects, QWidget * parent, Qt::WindowFlags f) :
 		QDialog(parent, f),
 		camera_(0),
 		objects_(objects),
@@ -191,7 +191,7 @@ void AddObjectDialog::setState(int state)
 					selectedKeypoints.at(i).pt.y -= roi.y;
 				}
 			}
-			objects_->append(new Object(0, selectedKeypoints, descriptors, cvImage_, Settings::currentDetectorType(), Settings::currentDescriptorType()));
+			objects_->append(new ObjWidget(0, selectedKeypoints, descriptors, cvImage_, Settings::currentDetectorType(), Settings::currentDescriptorType()));
 			cvResetImageROI(cvImage_);
 
 

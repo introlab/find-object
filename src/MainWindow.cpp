@@ -4,7 +4,7 @@
 #include "ui_mainWindow.h"
 #include "qtipl.h"
 #include "KeypointItem.h"
-#include "Object.h"
+#include "ObjWidget.h"
 #include "Camera.h"
 #include "Settings.h"
 #include "ParametersToolBox.h"
@@ -87,7 +87,7 @@ void MainWindow::loadObjects()
 		QDataStream in(&file);
 		while(!in.atEnd())
 		{
-			Object * obj = new Object();
+			ObjWidget * obj = new ObjWidget();
 			obj->load(in);
 			bool alreadyLoaded = false;
 			for(int i=0; i<objects_.size(); ++i)
@@ -132,7 +132,7 @@ void MainWindow::saveObjects()
 	}
 }
 
-void MainWindow::removeObject(Object * object)
+void MainWindow::removeObject(ObjWidget * object)
 {
 	if(object)
 	{
@@ -152,12 +152,12 @@ void MainWindow::addObject()
 	}
 }
 
-void MainWindow::showObject(Object * obj)
+void MainWindow::showObject(ObjWidget * obj)
 {
 	if(obj)
 	{
 		obj->setGraphicsViewMode(false);
-		QList<Object*> objs = ui_->objects_area->findChildren<Object*>();
+		QList<ObjWidget*> objs = ui_->objects_area->findChildren<ObjWidget*>();
 		QVBoxLayout * vLayout = new QVBoxLayout();
 		int id = Settings::getGeneral_nextObjID().toInt();
 		if(obj->id() == 0)
@@ -183,7 +183,7 @@ void MainWindow::showObject(Object * obj)
 		vLayout->addLayout(hLayout);
 		vLayout->addWidget(obj);
 		objects_.last()->setDeletable(true);
-		connect(obj, SIGNAL(removalTriggered(Object*)), this, SLOT(removeObject(Object*)));
+		connect(obj, SIGNAL(removalTriggered(ObjWidget*)), this, SLOT(removeObject(ObjWidget*)));
 		connect(obj, SIGNAL(destroyed(QObject *)), title, SLOT(deleteLater()));
 		connect(obj, SIGNAL(destroyed(QObject *)), detectedLabel, SLOT(deleteLater()));
 		connect(obj, SIGNAL(destroyed(QObject *)), detectorDescriptorType, SLOT(deleteLater()));
@@ -293,6 +293,7 @@ void MainWindow::update()
 		if(cvImage)
 		{
 			QTime time;
+			time.start();
 
 			//Convert to grayscale
 			IplImage * imageGrayScale = 0;
@@ -312,13 +313,11 @@ void MainWindow::update()
 			}
 
 			// EXTRACT KEYPOINTS
-			time.start();
 			cv::FeatureDetector * detector = Settings::createFeaturesDetector();
 			std::vector<cv::KeyPoint> keypoints;
 			detector->detect(img, keypoints);
 			delete detector;
-			ui_->label_timeDetection->setText(QString::number(time.elapsed()));
-			time.start();
+			ui_->label_timeDetection->setText(QString::number(time.restart()));
 
 			// EXTRACT DESCRIPTORS
 			cv::Mat descriptors;
@@ -333,8 +332,7 @@ void MainWindow::update()
 			{
 				cvReleaseImage(&imageGrayScale);
 			}
-			ui_->label_timeExtraction->setText(QString::number(time.elapsed()));
-			time.start();
+			ui_->label_timeExtraction->setText(QString::number(time.restart()));
 
 			// COMPARE
 			int alpha = 20*255/100;
@@ -344,8 +342,7 @@ void MainWindow::update()
 				cv::Mat environment(descriptors.rows, descriptors.cols, CV_32F);
 				descriptors.convertTo(environment, CV_32F);
 				cv::flann::Index treeFlannIndex(environment, cv::flann::KDTreeIndexParams());
-				ui_->label_timeIndexing->setText(QString::number(time.elapsed()));
-				time.start();
+				ui_->label_timeIndexing->setText(QString::number(time.restart()));
 
 				// DO NEAREST NEIGHBOR
 				int k = 2;
@@ -353,8 +350,7 @@ void MainWindow::update()
 				cv::Mat results(dataTree_.rows, k, CV_32SC1); // results index
 				cv::Mat dists(dataTree_.rows, k, CV_32FC1); // Distance results are CV_32FC1
 				treeFlannIndex.knnSearch(dataTree_, results, dists, k, cv::flann::SearchParams(emax) ); // maximum number of leafs checked
-				ui_->label_timeMatching->setText(QString::number(time.elapsed()));
-				time.start();
+				ui_->label_timeMatching->setText(QString::number(time.restart()));
 
 
 				// PROCESS RESULTS
@@ -367,7 +363,7 @@ void MainWindow::update()
 				{
 					// Check if this descriptor matches with those of the objects
 					// Apply NNDR
-					if(dists.at<float>(i,0) <= Settings::getNN_nndrRatio().toFloat() * dists.at<float>(i,1))
+					if(dists.at<float>(i,0) <= Settings::getNearestNeighbor_nndrRatio().toFloat() * dists.at<float>(i,1))
 					{
 						if(j>0)
 						{
@@ -468,13 +464,11 @@ void MainWindow::update()
 
 			ui_->label_nfeatures->setText(QString::number(keypoints.size()));
 			ui_->imageView_source->update();
-			ui_->label_timeGui->setText(QString::number(time.elapsed()));
+			ui_->label_timeGui->setText(QString::number(time.restart()));
 
 			cvReleaseImage(&cvImage);
 		}
 	}
 	ui_->label_detectorDescriptorType->setText(QString("%1/%2").arg(Settings::currentDetectorType()).arg(Settings::currentDescriptorType()));
-	ui_->label_timeRefreshRate->setText(QString("(%1 Hz - %2 Hz)").arg(QString::number(1000/cameraTimer_.interval())).arg(QString::number(int(1000.0f/(float)(updateRate_.elapsed()) + 1))));
-	//printf("GUI refresh rate %f Hz\n", 1000.0f/(float)(updateRate_.elapsed()));
-	updateRate_.start();
+	ui_->label_timeRefreshRate->setText(QString("(%1 Hz - %2 Hz)").arg(QString::number(1000/cameraTimer_.interval())).arg(QString::number(int(1000.0f/(float)(updateRate_.restart()) + 1))));
 }

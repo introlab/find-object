@@ -58,7 +58,7 @@ ENDIF(APPLE AND BUILD_AS_BUNDLE)
 
 ####### SOURCES (Projects) #######
 ADD_SUBDIRECTORY( src )
-
+ADD_SUBDIRECTORY( example )
 
 
 

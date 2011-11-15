@@ -13,7 +13,7 @@
  *      Author: matlab
  */
 
-#include "Object.h"
+#include "ObjWidget.h"
 #include "KeypointItem.h"
 #include "qtipl.h"
 #include "Settings.h"
@@ -35,7 +35,7 @@
 
 #include <stdio.h>
 
-Object::Object(QWidget * parent) :
+ObjWidget::ObjWidget(QWidget * parent) :
 	QWidget(parent),
 	iplImage_(0),
 	graphicsView_(0),
@@ -46,7 +46,7 @@ Object::Object(QWidget * parent) :
 {
 	setupUi();
 }
-Object::Object(int id,
+ObjWidget::ObjWidget(int id,
 		const std::vector<cv::KeyPoint> & keypoints,
 		const cv::Mat & descriptors,
 		const IplImage * iplImage,
@@ -64,7 +64,7 @@ Object::Object(int id,
 	setupUi();
 	this->setData(keypoints, descriptors, iplImage);
 }
-Object::~Object()
+ObjWidget::~ObjWidget()
 {
 	if(iplImage_)
 	{
@@ -72,14 +72,14 @@ Object::~Object()
 	}
 }
 
-void Object::setupUi()
+void ObjWidget::setupUi()
 {
 	graphicsView_ = new QGraphicsView(this);
 	graphicsView_->setVisible(true);
 	graphicsView_->setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
 	graphicsView_->setScene(new QGraphicsScene(graphicsView_));
 
-	this->setLayout(new QVBoxLayout(graphicsView_));
+	this->setLayout(new QVBoxLayout(this));
 	this->layout()->addWidget(graphicsView_);
 	this->layout()->setContentsMargins(0,0,0,0);
 
@@ -110,7 +110,7 @@ void Object::setupUi()
 	connect(graphicsView_->scene(), SIGNAL(selectionChanged()), this, SIGNAL(selectionChanged()));
 }
 
-void Object::setId(int id)
+void ObjWidget::setId(int id)
 {
 	id_=id;
 	if(id_)
@@ -119,7 +119,7 @@ void Object::setId(int id)
 	}
 }
 
-void Object::setGraphicsViewMode(bool on)
+void ObjWidget::setGraphicsViewMode(bool on)
 {
 	graphicsViewMode_ = on;
 	graphicsView_->setVisible(on);
@@ -143,7 +143,7 @@ void Object::setGraphicsViewMode(bool on)
 	this->update();
 }
 
-void Object::setData(const std::vector<cv::KeyPoint> & keypoints, const cv::Mat & descriptors, const IplImage * image)
+void ObjWidget::setData(const std::vector<cv::KeyPoint> & keypoints, const cv::Mat & descriptors, const IplImage * image)
 {
 	keypoints_ = keypoints;
 	descriptors_ = descriptors;
@@ -175,7 +175,7 @@ void Object::setData(const std::vector<cv::KeyPoint> & keypoints, const cv::Mat 
 	}
 }
 
-void Object::resetKptsColor()
+void ObjWidget::resetKptsColor()
 {
 	for(int i=0; i<kptColors_.size(); ++i)
 	{
@@ -188,7 +188,7 @@ void Object::resetKptsColor()
 	rectItems_.clear();
 }
 
-void Object::setKptColor(unsigned int index, const QColor & color)
+void ObjWidget::setKptColor(unsigned int index, const QColor & color)
 {
 	if(index < kptColors_.size())
 	{
@@ -204,38 +204,38 @@ void Object::setKptColor(unsigned int index, const QColor & color)
 	}
 }
 
-void Object::addRect(QGraphicsRectItem * rect)
+void ObjWidget::addRect(QGraphicsRectItem * rect)
 {
 	graphicsView_->scene()->addItem(rect);
 	rectItems_.append(rect);
 }
 
-QList<QGraphicsItem*> Object::selectedItems() const
+QList<QGraphicsItem*> ObjWidget::selectedItems() const
 {
 	return graphicsView_->scene()->selectedItems();
 }
 
-bool Object::isImageShown() const
+bool ObjWidget::isImageShown() const
 {
 	return _showImage->isChecked();
 }
 
-bool Object::isFeaturesShown() const
+bool ObjWidget::isFeaturesShown() const
 {
 	return _showFeatures->isChecked();
 }
 
-bool Object::isMirrorView() const
+bool ObjWidget::isMirrorView() const
 {
 	return _mirrorView->isChecked();
 }
 
-void Object::setDeletable(bool deletable)
+void ObjWidget::setDeletable(bool deletable)
 {
 	_delete->setEnabled(deletable);
 }
 
-void Object::save(QDataStream & streamPtr) const
+void ObjWidget::save(QDataStream & streamPtr) const
 {
 	streamPtr << id_ << detectorType_ << descriptorType_;
 	streamPtr << (int)keypoints_.size();
@@ -259,7 +259,7 @@ void Object::save(QDataStream & streamPtr) const
 	streamPtr << image_;
 }
 
-void Object::load(QDataStream & streamPtr)
+void ObjWidget::load(QDataStream & streamPtr)
 {
 	std::vector<cv::KeyPoint> kpts;
 	cv::Mat descriptors;
@@ -291,7 +291,7 @@ void Object::load(QDataStream & streamPtr)
 	this->setMinimumSize(image_.size());
 }
 
-void Object::paintEvent(QPaintEvent *event)
+void ObjWidget::paintEvent(QPaintEvent *event)
 {
 	if(graphicsViewMode_)
 	{
@@ -367,16 +367,16 @@ void Object::paintEvent(QPaintEvent *event)
 	}
 }
 
-void Object::resizeEvent(QResizeEvent* event)
+void ObjWidget::resizeEvent(QResizeEvent* event)
 {
+	QWidget::resizeEvent(event);
 	if(graphicsViewMode_)
 	{
 		graphicsView_->fitInView(graphicsView_->sceneRect(), Qt::KeepAspectRatio);
 	}
-	QWidget::resizeEvent(event);
 }
 
-void Object::contextMenuEvent(QContextMenuEvent * event)
+void ObjWidget::contextMenuEvent(QContextMenuEvent * event)
 {
 	QAction * action = _menu->exec(event->globalPos());
 	if(action == _saveImage)
@@ -431,7 +431,7 @@ void Object::contextMenuEvent(QContextMenuEvent * event)
 	QWidget::contextMenuEvent(event);
 }
 
-QPixmap Object::getSceneAsPixmap()
+QPixmap ObjWidget::getSceneAsPixmap()
 {
 	if(graphicsViewMode_)
 	{
@@ -446,7 +446,7 @@ QPixmap Object::getSceneAsPixmap()
 	}
 }
 
-void Object::updateItemsShown()
+void ObjWidget::updateItemsShown()
 {
 	QList<QGraphicsItem*> items = graphicsView_->scene()->items();
 	for(int i=0; i<items.size(); ++i)
@@ -462,7 +462,7 @@ void Object::updateItemsShown()
 	}
 }
 
-void Object::drawKeypoints(QPainter * painter)
+void ObjWidget::drawKeypoints(QPainter * painter)
 {
 	QList<KeypointItem *> items;
 	KeypointItem * item = 0;
@@ -499,13 +499,13 @@ void Object::drawKeypoints(QPainter * painter)
 	}
 }
 
-QColor Object::defaultColor() const
+QColor ObjWidget::defaultColor() const
 {
 	int alpha = 20*255/100;
 	return QColor(255, 255, 0, alpha);
 }
 
-std::vector<cv::KeyPoint> Object::selectedKeypoints() const
+std::vector<cv::KeyPoint> ObjWidget::selectedKeypoints() const
 {
 	std::vector<cv::KeyPoint> selected;
 	if(graphicsViewMode_)
@@ -522,20 +522,23 @@ std::vector<cv::KeyPoint> Object::selectedKeypoints() const
 	return selected;
 }
 
-void Object::setupGraphicsView()
+void ObjWidget::setupGraphicsView()
 {
 	graphicsView_->scene()->clear();
-	graphicsView_->scene()->setSceneRect(image_.rect());
-	QList<KeypointItem*> items;
-	if(image_.width() > 0 && image_.height() > 0)
+	if(!image_.isNull())
 	{
-		QRectF sceneRect = graphicsView_->sceneRect();
+		graphicsView_->scene()->setSceneRect(image_.rect());
+		QList<KeypointItem*> items;
+		if(image_.width() > 0 && image_.height() > 0)
+		{
+			QRectF sceneRect = graphicsView_->sceneRect();
 
-		QGraphicsPixmapItem * pixmapItem = graphicsView_->scene()->addPixmap(image_);
-		pixmapItem->setVisible(this->isImageShown());
-		this->drawKeypoints();
+			QGraphicsPixmapItem * pixmapItem = graphicsView_->scene()->addPixmap(image_);
+			pixmapItem->setVisible(this->isImageShown());
+			this->drawKeypoints();
 
-		graphicsView_->fitInView(sceneRect, Qt::KeepAspectRatio);
+			graphicsView_->fitInView(sceneRect, Qt::KeepAspectRatio);
+		}
 	}
 }
 

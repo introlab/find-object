@@ -7,7 +7,7 @@
 #include <opencv2/core/core_c.h>
 
 class Ui_addObjectDialog;
-class Object;
+class ObjWidget;
 class Camera;
 class KeypointItem;
 
@@ -16,7 +16,7 @@ class AddObjectDialog : public QDialog {
 	Q_OBJECT
 
 public:
-	AddObjectDialog(QList<Object*> * objects, QWidget * parent = 0, Qt::WindowFlags f = 0);
+	AddObjectDialog(QList<ObjWidget*> * objects, QWidget * parent = 0, Qt::WindowFlags f = 0);
 	virtual ~AddObjectDialog();
 
 private slots:
@@ -37,7 +37,7 @@ private:
 	Ui_addObjectDialog * ui_;
 	Camera * camera_;
 	QTimer cameraTimer_;
-	QList<Object*> * objects_;
+	QList<ObjWidget*> * objects_;
 	IplImage * cvImage_;
 
 	enum State{kTakePicture, kSelectFeatures, kVerifySelection, kClosing};

@@ -1,12 +1,12 @@
 /*
- * VisualObject.h
+ * ObjWidget.h
  *
  *  Created on: 2011-10-21
  *      Author: matlab
  */
 
-#ifndef OBJECT_H_
-#define OBJECT_H_
+#ifndef OBJWIDGET_H_
+#define OBJWIDGET_H_
 
 #include <opencv2/features2d/features2d.hpp>
 #include <QtGui/QWidget>
@@ -20,20 +20,20 @@ class QGraphicsScene;
 class QGraphicsRectItem;
 class QGraphicsItem;
 
-class Object : public QWidget
+class ObjWidget : public QWidget
 {
 	Q_OBJECT
 
 public:
-	Object(QWidget * parent = 0);
-	Object(int id,
+	ObjWidget(QWidget * parent = 0);
+	ObjWidget(int id,
 			const std::vector<cv::KeyPoint> & keypoints,
 			const cv::Mat & descriptors,
 			const IplImage * image,
 			const QString & detectorType = "NA",
 			const QString & descriptorType = "NA",
 			QWidget * parent = 0);
-	virtual ~Object();
+	virtual ~ObjWidget();
 
 	void setId(int id);
 	void setData(const std::vector<cv::KeyPoint> & keypoints,
@@ -71,7 +71,7 @@ protected:
 	virtual void resizeEvent(QResizeEvent* event);
 
 signals:
-	void removalTriggered(Object *);
+	void removalTriggered(ObjWidget *);
 	void selectionChanged();
 
 private:
@@ -106,4 +106,4 @@ private:
 };
 
 
-#endif /* OBJECT_H_ */
+#endif /* OBJWIDGET_H_ */

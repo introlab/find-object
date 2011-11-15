@@ -106,7 +106,7 @@ class Settings
 	PARAMETER(Surf, upright, bool, false);
 	PARAMETER(Surf, extended, bool, false);
 
-	PARAMETER(NN, nndrRatio, float, 0.8f); // NNDR RATIO
+	PARAMETER(NearestNeighbor, nndrRatio, float, 0.8f); // NNDR RATIO
 
 	PARAMETER(General, nextObjID, unsigned int, 1);
 

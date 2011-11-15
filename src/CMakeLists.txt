@@ -4,7 +4,7 @@
 SET(headers_ui 
 	./MainWindow.h
 	./AddObjectDialog.h
-	./Object.h
+	./ObjWidget.h
 	./Camera.h
 	./ParametersToolBox.h
 )
@@ -38,7 +38,7 @@ SET(SRC_FILES
 	./Camera.cpp
 	./ParametersToolBox.cpp
 	./Settings.cpp
-	./Object.cpp
+	./ObjWidget.cpp
 	${moc_srcs} 
 	${moc_uis} 
 	#${srcs_qrc}
