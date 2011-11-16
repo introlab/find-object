@@ -76,8 +76,8 @@ int main(int argc, char * argv[])
 		////////////////////////////
 		// The extractor can be any of (see OpenCV features2d.hpp):
 		// cv::DescriptorExtractor * detector = new cv::BriefDescriptorExtractor();
-		// cv::DescriptorExtractor * detector = new cv::SiftFeatureDetector();
-		// cv::DescriptorExtractor * detector = new cv::SurfFeatureDetector();
+		// cv::DescriptorExtractor * detector = new cv::SiftDescriptorExtractor();
+		// cv::DescriptorExtractor * detector = new cv::SurfDescriptorExtractor();
 		cv::DescriptorExtractor * extractor = new cv::SurfDescriptorExtractor();
 		extractor->compute(objectImg, objectKeypoints, objectDescriptors);
 		printf("Object: %d descriptors extracted in %d ms\n", objectDescriptors.rows, time.restart());
