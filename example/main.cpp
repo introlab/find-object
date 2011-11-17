@@ -182,6 +182,7 @@ int main(int argc, char * argv[])
 				else
 				{
 					objWidget.setKptColor(indexes_1.at(k), QColor(0,0,0,alpha));
+					sceneWidget.setKptColor(indexes_2.at(k), QColor(0,0,0,alpha));
 				}
 			}
 			QPen rectPen(color);
@@ -200,9 +201,27 @@ int main(int argc, char * argv[])
 		// Wait for gui
 		objWidget.setGraphicsViewMode(false);
 		objWidget.setWindowTitle("Object");
+		if(objWidget.image().width() <= 800)
+		{
+			objWidget.setGeometry(0, 0, objWidget.image().width(), objWidget.image().height());
+		}
+		else
+		{
+			objWidget.setGeometry(0, 0, 800, 600);
+			objWidget.setAutoScale(false);
+		}
 		objWidget.show();
 		sceneWidget.setGraphicsViewMode(false);
 		sceneWidget.setWindowTitle("Scene");
+		if(sceneWidget.image().width() <= 800)
+		{
+			sceneWidget.setGeometry(0, 0, sceneWidget.image().width(), sceneWidget.image().height());
+		}
+		else
+		{
+			sceneWidget.setGeometry(0, 0, 800, 600);
+			sceneWidget.setAutoScale(false);
+		}
 		sceneWidget.show();
 		int r = app.exec();
 		printf("Closing...\n");

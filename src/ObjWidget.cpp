@@ -40,9 +40,9 @@ ObjWidget::ObjWidget(QWidget * parent) :
 	iplImage_(0),
 	graphicsView_(0),
 	id_(0),
-	graphicsViewMode_(true),
 	detectorType_("NA"),
-	descriptorType_("NA")
+	descriptorType_("NA"),
+	graphicsViewInitialized_(false)
 {
 	setupUi();
 }
@@ -57,9 +57,9 @@ ObjWidget::ObjWidget(int id,
 	iplImage_(0),
 	graphicsView_(0),
 	id_(id),
-	graphicsViewMode_(true),
 	detectorType_(detectorType),
-	descriptorType_(descriptorType)
+	descriptorType_(descriptorType),
+	graphicsViewInitialized_(false)
 {
 	setupUi();
 	this->setData(keypoints, descriptors, iplImage);
@@ -75,7 +75,7 @@ ObjWidget::~ObjWidget()
 void ObjWidget::setupUi()
 {
 	graphicsView_ = new QGraphicsView(this);
-	graphicsView_->setVisible(true);
+	graphicsView_->setVisible(false);
 	graphicsView_->setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
 	graphicsView_->setScene(new QGraphicsScene(graphicsView_));
 
@@ -93,9 +93,13 @@ void ObjWidget::setupUi()
 	_mirrorView = _menu->addAction(tr("Mirror view"));
 	_mirrorView->setCheckable(true);
 	_mirrorView->setChecked(false);
-	_plainView = _menu->addAction(tr("Plain view"));
-	_plainView->setCheckable(true);
-	_plainView->setChecked(!graphicsViewMode_);
+	_graphicsViewMode = _menu->addAction(tr("Graphics view"));
+	_graphicsViewMode->setCheckable(true);
+	_graphicsViewMode->setChecked(false);
+	_autoScale = _menu->addAction(tr("Scale view"));
+	_autoScale->setCheckable(true);
+	_autoScale->setChecked(true);
+	_autoScale->setEnabled(false);
 	_menu->addSeparator();
 	_saveImage = _menu->addAction(tr("Save picture..."));
 	_menu->addSeparator();
@@ -121,12 +125,13 @@ void ObjWidget::setId(int id)
 
 void ObjWidget::setGraphicsViewMode(bool on)
 {
-	graphicsViewMode_ = on;
+	_graphicsViewMode->setChecked(on);
 	graphicsView_->setVisible(on);
+	_autoScale->setEnabled(on);
 	//update items' color
 	if(on)
 	{
-		if(keypointItems_.size() == 0)
+		if(!graphicsViewInitialized_)
 		{
 			this->setupGraphicsView();
 		}
@@ -138,9 +143,30 @@ void ObjWidget::setGraphicsViewMode(bool on)
 			}
 		}
 	}
-	graphicsView_->fitInView(graphicsView_->sceneRect(), Qt::KeepAspectRatio);
-	_plainView->setChecked(!on);
-	this->update();
+	if(_autoScale->isChecked())
+	{
+		graphicsView_->fitInView(graphicsView_->sceneRect(), Qt::KeepAspectRatio);
+	}
+	else
+	{
+		graphicsView_->resetTransform();
+	}
+}
+
+void ObjWidget::setAutoScale(bool autoScale)
+{
+	_autoScale->setChecked(autoScale);
+	if(_graphicsViewMode)
+	{
+		if(autoScale)
+		{
+			graphicsView_->fitInView(graphicsView_->sceneRect(), Qt::KeepAspectRatio);
+		}
+		else
+		{
+			graphicsView_->resetTransform();
+		}
+	}
 }
 
 void ObjWidget::setData(const std::vector<cv::KeyPoint> & keypoints, const cv::Mat & descriptors, const IplImage * image)
@@ -150,6 +176,8 @@ void ObjWidget::setData(const std::vector<cv::KeyPoint> & keypoints, const cv::M
 	kptColors_ = QVector<QColor>(keypoints.size(), defaultColor());
 	keypointItems_.clear();
 	rectItems_.clear();
+	graphicsView_->scene()->clear();
+	graphicsViewInitialized_ = false;
 	if(iplImage_)
 	{
 		cvReleaseImage(&iplImage_);
@@ -167,9 +195,9 @@ void ObjWidget::setData(const std::vector<cv::KeyPoint> & keypoints, const cv::M
 		cvCopy(image, iplImage_, NULL);
 
 		image_ = QPixmap::fromImage(Ipl2QImage(iplImage_));
-		this->setMinimumSize(image_.size());
+		//this->setMinimumSize(image_.size());
 	}
-	if(graphicsViewMode_)
+	if(_graphicsViewMode->isChecked())
 	{
 		this->setupGraphicsView();
 	}
@@ -180,11 +208,12 @@ void ObjWidget::resetKptsColor()
 	for(int i=0; i<kptColors_.size(); ++i)
 	{
 		kptColors_[i] = defaultColor();
-		if(graphicsViewMode_)
+		if(_graphicsViewMode->isChecked())
 		{
 			keypointItems_[i]->setColor(this->defaultColor());
 		}
 	}
+	qDeleteAll(rectItems_.begin(), rectItems_.end());
 	rectItems_.clear();
 }
 
@@ -195,7 +224,7 @@ void ObjWidget::setKptColor(unsigned int index, const QColor & color)
 		kptColors_[index] = color;
 	}
 
-	if(graphicsViewMode_)
+	if(_graphicsViewMode->isChecked())
 	{
 		if(index < keypointItems_.size())
 		{
@@ -206,7 +235,11 @@ void ObjWidget::setKptColor(unsigned int index, const QColor & color)
 
 void ObjWidget::addRect(QGraphicsRectItem * rect)
 {
-	graphicsView_->scene()->addItem(rect);
+	if(graphicsViewInitialized_)
+	{
+		graphicsView_->scene()->addItem(rect);
+	}
+	rect->setZValue(2);
 	rectItems_.append(rect);
 }
 
@@ -288,12 +321,12 @@ void ObjWidget::load(QDataStream & streamPtr)
 	descriptors = cv::Mat(rows, cols, type, data.data()).clone();
 	streamPtr >> image_;
 	this->setData(kpts, descriptors, 0);
-	this->setMinimumSize(image_.size());
+	//this->setMinimumSize(image_.size());
 }
 
 void ObjWidget::paintEvent(QPaintEvent *event)
 {
-	if(graphicsViewMode_)
+	if(_graphicsViewMode->isChecked())
 	{
 		QWidget::paintEvent(event);
 	}
@@ -304,10 +337,10 @@ void ObjWidget::paintEvent(QPaintEvent *event)
 			//Scale
 			float w = image_.width();
 			float h = image_.height();
-			float widthRatio = this->rect().width() / w;
-			float heightRatio = this->rect().height() / h;
+			float widthRatio = float(this->rect().width()) / w;
+			float heightRatio = float(this->rect().height()) / h;
 			float ratio = 1.0f;
-			//printf("w=%f, h=%f, wR=%f, hR=%f, sW=%f, sH=%f\n", w, h, widthRatio, heightRatio, sceneRect.width(), sceneRect.height());
+			//printf("w=%f, h=%f, wR=%f, hR=%f, sW=%d, sH=%d\n", w, h, widthRatio, heightRatio, this->rect().width(), this->rect().height());
 			if(widthRatio < heightRatio)
 			{
 				ratio = widthRatio;
@@ -350,10 +383,12 @@ void ObjWidget::paintEvent(QPaintEvent *event)
 			{
 				painter.drawPixmap(QPoint(0,0), image_);
 			}
+
 			if(_showFeatures->isChecked())
 			{
 				drawKeypoints(&painter);
 			}
+
 
 			for(int i=0; i<rectItems_.size(); ++i)
 			{
@@ -363,6 +398,7 @@ void ObjWidget::paintEvent(QPaintEvent *event)
 				painter.drawRect(rectItems_.at(i)->rect());
 				painter.restore();
 			}
+
 		}
 	}
 }
@@ -370,7 +406,7 @@ void ObjWidget::paintEvent(QPaintEvent *event)
 void ObjWidget::resizeEvent(QResizeEvent* event)
 {
 	QWidget::resizeEvent(event);
-	if(graphicsViewMode_)
+	if(_graphicsViewMode->isChecked() && _autoScale->isChecked())
 	{
 		graphicsView_->fitInView(graphicsView_->sceneRect(), Qt::KeepAspectRatio);
 	}
@@ -399,7 +435,7 @@ void ObjWidget::contextMenuEvent(QContextMenuEvent * event)
 	}
 	else if(action == _showFeatures || action == _showImage)
 	{
-		if(graphicsViewMode_)
+		if(_graphicsViewMode->isChecked())
 		{
 			this->updateItemsShown();
 		}
@@ -411,7 +447,7 @@ void ObjWidget::contextMenuEvent(QContextMenuEvent * event)
 	else if(action == _mirrorView)
 	{
 		graphicsView_->setTransform(QTransform().scale(this->isMirrorView()?-1.0:1.0, 1.0));
-		if(graphicsViewMode_)
+		if(_graphicsViewMode->isChecked() && _autoScale->isChecked())
 		{
 			graphicsView_->fitInView(graphicsView_->sceneRect(), Qt::KeepAspectRatio);
 		}
@@ -424,16 +460,20 @@ void ObjWidget::contextMenuEvent(QContextMenuEvent * event)
 	{
 		emit removalTriggered(this);
 	}
-	else if(action == _plainView)
+	else if(action == _graphicsViewMode)
 	{
-		this->setGraphicsViewMode(!_plainView->isChecked());
+		this->setGraphicsViewMode(_graphicsViewMode->isChecked());
+	}
+	else if(action == _autoScale)
+	{
+		this->setAutoScale(_autoScale->isChecked());
 	}
 	QWidget::contextMenuEvent(event);
 }
 
 QPixmap ObjWidget::getSceneAsPixmap()
 {
-	if(graphicsViewMode_)
+	if(_graphicsViewMode->isChecked())
 	{
 		QPixmap img(graphicsView_->sceneRect().width(), graphicsView_->sceneRect().height());
 		QPainter p(&img);
@@ -472,7 +512,7 @@ void ObjWidget::drawKeypoints(QPainter * painter)
 	{
 		const cv::KeyPoint & r = *iter;
 		float radius = 14*1.2/9.*2;//r.size*1.2/9.*2;
-		if(graphicsViewMode_)
+		if(_graphicsViewMode->isChecked())
 		{
 			QString info = QString( "ID = %1\n"
 									"Response = %2\n"
@@ -508,7 +548,7 @@ QColor ObjWidget::defaultColor() const
 std::vector<cv::KeyPoint> ObjWidget::selectedKeypoints() const
 {
 	std::vector<cv::KeyPoint> selected;
-	if(graphicsViewMode_)
+	if(_graphicsViewMode->isChecked())
 	{
 		QList<QGraphicsItem*> items = graphicsView_->scene()->selectedItems();
 		for(int i=0; i<items.size(); ++i)
@@ -524,7 +564,6 @@ std::vector<cv::KeyPoint> ObjWidget::selectedKeypoints() const
 
 void ObjWidget::setupGraphicsView()
 {
-	graphicsView_->scene()->clear();
 	if(!image_.isNull())
 	{
 		graphicsView_->scene()->setSceneRect(image_.rect());
@@ -537,8 +576,17 @@ void ObjWidget::setupGraphicsView()
 			pixmapItem->setVisible(this->isImageShown());
 			this->drawKeypoints();
 
-			graphicsView_->fitInView(sceneRect, Qt::KeepAspectRatio);
+			for(int i=0; i<rectItems_.size(); ++i)
+			{
+				graphicsView_->scene()->addItem(rectItems_.at(i));
+			}
+
+			if(_autoScale->isChecked())
+			{
+				graphicsView_->fitInView(sceneRect, Qt::KeepAspectRatio);
+			}
 		}
+		graphicsViewInitialized_ = true;
 	}
 }
 

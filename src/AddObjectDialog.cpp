@@ -126,6 +126,7 @@ void AddObjectDialog::setState(int state)
 		ui_->cameraView->setVisible(true);
 		ui_->objectView->setVisible(false);
 		ui_->cameraView->setGraphicsViewMode(true);
+		updateNextButton();
 	}
 	else if(state == kVerifySelection)
 	{
@@ -156,6 +157,8 @@ void AddObjectDialog::setState(int state)
 				}
 			}
 			ui_->objectView->setData(selectedKeypoints, cv::Mat(), cvImage_);
+			ui_->objectView->setMinimumSize(roi.width, roi.height);
+			ui_->objectView->update();
 			cvResetImageROI(cvImage_);
 			ui_->pushButton_next->setEnabled(true);
 		}
@@ -268,8 +271,8 @@ CvRect AddObjectDialog::computeROI(const std::vector<cv::KeyPoint> & kpts)
 		roi.y = h1;
 		roi.width = x2-x1;
 		roi.height = h2-h1;
-		printf("ptx=%d, pty=%d\n", (int)kpts.at(i).pt.x, (int)kpts.at(i).pt.y);
-		printf("x=%d, y=%d, w=%d, h=%d\n", roi.x, roi.y, roi.width, roi.height);
+		//printf("ptx=%d, pty=%d\n", (int)kpts.at(i).pt.x, (int)kpts.at(i).pt.y);
+		//printf("x=%d, y=%d, w=%d, h=%d\n", roi.x, roi.y, roi.width, roi.height);
 	}
 
 	return roi;

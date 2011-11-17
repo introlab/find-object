@@ -159,6 +159,7 @@ void MainWindow::showObject(ObjWidget * obj)
 		obj->setGraphicsViewMode(false);
 		QList<ObjWidget*> objs = ui_->objects_area->findChildren<ObjWidget*>();
 		QVBoxLayout * vLayout = new QVBoxLayout();
+		obj->setMinimumSize(obj->image().width(), obj->image().height());
 		int id = Settings::getGeneral_nextObjID().toInt();
 		if(obj->id() == 0)
 		{
