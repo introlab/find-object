@@ -169,7 +169,7 @@ int main(int argc, char * argv[])
 			H.at<double>(0,2), H.at<double>(1,2), H.at<double>(2,2));
 
 			// GUI : Change color and add homography rectangle
-			QColor color(Qt::red);
+			QColor color(Qt::green);
 			int alpha = 130;
 			color.setAlpha(alpha);
 			for(int k=0; k<mpts_1.size();++k)
@@ -181,8 +181,8 @@ int main(int argc, char * argv[])
 				}
 				else
 				{
-					objWidget.setKptColor(indexes_1.at(k), QColor(0,0,0,alpha));
-					sceneWidget.setKptColor(indexes_2.at(k), QColor(0,0,0,alpha));
+					objWidget.setKptColor(indexes_1.at(k), QColor(255,0,0,alpha));
+					sceneWidget.setKptColor(indexes_2.at(k), QColor(255,0,0,alpha));
 				}
 			}
 			QPen rectPen(color);
