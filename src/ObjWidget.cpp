@@ -30,6 +30,7 @@
 #include <QtGui/QGraphicsScene>
 #include <QtGui/QVBoxLayout>
 #include <QtGui/QGraphicsRectItem>
+#include <QtGui/QInputDialog>
 
 #include <QtCore/QDir>
 
@@ -42,7 +43,8 @@ ObjWidget::ObjWidget(QWidget * parent) :
 	id_(0),
 	detectorType_("NA"),
 	descriptorType_("NA"),
-	graphicsViewInitialized_(false)
+	graphicsViewInitialized_(false),
+	alpha_(50)
 {
 	setupUi();
 }
@@ -59,7 +61,8 @@ ObjWidget::ObjWidget(int id,
 	id_(id),
 	detectorType_(detectorType),
 	descriptorType_(descriptorType),
-	graphicsViewInitialized_(false)
+	graphicsViewInitialized_(false),
+	alpha_(50)
 {
 	setupUi();
 	this->setData(keypoints, descriptors, iplImage);
@@ -100,6 +103,11 @@ void ObjWidget::setupUi()
 	_autoScale->setCheckable(true);
 	_autoScale->setChecked(true);
 	_autoScale->setEnabled(false);
+	_sizedFeatures = _menu->addAction(tr("Sized features"));
+	_sizedFeatures->setCheckable(true);
+	_sizedFeatures->setChecked(false);
+	_menu->addSeparator();
+	_setAlpha = _menu->addAction(tr("Set alpha..."));
 	_menu->addSeparator();
 	_saveImage = _menu->addAction(tr("Save picture..."));
 	_menu->addSeparator();
@@ -169,6 +177,49 @@ void ObjWidget::setAutoScale(bool autoScale)
 	}
 }
 
+void ObjWidget::setSizedFeatures(bool on)
+{
+	_sizedFeatures->setChecked(on);
+	if(graphicsViewInitialized_)
+	{
+		for(unsigned int i=0; i<keypointItems_.size() && i<keypoints_.size(); ++i)
+		{
+			float size = 14;
+			if(on && keypoints_[i].size>14.0f)
+			{
+				size = keypoints_[i].size;
+			}
+			float radius = size*1.2f/9.0f*2.0f;
+			keypointItems_.at(i)->setRect(keypoints_[i].pt.x-radius, keypoints_[i].pt.y-radius, radius*2, radius*2);
+		}
+	}
+	if(!_graphicsViewMode->isChecked())
+	{
+		this->update();
+	}
+}
+
+void ObjWidget::setAlpha(int alpha)
+{
+	if(alpha>=0 && alpha<=255)
+	{
+		alpha_ = alpha;
+		if(graphicsViewInitialized_)
+		{
+			for(int i=0; i<keypointItems_.size() && i<kptColors_.size(); ++i)
+			{
+				QColor color = kptColors_.at(i);
+				color.setAlpha(alpha_);
+				keypointItems_.at(i)->setColor(color);
+			}
+		}
+		if(!_graphicsViewMode->isChecked())
+		{
+			this->update();
+		}
+	}
+}
+
 void ObjWidget::setData(const std::vector<cv::KeyPoint> & keypoints, const cv::Mat & descriptors, const IplImage * image)
 {
 	keypoints_ = keypoints;
@@ -228,6 +279,8 @@ void ObjWidget::setKptColor(unsigned int index, const QColor & color)
 	{
 		if(index < keypointItems_.size())
 		{
+			QColor color = color;
+			color.setAlpha(alpha_);
 			keypointItems_.at(index)->setColor(color);
 		}
 	}
@@ -451,7 +504,7 @@ void ObjWidget::contextMenuEvent(QContextMenuEvent * event)
 		{
 			graphicsView_->fitInView(graphicsView_->sceneRect(), Qt::KeepAspectRatio);
 		}
-		else
+		else if(!_graphicsViewMode->isChecked())
 		{
 			this->update();
 		}
@@ -467,6 +520,19 @@ void ObjWidget::contextMenuEvent(QContextMenuEvent * event)
 	else if(action == _autoScale)
 	{
 		this->setAutoScale(_autoScale->isChecked());
+	}
+	else if(action == _sizedFeatures)
+	{
+		this->setSizedFeatures(_sizedFeatures->isChecked());
+	}
+	else if(action == _setAlpha)
+	{
+		bool ok;
+		int newAlpha = QInputDialog::getInt(this, tr("Set alpha"), tr("Alpha:"), alpha_, 0, 255, 5, &ok);
+		if(ok)
+		{
+			this->setAlpha(newAlpha);
+		}
 	}
 	QWidget::contextMenuEvent(event);
 }
@@ -511,7 +577,13 @@ void ObjWidget::drawKeypoints(QPainter * painter)
 	for(std::vector<cv::KeyPoint>::const_iterator iter = keypoints_.begin(); iter != keypoints_.end(); ++iter, ++i )
 	{
 		const cv::KeyPoint & r = *iter;
-		float radius = 14*1.2/9.*2;//r.size*1.2/9.*2;
+		float size = 14;
+		if(r.size>14.0f && _sizedFeatures->isChecked())
+		{
+			size = r.size;
+		}
+		float radius = size*1.2f/9.0f*2.0f;
+		QColor color(kptColors_.at(i).red(), kptColors_.at(i).green(), kptColors_.at(i).blue(), alpha_);
 		if(_graphicsViewMode->isChecked())
 		{
 			QString info = QString( "ID = %1\n"
@@ -521,7 +593,7 @@ void ObjWidget::drawKeypoints(QPainter * painter)
 									"Y = %5\n"
 									"Size = %6").arg(i+1).arg(r.response).arg(r.angle).arg(r.pt.x).arg(r.pt.y).arg(r.size);
 			// YELLOW = NEW and multiple times
-			item = new KeypointItem(i+1, r.pt.x-radius, r.pt.y-radius, radius*2, info, kptColors_.at(i));
+			item = new KeypointItem(i+1, r.pt.x-radius, r.pt.y-radius, radius*2, info, color);
 			item->setVisible(this->isFeaturesShown());
 			item->setZValue(1);
 			graphicsView_->scene()->addItem(item);
@@ -531,8 +603,8 @@ void ObjWidget::drawKeypoints(QPainter * painter)
 		if(painter)
 		{
 			painter->save();
-			painter->setPen(kptColors_.at(i));
-			painter->setBrush(kptColors_.at(i));
+			painter->setPen(color);
+			painter->setBrush(color);
 			painter->drawEllipse(r.pt.x-radius, r.pt.y-radius, radius*2, radius*2);
 			painter->restore();
 		}
@@ -541,8 +613,9 @@ void ObjWidget::drawKeypoints(QPainter * painter)
 
 QColor ObjWidget::defaultColor() const
 {
-	int alpha = 20*255/100;
-	return QColor(255, 255, 0, alpha);
+	QColor color(Qt::yellow);
+	color.setAlpha(alpha_);
+	return color;
 }
 
 std::vector<cv::KeyPoint> ObjWidget::selectedKeypoints() const

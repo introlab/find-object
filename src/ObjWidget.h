@@ -43,6 +43,8 @@ public:
 	void setKptColor(unsigned int index, const QColor & color);
 	void setGraphicsViewMode(bool on);
 	void setAutoScale(bool autoScale);
+	void setSizedFeatures(bool on);
+	void setAlpha(int alpha);
 	void setDeletable(bool deletable);
 	void addRect(QGraphicsRectItem * rect);
 
@@ -94,6 +96,7 @@ private:
 	QString descriptorType_;
 	QList<QGraphicsRectItem*> rectItems_;
 	bool graphicsViewInitialized_;
+	int alpha_;
 
 	// menu stuff
 	QString _savedFileName;
@@ -105,6 +108,8 @@ private:
 	QAction * _delete;
 	QAction * _graphicsViewMode;
 	QAction * _autoScale;
+	QAction * _sizedFeatures;
+	QAction * _setAlpha;
 };
 
 
