@@ -61,7 +61,9 @@ int main(int argc, char * argv[])
 		// EXTRACT KEYPOINTS
 		////////////////////////////
 		// The detector can be any of (see OpenCV features2d.hpp):
+		// cv::FeatureDetector * detector = new cv::OrbFeatureDetector();
 		// cv::FeatureDetector * detector = new cv::FastFeatureDetector();
+		// cv::FeatureDetector * detector = new cv::MserFeatureDetector();
 		// cv::FeatureDetector * detector = new cv::SiftFeatureDetector();
 		// cv::FeatureDetector * detector = new cv::SurfFeatureDetector();
 		// cv::FeatureDetector * detector = new cv::StarFeatureDetector();
@@ -76,6 +78,7 @@ int main(int argc, char * argv[])
 		////////////////////////////
 		// The extractor can be any of (see OpenCV features2d.hpp):
 		// cv::DescriptorExtractor * detector = new cv::BriefDescriptorExtractor();
+		// cv::DescriptorExtractor * detector = new cv::OrbDescriptorExtractor();
 		// cv::DescriptorExtractor * detector = new cv::SiftDescriptorExtractor();
 		// cv::DescriptorExtractor * detector = new cv::SurfDescriptorExtractor();
 		cv::DescriptorExtractor * extractor = new cv::SurfDescriptorExtractor();
