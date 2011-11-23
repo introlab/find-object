@@ -26,7 +26,8 @@
 // Camera ownership transferred
 MainWindow::MainWindow(Camera * camera, QWidget * parent) :
 	QMainWindow(parent),
-	camera_(camera)
+	camera_(camera),
+	lowestRefreshRate_(99)
 {
 	ui_ = new Ui_mainWindow();
 	ui_->setupUi(this);
@@ -63,11 +64,13 @@ MainWindow::MainWindow(Camera * camera, QWidget * parent) :
 
 	// Actions
 	connect(ui_->actionAdd_object, SIGNAL(triggered()), this, SLOT(addObject()));
-	connect(ui_->actionStart_camera, SIGNAL(triggered()), this, SLOT(startCamera()));
+	connect(ui_->actionStart_camera, SIGNAL(triggered()), this, SLOT(startProcessing()));
 	connect(ui_->actionStop_camera, SIGNAL(triggered()), this, SLOT(stopProcessing()));
 	connect(ui_->actionExit, SIGNAL(triggered()), this, SLOT(close()));
 	connect(ui_->actionSave_objects, SIGNAL(triggered()), this, SLOT(saveObjects()));
 	connect(ui_->actionLoad_objects, SIGNAL(triggered()), this, SLOT(loadObjects()));
+
+	startProcessing();
 }
 
 MainWindow::~MainWindow()
@@ -162,12 +165,13 @@ void MainWindow::removeObject(ObjWidget * object)
 
 void MainWindow::addObject()
 {
-	this->stopProcessing();
+	disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
 	AddObjectDialog dialog(camera_, &objects_, this);
 	if(dialog.exec() == QDialog::Accepted)
 	{
 		showObject(objects_.last());
 	}
+	this->startProcessing();
 }
 
 void MainWindow::showObject(ObjWidget * obj)
@@ -500,5 +504,17 @@ void MainWindow::update(const cv::Mat & image)
 		ui_->label_timeGui->setText(QString::number(time.restart()));
 	}
 	ui_->label_detectorDescriptorType->setText(QString("%1/%2").arg(Settings::currentDetectorType()).arg(Settings::currentDescriptorType()));
-	ui_->label_timeRefreshRate->setText(QString("(%1 Hz - %2 Hz)").arg(QString::number(Settings::getCamera_imageRate().toInt())).arg(QString::number(int(1000.0f/(float)(updateRate_.restart()) + 1))));
+
+	int refreshRate = qRound(1000.0f/float(updateRate_.restart()));
+	if(refreshRate > 0 && refreshRate < lowestRefreshRate_)
+	{
+		lowestRefreshRate_ = refreshRate;
+	}
+	// Refresh the label only after each 1000 ms
+	if(refreshStartTime_.elapsed() > 1000)
+	{
+		ui_->label_timeRefreshRate->setText(QString("(%1 Hz - %2 Hz)").arg(QString::number(Settings::getCamera_imageRate().toInt())).arg(QString::number(lowestRefreshRate_)));
+		lowestRefreshRate_ = 99;
+		refreshStartTime_.start();
+	}
 }

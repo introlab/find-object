@@ -28,15 +28,18 @@ public:
 
 	void loadObjects(const QString & fileName);
 	void saveObjects(const QString & fileName);
-	void startProcessing();
-	void stopProcessing();
 
 protected:
 	virtual void closeEvent(QCloseEvent * event);
 
+public slots:
+	void startProcessing();
+	void stopProcessing();
+
 private slots:
 	void loadObjects();
 	void saveObjects();
+	void addObject();
 	void removeObject(ObjWidget * object);
 	void update(const cv::Mat & image);
 
@@ -44,7 +47,6 @@ signals:
 	void objectsFound(const QMap<int, QPoint> &);
 
 private:
-	void addObject();
 	void showObject(ObjWidget * obj);
 	void updateData();
 
@@ -55,6 +57,8 @@ private:
 	cv::Mat dataTree_;
 	QList<int> dataRange_;
 	QTime updateRate_;
+	QTime refreshStartTime_;
+	int lowestRefreshRate_;
 
 };
 
