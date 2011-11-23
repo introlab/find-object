@@ -26,7 +26,7 @@ public:
 	MainWindow(Camera * camera = 0, QWidget * parent = 0);
 	virtual ~MainWindow();
 
-	void loadObjects(const QString & fileName);
+	bool loadObjects(const QString & fileName);
 	void saveObjects(const QString & fileName);
 
 protected:

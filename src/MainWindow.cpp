@@ -89,35 +89,39 @@ void MainWindow::closeEvent(QCloseEvent * event)
 	QMainWindow::closeEvent(event);
 }
 
-void MainWindow::loadObjects(const QString & fileName)
+bool MainWindow::loadObjects(const QString & fileName)
 {
 	QFile file(fileName);
-	file.open(QIODevice::ReadOnly);
-	QDataStream in(&file);
-	while(!in.atEnd())
+	if(file.open(QIODevice::ReadOnly))
 	{
-		ObjWidget * obj = new ObjWidget();
-		obj->load(in);
-		bool alreadyLoaded = false;
-		for(int i=0; i<objects_.size(); ++i)
+		QDataStream in(&file);
+		while(!in.atEnd())
 		{
-			if(objects_.at(i)->id() == obj->id())
+			ObjWidget * obj = new ObjWidget();
+			obj->load(in);
+			bool alreadyLoaded = false;
+			for(int i=0; i<objects_.size(); ++i)
 			{
-				alreadyLoaded = true;
-				break;
+				if(objects_.at(i)->id() == obj->id())
+				{
+					alreadyLoaded = true;
+					break;
+				}
+			}
+			if(!alreadyLoaded)
+			{
+				objects_.append(obj);
+				showObject(obj);
+			}
+			else
+			{
+				delete obj;
 			}
 		}
-		if(!alreadyLoaded)
-		{
-			objects_.append(obj);
-			showObject(obj);
-		}
-		else
-		{
-			delete obj;
-		}
+		file.close();
+		return true;
 	}
-	file.close();
+	return false;
 }
 
 void MainWindow::saveObjects(const QString & fileName)
