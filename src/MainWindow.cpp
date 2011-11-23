@@ -522,7 +522,14 @@ void MainWindow::update(const cv::Mat & image)
 	// Refresh the label only after each 1000 ms
 	if(refreshStartTime_.elapsed() > 1000)
 	{
-		ui_->label_timeRefreshRate->setText(QString("(%1 Hz - %2 Hz)").arg(QString::number(Settings::getCamera_imageRate().toInt())).arg(QString::number(lowestRefreshRate_)));
+		if(Settings::getCamera_imageRate().toInt()>0)
+		{
+			ui_->label_timeRefreshRate->setText(QString("(%1 Hz - %2 Hz)").arg(QString::number(Settings::getCamera_imageRate().toInt())).arg(QString::number(lowestRefreshRate_)));
+		}
+		else
+		{
+			ui_->label_timeRefreshRate->setText(QString("(%2 Hz)").arg(QString::number(lowestRefreshRate_)));
+		}
 		lowestRefreshRate_ = 99;
 		refreshStartTime_.start();
 	}
