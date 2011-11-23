@@ -89,6 +89,11 @@ void MainWindow::closeEvent(QCloseEvent * event)
 	QMainWindow::closeEvent(event);
 }
 
+ParametersToolBox * MainWindow::parametersToolBox() const
+{
+	return ui_->toolBox;
+}
+
 bool MainWindow::loadObjects(const QString & fileName)
 {
 	QFile file(fileName);

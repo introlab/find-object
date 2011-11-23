@@ -29,6 +29,8 @@ public:
 	bool loadObjects(const QString & fileName);
 	void saveObjects(const QString & fileName);
 
+	ParametersToolBox * parametersToolBox() const;
+
 protected:
 	virtual void closeEvent(QCloseEvent * event);
 
