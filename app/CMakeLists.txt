@@ -2,16 +2,16 @@
 
 ### Qt Gui stuff ###
 SET(headers_ui 
-	./MainWindow.h
-	./AddObjectDialog.h
-	./ObjWidget.h
-	./Camera.h
-	./ParametersToolBox.h
+	../src/MainWindow.h
+	../src/AddObjectDialog.h
+	../src/ObjWidget.h
+	../src/Camera.h
+	../src/ParametersToolBox.h
 )
 
 SET(uis
-    ./ui/mainWindow.ui
-    ./ui/addObjectDialog.ui
+    ../src/ui/mainWindow.ui
+    ../src/ui/addObjectDialog.ui
 )
 
 #SET(qrc 
@@ -30,21 +30,22 @@ QT4_WRAP_CPP(moc_srcs ${headers_ui})
 
 
 SET(SRC_FILES 
-	./MainWindow.cpp
-	./AddObjectDialog.cpp
-	./KeypointItem.cpp
-	./qtipl.cpp
 	./main.cpp
-	./Camera.cpp
-	./ParametersToolBox.cpp
-	./Settings.cpp
-	./ObjWidget.cpp
+	../src/MainWindow.cpp
+	../src/AddObjectDialog.cpp
+	../src/KeypointItem.cpp
+	../src/qtipl.cpp
+	../src/Camera.cpp
+	../src/ParametersToolBox.cpp
+	../src/Settings.cpp
+	../src/ObjWidget.cpp
 	${moc_srcs} 
 	${moc_uis} 
 	#${srcs_qrc}
 )
 
 SET(INCLUDE_DIRS
+	${CMAKE_CURRENT_SOURCE_DIR}/../src
 	${CMAKE_CURRENT_SOURCE_DIR}
 	${OpenCV_INCLUDE_DIRS}
 	${CMAKE_CURRENT_BINARY_DIR} # for qt ui generated in binary dir
