@@ -10,38 +10,29 @@
 
 #include <opencv2/highgui/highgui.hpp>
 #include <QtCore/QObject>
-#include "Settings.h"
+#include <QtCore/QTimer>
 
 class Camera : public QObject {
 	Q_OBJECT
 public:
-	Camera(int deviceId = Settings::defaultCamera_deviceId(),
-			int width = Settings::defaultCamera_imageWidth(),
-			int height = Settings::defaultCamera_imageHeight(),
-			QObject * parent = 0);
+	Camera(QObject * parent = 0);
 	virtual ~Camera();
 
-	void setDeviceId(int deviceId) {deviceId_=deviceId;}
-	void setImageWidth(int imageWidth) {imageWidth_=imageWidth;}
-	void setImageHeight(int imageHeight) {imageHeight_=imageHeight;}
-
-	int getDeviceId() const {return deviceId_;}
-	int getImageWidth() const {return imageWidth_;}
-	int getImageHeight() const {return imageHeight_;}
+	virtual bool start();
+	virtual void stop();
 
 signals:
-	void ready();
+	void imageReceived(const cv::Mat & image);
 
-public:
-	bool init();
-	void close();
-	IplImage * takeImage();
+public slots:
+	void updateImageRate();
+
+private slots:
+	void takeImage();
 
 private:
 	CvCapture * capture_;
-	int deviceId_;
-	int imageWidth_;
-	int imageHeight_;
+	QTimer cameraTimer_;
 };
 
 #endif /* CAMERA_H_ */

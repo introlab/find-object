@@ -21,21 +21,34 @@
 #include <QtGui/QMessageBox>
 #include <QtGui/QGraphicsScene>
 #include <QtGui/QGraphicsRectItem>
+#include <QtGui/QSpinBox>
 
-MainWindow::MainWindow(QWidget * parent) :
+// Camera ownership transferred
+MainWindow::MainWindow(Camera * camera, QWidget * parent) :
 	QMainWindow(parent),
-	camera_(0)
+	camera_(camera)
 {
 	ui_ = new Ui_mainWindow();
 	ui_->setupUi(this);
 
-	connect(&cameraTimer_, SIGNAL(timeout()), this, SLOT(update()));
+	if(!camera_)
+	{
+		camera_ = new Camera(this);
+	}
+	else
+	{
+		camera_->setParent(this);
+	}
 
 	QByteArray geometry;
 	Settings::loadSettings(Settings::iniDefaultPath(), &geometry);
 	this->restoreGeometry(geometry);
 
 	ui_->toolBox->setupUi();
+	connect((QSpinBox*)ui_->toolBox->getParameterWidget(Settings::kCamera_imageRate()),
+			SIGNAL(editingFinished()),
+			camera_,
+			SLOT(updateImageRate()));
 	ui_->dockWidget_parameters->hide();
 	ui_->menuView->addAction(ui_->dockWidget_parameters->toggleViewAction());
 	ui_->menuView->addAction(ui_->dockWidget_objects->toggleViewAction());
@@ -59,12 +72,8 @@ MainWindow::MainWindow(QWidget * parent) :
 
 MainWindow::~MainWindow()
 {
-	this->stopCamera();
-	if(camera_)
-	{
-		delete camera_;
-		camera_ = 0;
-	}
+	disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
+	camera_->stop();
 	dataTree_ = cv::Mat();
 	qDeleteAll(objects_.begin(), objects_.end());
 	objects_.clear();
@@ -145,7 +154,7 @@ void MainWindow::removeObject(ObjWidget * object)
 void MainWindow::addObject()
 {
 	this->stopCamera();
-	AddObjectDialog dialog(&objects_, this);
+	AddObjectDialog dialog(camera_, &objects_, this);
 	if(dialog.exec() == QDialog::Accepted)
 	{
 		showObject(objects_.last());
@@ -248,16 +257,9 @@ void MainWindow::updateData()
 
 void MainWindow::startCamera()
 {
-	if(camera_)
+	if(camera_->start())
 	{
-		camera_->close();
-		delete camera_;
-	}
-	camera_ = Settings::createCamera();
-	connect(camera_, SIGNAL(ready()), this, SLOT(update()));
-	if(camera_->init())
-	{
-		cameraTimer_.start(1000/Settings::getCamera_imageRate().toInt());
+		connect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
 		ui_->actionStop_camera->setEnabled(true);
 		ui_->actionStart_camera->setEnabled(false);
 	}
@@ -271,16 +273,14 @@ void MainWindow::stopCamera()
 {
 	if(camera_)
 	{
-		cameraTimer_.stop();
-		camera_->close();
-		delete camera_;
-		camera_ = 0;
+		disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
+		camera_->stop();
 	}
 	ui_->actionStop_camera->setEnabled(false);
 	ui_->actionStart_camera->setEnabled(true);
 }
 
-void MainWindow::update()
+void MainWindow::update(const cv::Mat & image)
 {
 	// reset objects color
 	for(int i=0; i<objects_.size(); ++i)
@@ -288,188 +288,184 @@ void MainWindow::update()
 		objects_[i]->resetKptsColor();
 	}
 
-	if(camera_)
+	if(!image.empty())
 	{
-		IplImage * cvImage = camera_->takeImage();
-		if(cvImage)
+		IplImage iplImage = image;
+
+		QTime time;
+		time.start();
+
+		//Convert to grayscale
+		IplImage * imageGrayScale = 0;
+		if(iplImage.nChannels != 1 || iplImage.depth != IPL_DEPTH_8U)
 		{
-			QTime time;
-			time.start();
+			imageGrayScale = cvCreateImage(cvSize(iplImage.width,iplImage.height), IPL_DEPTH_8U, 1);
+			cvCvtColor(&iplImage, imageGrayScale, CV_BGR2GRAY);
+		}
+		cv::Mat img;
+		if(imageGrayScale)
+		{
+			img = cv::Mat(imageGrayScale);
+		}
+		else
+		{
+			img =  cv::Mat(&iplImage);
+		}
 
-			//Convert to grayscale
-			IplImage * imageGrayScale = 0;
-			if(cvImage->nChannels != 1 || cvImage->depth != IPL_DEPTH_8U)
+		// EXTRACT KEYPOINTS
+		cv::FeatureDetector * detector = Settings::createFeaturesDetector();
+		std::vector<cv::KeyPoint> keypoints;
+		detector->detect(img, keypoints);
+		delete detector;
+		ui_->label_timeDetection->setText(QString::number(time.restart()));
+
+		// EXTRACT DESCRIPTORS
+		cv::Mat descriptors;
+		cv::DescriptorExtractor * extractor = Settings::createDescriptorsExtractor();
+		extractor->compute(img, keypoints, descriptors);
+		delete extractor;
+		if(keypoints.size() != descriptors.rows)
+		{
+			printf("ERROR : kpt=%lu != descriptors=%d\n", keypoints.size(), descriptors.rows);
+		}
+		if(imageGrayScale)
+		{
+			cvReleaseImage(&imageGrayScale);
+		}
+		ui_->label_timeExtraction->setText(QString::number(time.restart()));
+
+		// COMPARE
+		int alpha = 20*255/100;
+		if(!dataTree_.empty())
+		{
+			// CREATE INDEX
+			cv::Mat environment(descriptors.rows, descriptors.cols, CV_32F);
+			descriptors.convertTo(environment, CV_32F);
+			cv::flann::Index treeFlannIndex(environment, cv::flann::KDTreeIndexParams());
+			ui_->label_timeIndexing->setText(QString::number(time.restart()));
+
+			// DO NEAREST NEIGHBOR
+			int k = 2;
+			int emax = 64;
+			cv::Mat results(dataTree_.rows, k, CV_32SC1); // results index
+			cv::Mat dists(dataTree_.rows, k, CV_32FC1); // Distance results are CV_32FC1
+			treeFlannIndex.knnSearch(dataTree_, results, dists, k, cv::flann::SearchParams(emax) ); // maximum number of leafs checked
+			ui_->label_timeMatching->setText(QString::number(time.restart()));
+
+
+			// PROCESS RESULTS
+			ui_->imageView_source->setData(keypoints, cv::Mat(), &iplImage);
+			int j=0;
+			std::vector<cv::Point2f> mpts_1, mpts_2;
+			std::vector<int> indexes_1, indexes_2;
+			std::vector<uchar> outlier_mask;
+			for(unsigned int i=0; i<dataTree_.rows; ++i)
 			{
-				imageGrayScale = cvCreateImage(cvSize(cvImage->width,cvImage->height), IPL_DEPTH_8U, 1);
-				cvCvtColor(cvImage, imageGrayScale, CV_BGR2GRAY);
-			}
-			cv::Mat img;
-			if(imageGrayScale)
-			{
-				img = cv::Mat(imageGrayScale);
-			}
-			else
-			{
-				img =  cv::Mat(cvImage);
-			}
-
-			// EXTRACT KEYPOINTS
-			cv::FeatureDetector * detector = Settings::createFeaturesDetector();
-			std::vector<cv::KeyPoint> keypoints;
-			detector->detect(img, keypoints);
-			delete detector;
-			ui_->label_timeDetection->setText(QString::number(time.restart()));
-
-			// EXTRACT DESCRIPTORS
-			cv::Mat descriptors;
-			cv::DescriptorExtractor * extractor = Settings::createDescriptorsExtractor();
-			extractor->compute(img, keypoints, descriptors);
-			delete extractor;
-			if(keypoints.size() != descriptors.rows)
-			{
-				printf("ERROR : kpt=%lu != descriptors=%d\n", keypoints.size(), descriptors.rows);
-			}
-			if(imageGrayScale)
-			{
-				cvReleaseImage(&imageGrayScale);
-			}
-			ui_->label_timeExtraction->setText(QString::number(time.restart()));
-
-			// COMPARE
-			int alpha = 20*255/100;
-			if(!dataTree_.empty())
-			{
-				// CREATE INDEX
-				cv::Mat environment(descriptors.rows, descriptors.cols, CV_32F);
-				descriptors.convertTo(environment, CV_32F);
-				cv::flann::Index treeFlannIndex(environment, cv::flann::KDTreeIndexParams());
-				ui_->label_timeIndexing->setText(QString::number(time.restart()));
-
-				// DO NEAREST NEIGHBOR
-				int k = 2;
-				int emax = 64;
-				cv::Mat results(dataTree_.rows, k, CV_32SC1); // results index
-				cv::Mat dists(dataTree_.rows, k, CV_32FC1); // Distance results are CV_32FC1
-				treeFlannIndex.knnSearch(dataTree_, results, dists, k, cv::flann::SearchParams(emax) ); // maximum number of leafs checked
-				ui_->label_timeMatching->setText(QString::number(time.restart()));
-
-
-				// PROCESS RESULTS
-				ui_->imageView_source->setData(keypoints, cv::Mat(), cvImage);
-				int j=0;
-				std::vector<cv::Point2f> mpts_1, mpts_2;
-				std::vector<int> indexes_1, indexes_2;
-				std::vector<uchar> outlier_mask;
-				for(unsigned int i=0; i<dataTree_.rows; ++i)
+				// Check if this descriptor matches with those of the objects
+				// Apply NNDR
+				if(dists.at<float>(i,0) <= Settings::getNearestNeighbor_nndrRatio().toFloat() * dists.at<float>(i,1))
 				{
-					// Check if this descriptor matches with those of the objects
-					// Apply NNDR
-					if(dists.at<float>(i,0) <= Settings::getNearestNeighbor_nndrRatio().toFloat() * dists.at<float>(i,1))
+					if(j>0)
 					{
-						if(j>0)
-						{
-							mpts_1.push_back(objects_.at(j)->keypoints().at(i-dataRange_.at(j-1)).pt);
-							indexes_1.push_back(i-dataRange_.at(j-1));
-						}
-						else
-						{
-							mpts_1.push_back(objects_.at(j)->keypoints().at(i).pt);
-							indexes_1.push_back(i);
-						}
-						mpts_2.push_back(ui_->imageView_source->keypoints().at(results.at<int>(i,0)).pt);
-						indexes_2.push_back(results.at<int>(i,0));
+						mpts_1.push_back(objects_.at(j)->keypoints().at(i-dataRange_.at(j-1)).pt);
+						indexes_1.push_back(i-dataRange_.at(j-1));
 					}
-
-					if(i+1 >= dataRange_.at(j))
+					else
 					{
-						QLabel * label = ui_->dockWidget_objects->findChild<QLabel*>(QString("%1detection").arg(objects_.at(j)->id()));
-						if(mpts_1.size() >= Settings::getHomography_minimumInliers().toInt())
+						mpts_1.push_back(objects_.at(j)->keypoints().at(i).pt);
+						indexes_1.push_back(i);
+					}
+					mpts_2.push_back(ui_->imageView_source->keypoints().at(results.at<int>(i,0)).pt);
+					indexes_2.push_back(results.at<int>(i,0));
+				}
+
+				if(i+1 >= dataRange_.at(j))
+				{
+					QLabel * label = ui_->dockWidget_objects->findChild<QLabel*>(QString("%1detection").arg(objects_.at(j)->id()));
+					if(mpts_1.size() >= Settings::getHomography_minimumInliers().toInt())
+					{
+						cv::Mat H = findHomography(mpts_1,
+								mpts_2,
+								cv::RANSAC,
+								Settings::getHomography_ransacReprojThr().toDouble(),
+								outlier_mask);
+						int inliers=0, outliers=0;
+						QColor color((Qt::GlobalColor)(j % 12 + 7 ));
+						color.setAlpha(alpha);
+						for(int k=0; k<mpts_1.size();++k)
 						{
-							cv::Mat H = findHomography(mpts_1,
-									mpts_2,
-									cv::RANSAC,
-									Settings::getHomography_ransacReprojThr().toDouble(),
-									outlier_mask);
-							int inliers=0, outliers=0;
-							QColor color((Qt::GlobalColor)(j % 12 + 7 ));
-							color.setAlpha(alpha);
+							if(outlier_mask.at(k))
+							{
+								++inliers;
+							}
+							else
+							{
+								++outliers;
+							}
+						}
+
+						// COLORIZE
+						if(inliers >= Settings::getHomography_minimumInliers().toInt())
+						{
 							for(int k=0; k<mpts_1.size();++k)
 							{
 								if(outlier_mask.at(k))
 								{
-									++inliers;
+									objects_.at(j)->setKptColor(indexes_1.at(k), color);
+									ui_->imageView_source->setKptColor(indexes_2.at(k), color);
 								}
 								else
 								{
-									++outliers;
+									objects_.at(j)->setKptColor(indexes_1.at(k), QColor(0,0,0,alpha));
 								}
 							}
 
-							// COLORIZE
-							if(inliers >= Settings::getHomography_minimumInliers().toInt())
-							{
-								for(int k=0; k<mpts_1.size();++k)
-								{
-									if(outlier_mask.at(k))
-									{
-										objects_.at(j)->setKptColor(indexes_1.at(k), color);
-										ui_->imageView_source->setKptColor(indexes_2.at(k), color);
-									}
-									else
-									{
-										objects_.at(j)->setKptColor(indexes_1.at(k), QColor(0,0,0,alpha));
-									}
-								}
+							label->setText(QString("%1 in %2 out").arg(inliers).arg(outliers));
+							QTransform hTransform(
+									H.at<double>(0,0), H.at<double>(1,0), H.at<double>(2,0),
+									H.at<double>(0,1), H.at<double>(1,1), H.at<double>(2,1),
+									H.at<double>(0,2), H.at<double>(1,2), H.at<double>(2,2));
+							QPen rectPen(color);
+							rectPen.setWidth(4);
+							QGraphicsRectItem * rectItem = new QGraphicsRectItem(objects_.at(j)->image().rect());
+							rectItem->setPen(rectPen);
+							rectItem->setTransform(hTransform);
+							ui_->imageView_source->addRect(rectItem);
 
-								label->setText(QString("%1 in %2 out").arg(inliers).arg(outliers));
-								QTransform hTransform(
-										H.at<double>(0,0), H.at<double>(1,0), H.at<double>(2,0),
-										H.at<double>(0,1), H.at<double>(1,1), H.at<double>(2,1),
-										H.at<double>(0,2), H.at<double>(1,2), H.at<double>(2,2));
-								QPen rectPen(color);
-								rectPen.setWidth(4);
-								QGraphicsRectItem * rectItem = new QGraphicsRectItem(objects_.at(j)->image().rect());
-								rectItem->setPen(rectPen);
-								rectItem->setTransform(hTransform);
-								ui_->imageView_source->addRect(rectItem);
-
-							}
-							else
-							{
-								label->setText(QString("Too low inliers (%1)").arg(inliers));
-							}
 						}
 						else
 						{
-							label->setText(QString("Too low matches (%1)").arg(mpts_1.size()));
+							label->setText(QString("Too low inliers (%1)").arg(inliers));
 						}
-						mpts_1.clear();
-						mpts_2.clear();
-						indexes_1.clear();
-						indexes_2.clear();
-						outlier_mask.clear();
-						++j;
 					}
+					else
+					{
+						label->setText(QString("Too low matches (%1)").arg(mpts_1.size()));
+					}
+					mpts_1.clear();
+					mpts_2.clear();
+					indexes_1.clear();
+					indexes_2.clear();
+					outlier_mask.clear();
+					++j;
 				}
 			}
-			else
-			{
-				ui_->imageView_source->setData(keypoints, cv::Mat(), cvImage);
-			}
-
-			//Update object pictures
-			for(int i=0; i<objects_.size(); ++i)
-			{
-				objects_[i]->update();
-			}
-
-			ui_->label_nfeatures->setText(QString::number(keypoints.size()));
-			ui_->imageView_source->update();
-			ui_->label_timeGui->setText(QString::number(time.restart()));
-
-			cvReleaseImage(&cvImage);
 		}
+		else
+		{
+			ui_->imageView_source->setData(keypoints, cv::Mat(), &iplImage);
+		}
+
+		//Update object pictures
+		for(int i=0; i<objects_.size(); ++i)
+		{
+			objects_[i]->update();
+		}
+
+		ui_->label_nfeatures->setText(QString::number(keypoints.size()));
+		ui_->imageView_source->update();
+		ui_->label_timeGui->setText(QString::number(time.restart()));
 	}
 	ui_->label_detectorDescriptorType->setText(QString("%1/%2").arg(Settings::currentDetectorType()).arg(Settings::currentDescriptorType()));
-	ui_->label_timeRefreshRate->setText(QString("(%1 Hz - %2 Hz)").arg(QString::number(1000/cameraTimer_.interval())).arg(QString::number(int(1000.0f/(float)(updateRate_.restart()) + 1))));
+	ui_->label_timeRefreshRate->setText(QString("(%1 Hz - %2 Hz)").arg(QString::number(Settings::getCamera_imageRate().toInt())).arg(QString::number(int(1000.0f/(float)(updateRate_.restart()) + 1))));
 }

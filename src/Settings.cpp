@@ -291,14 +291,6 @@ cv::DescriptorExtractor * Settings::createDescriptorsExtractor()
 	return extractor;
 }
 
-Camera * Settings::createCamera()
-{
-	return new Camera(
-			getCamera_deviceId().toInt(),
-			getCamera_imageWidth().toInt(),
-			getCamera_imageHeight().toInt());
-}
-
 QString Settings::currentDetectorType()
 {
 	int index = Settings::getDetector_Type().toString().split(':').first().toInt();

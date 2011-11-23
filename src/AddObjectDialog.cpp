@@ -5,6 +5,7 @@
 #include "KeypointItem.h"
 #include "Camera.h"
 #include "qtipl.h"
+#include "Settings.h"
 
 #include <stdio.h>
 
@@ -15,18 +16,14 @@
 #include <opencv2/imgproc/imgproc_c.h>
 #include <opencv2/highgui/highgui_c.h>
 
-AddObjectDialog::AddObjectDialog(QList<ObjWidget*> * objects, QWidget * parent, Qt::WindowFlags f) :
+AddObjectDialog::AddObjectDialog(Camera * camera, QList<ObjWidget*> * objects, QWidget * parent, Qt::WindowFlags f) :
 		QDialog(parent, f),
-		camera_(0),
+		camera_(camera),
 		objects_(objects),
 		cvImage_(0)
 {
 	ui_ = new Ui_addObjectDialog();
 	ui_->setupUi(this);
-
-	camera_ = Settings::createCamera();
-
-	connect(&cameraTimer_, SIGNAL(timeout()), this, SLOT(update()));
 
 	connect(ui_->pushButton_cancel, SIGNAL(clicked()), this, SLOT(cancel()));
 	connect(ui_->pushButton_back, SIGNAL(clicked()), this, SLOT(back()));
@@ -44,15 +41,12 @@ AddObjectDialog::~AddObjectDialog()
 	{
 		cvReleaseImage(&cvImage_);
 	}
-	if(camera_)
-	{
-		delete camera_;
-	}
 	delete ui_;
 }
 
 void AddObjectDialog::closeEvent(QCloseEvent* event)
 {
+	disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
 	QDialog::closeEvent(event);
 }
 
@@ -102,20 +96,20 @@ void AddObjectDialog::setState(int state)
 		ui_->cameraView->setVisible(true);
 		ui_->objectView->setVisible(false);
 		ui_->cameraView->setGraphicsViewMode(false);
-		if(!camera_->init())
+		if(!camera_ || !camera_->start())
 		{
-			QMessageBox::critical(this, tr("Camera error"), tr("Camera initialization failed! (with device %1)").arg(Settings::getCamera_deviceId().toInt()));
+			QMessageBox::critical(this, tr("Camera error"), tr("Camera is not started!"));
 			ui_->pushButton_takePicture->setEnabled(false);
 		}
 		else
 		{
-			cameraTimer_.start(1000/Settings::getCamera_imageRate().toInt());
+			connect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
 		}
 	}
 	else if(state == kSelectFeatures)
 	{
-		cameraTimer_.stop();
-		camera_->close();
+		disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
+		camera_->stop();
 
 		ui_->pushButton_cancel->setEnabled(true);
 		ui_->pushButton_back->setEnabled(true);
@@ -130,8 +124,8 @@ void AddObjectDialog::setState(int state)
 	}
 	else if(state == kVerifySelection)
 	{
-		cameraTimer_.stop();
-		camera_->close();
+		disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
+		camera_->stop();
 
 		ui_->pushButton_cancel->setEnabled(true);
 		ui_->pushButton_back->setEnabled(true);
@@ -204,14 +198,15 @@ void AddObjectDialog::setState(int state)
 	}
 }
 
-void AddObjectDialog::update()
+void AddObjectDialog::update(const cv::Mat & image)
 {
 	if(cvImage_)
 	{
 		cvReleaseImage(&cvImage_);
 		cvImage_ = 0;
 	}
-	cvImage_ = camera_->takeImage();
+	IplImage iplImage = image;
+	cvImage_ = cvCloneImage(& iplImage);
 	if(cvImage_)
 	{
 		// convert to grayscale

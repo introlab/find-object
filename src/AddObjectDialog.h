@@ -16,11 +16,11 @@ class AddObjectDialog : public QDialog {
 	Q_OBJECT
 
 public:
-	AddObjectDialog(QList<ObjWidget*> * objects, QWidget * parent = 0, Qt::WindowFlags f = 0);
+	AddObjectDialog(Camera * camera, QList<ObjWidget*> * objects, QWidget * parent = 0, Qt::WindowFlags f = 0);
 	virtual ~AddObjectDialog();
 
 private slots:
-	void update();
+	void update(const cv::Mat &);
 	void next();
 	void back();
 	void cancel();
@@ -36,7 +36,6 @@ private:
 private:
 	Ui_addObjectDialog * ui_;
 	Camera * camera_;
-	QTimer cameraTimer_;
 	QList<ObjWidget*> * objects_;
 	IplImage * cvImage_;
 

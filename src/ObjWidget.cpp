@@ -1,17 +1,3 @@
-/*
- * Object.cpp
- *
- *  Created on: 2011-10-23
- *      Author: matlab
- */
-
-
-/*
- * VisualObject.h
- *
- *  Created on: 2011-10-21
- *      Author: matlab
- */
 
 #include "ObjWidget.h"
 #include "KeypointItem.h"

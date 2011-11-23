@@ -8,45 +8,23 @@
 #include "Camera.h"
 #include <stdio.h>
 #include <opencv2/imgproc/imgproc_c.h>
+#include "Settings.h"
 
-Camera::Camera(int deviceId,
-		int imageWidth,
-		int imageHeight,
-		QObject * parent) :
+Camera::Camera(QObject * parent) :
 	QObject(parent),
-	capture_(0),
-	deviceId_(deviceId),
-	imageWidth_(imageWidth),
-	imageHeight_(imageHeight)
+	capture_(0)
 {
+	connect(&cameraTimer_, SIGNAL(timeout()), this, SLOT(takeImage()));
 }
 
 Camera::~Camera()
 {
-	this->close();
+	this->stop();
 }
 
-bool Camera::init()
+void Camera::stop()
 {
-	if(!capture_)
-	{
-		capture_ = cvCaptureFromCAM(deviceId_);
-		if(capture_)
-		{
-			cvSetCaptureProperty(capture_, CV_CAP_PROP_FRAME_WIDTH, double(imageWidth_));
-			cvSetCaptureProperty(capture_, CV_CAP_PROP_FRAME_HEIGHT, double(imageHeight_));
-		}
-	}
-	if(!capture_)
-	{
-		printf("Failed to create a capture object!\n");
-		return false;
-	}
-	return true;
-}
-
-void Camera::close()
-{
+	cameraTimer_.stop();
 	if(capture_)
 	{
 		cvReleaseCapture(&capture_);
@@ -54,11 +32,11 @@ void Camera::close()
 	}
 }
 
-IplImage * Camera::takeImage()
+void Camera::takeImage()
 {
-	IplImage * img = 0;
 	if(capture_)
 	{
+		IplImage * img = 0;
 		if(cvGrabFrame(capture_)) // capture a frame
 		{
 			img = cvRetrieveFrame(capture_); // retrieve the captured frame
@@ -67,29 +45,57 @@ IplImage * Camera::takeImage()
 		{
 			printf("CameraVideo: Could not grab a frame, the end of the feed may be reached...\n");
 		}
-	}
 
-	//resize
-	if(img &&
-		imageWidth_ &&
-		imageHeight_ &&
-		imageWidth_ != (unsigned int)img->width &&
-		imageHeight_ != (unsigned int)img->height)
+		//resize
+		if(img &&
+			Settings::getCamera_imageWidth().toInt() &&
+			Settings::getCamera_imageHeight().toInt() &&
+			Settings::getCamera_imageWidth().toInt() != (unsigned int)img->width &&
+			Settings::getCamera_imageHeight().toInt() != (unsigned int)img->height)
+		{
+			// declare a destination IplImage object with correct size, depth and channels
+			cv::Mat imgMat(cvSize(Settings::getCamera_imageWidth().toInt(), Settings::getCamera_imageHeight().toInt()),
+						   img->depth,
+						   img->nChannels );
+
+			//use cvResize to resize source to a destination image (linear interpolation)
+			IplImage resampledImg = imgMat;
+			cvResize(img, &resampledImg);
+			emit imageReceived(imgMat);
+		}
+		else
+		{
+			emit imageReceived(cv::Mat(img, true));
+		}
+	}
+}
+
+bool Camera::start()
+{
+	if(!capture_)
 	{
-		// declare a destination IplImage object with correct size, depth and channels
-		IplImage * resampledImg = cvCreateImage( cvSize(imageWidth_, imageHeight_),
-											   img->depth,
-											   img->nChannels );
-
-		//use cvResize to resize source to a destination image (linear interpolation)
-		cvResize(img, resampledImg);
-		img = resampledImg;
+		if(!capture_)
+		{
+			capture_ = cvCaptureFromCAM(Settings::getCamera_deviceId().toInt());
+			if(capture_)
+			{
+				cvSetCaptureProperty(capture_, CV_CAP_PROP_FRAME_WIDTH, double(Settings::getCamera_imageWidth().toInt()));
+				cvSetCaptureProperty(capture_, CV_CAP_PROP_FRAME_HEIGHT, double(Settings::getCamera_imageHeight().toInt()));
+			}
+		}
+		if(!capture_)
+		{
+			printf("Failed to create a capture object!\n");
+			return false;
+		}
 	}
-	else if(img)
-	{
-		img = cvCloneImage(img);
-	}
 
-	return img;
+	cameraTimer_.start(1000/Settings::getCamera_imageRate().toInt());
+	return true;
+}
+
+void Camera::updateImageRate()
+{
+	cameraTimer_.setInterval(1000/Settings::getCamera_imageRate().toInt());
 }
 

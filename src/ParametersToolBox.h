@@ -22,6 +22,7 @@ public:
 	virtual ~ParametersToolBox();
 
 	void setupUi();
+	QWidget * getParameterWidget(const QString & key);
 
 private:
 	void addParameter(QVBoxLayout * layout, const QString & key, const QVariant & value);
@@ -36,7 +37,6 @@ private slots:
 	void changeParameter(const QString & value);
 	void changeParameter(const int & value);
 	void resetCurrentPage();
-
 };
 
 #endif /* PARAMETERSTOOLBOX_H_ */

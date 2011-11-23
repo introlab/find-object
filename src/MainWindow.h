@@ -23,7 +23,7 @@ class MainWindow : public QMainWindow
 	Q_OBJECT
 
 public:
-	MainWindow(QWidget * parent = 0);
+	MainWindow(Camera * camera = 0, QWidget * parent = 0);
 	virtual ~MainWindow();
 
 protected:
@@ -35,7 +35,7 @@ private slots:
 	void stopCamera();
 	void loadObjects();
 	void saveObjects();
-	void update();
+	void update(const cv::Mat & image);
 	void updateData();
 	void removeObject(ObjWidget * object);
 
@@ -46,7 +46,6 @@ private:
 	Ui_mainWindow * ui_;
 	Camera * camera_;
 	QList<ObjWidget*> objects_;
-	QTimer cameraTimer_;
 	cv::Mat dataTree_;
 	QList<int> dataRange_;
 	QTime updateRate_;

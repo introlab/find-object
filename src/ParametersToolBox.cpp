@@ -25,6 +25,11 @@ ParametersToolBox::~ParametersToolBox()
 {
 }
 
+QWidget * ParametersToolBox::getParameterWidget(const QString & key)
+{
+	return this->findChild<QWidget*>(key);
+}
+
 void ParametersToolBox::resetCurrentPage()
 {
 	const QObjectList & children = this->widget(this->currentIndex())->children();

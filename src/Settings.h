@@ -136,8 +136,6 @@ public:
 	static QString currentDescriptorType();
 	static QString currentDetectorType();
 
-	static Camera * createCamera();
-
 private:
 	Settings(){}
 
