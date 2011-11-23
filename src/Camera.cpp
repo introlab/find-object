@@ -14,6 +14,7 @@ Camera::Camera(QObject * parent) :
 	QObject(parent),
 	capture_(0)
 {
+	qRegisterMetaType<cv::Mat>("cv::Mat");
 	connect(&cameraTimer_, SIGNAL(timeout()), this, SLOT(takeImage()));
 }
 
