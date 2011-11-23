@@ -26,21 +26,27 @@ public:
 	MainWindow(Camera * camera = 0, QWidget * parent = 0);
 	virtual ~MainWindow();
 
+	void loadObjects(const QString & fileName);
+	void saveObjects(const QString & fileName);
+	void startProcessing();
+	void stopProcessing();
+
 protected:
 	virtual void closeEvent(QCloseEvent * event);
 
 private slots:
-	void addObject();
-	void startCamera();
-	void stopCamera();
 	void loadObjects();
 	void saveObjects();
-	void update(const cv::Mat & image);
-	void updateData();
 	void removeObject(ObjWidget * object);
+	void update(const cv::Mat & image);
+
+signals:
+	void objectsFound(const QMap<int, QPoint> &);
 
 private:
+	void addObject();
 	void showObject(ObjWidget * obj);
+	void updateData();
 
 private:
 	Ui_mainWindow * ui_;

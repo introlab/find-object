@@ -64,7 +64,7 @@ MainWindow::MainWindow(Camera * camera, QWidget * parent) :
 	// Actions
 	connect(ui_->actionAdd_object, SIGNAL(triggered()), this, SLOT(addObject()));
 	connect(ui_->actionStart_camera, SIGNAL(triggered()), this, SLOT(startCamera()));
-	connect(ui_->actionStop_camera, SIGNAL(triggered()), this, SLOT(stopCamera()));
+	connect(ui_->actionStop_camera, SIGNAL(triggered()), this, SLOT(stopProcessing()));
 	connect(ui_->actionExit, SIGNAL(triggered()), this, SLOT(close()));
 	connect(ui_->actionSave_objects, SIGNAL(triggered()), this, SLOT(saveObjects()));
 	connect(ui_->actionLoad_objects, SIGNAL(triggered()), this, SLOT(loadObjects()));
@@ -86,38 +86,55 @@ void MainWindow::closeEvent(QCloseEvent * event)
 	QMainWindow::closeEvent(event);
 }
 
+void MainWindow::loadObjects(const QString & fileName)
+{
+	QFile file(fileName);
+	file.open(QIODevice::ReadOnly);
+	QDataStream in(&file);
+	while(!in.atEnd())
+	{
+		ObjWidget * obj = new ObjWidget();
+		obj->load(in);
+		bool alreadyLoaded = false;
+		for(int i=0; i<objects_.size(); ++i)
+		{
+			if(objects_.at(i)->id() == obj->id())
+			{
+				alreadyLoaded = true;
+				break;
+			}
+		}
+		if(!alreadyLoaded)
+		{
+			objects_.append(obj);
+			showObject(obj);
+		}
+		else
+		{
+			delete obj;
+		}
+	}
+	file.close();
+}
+
+void MainWindow::saveObjects(const QString & fileName)
+{
+	QFile file(fileName);
+	file.open(QIODevice::WriteOnly);
+	QDataStream out(&file);
+	for(int i=0; i<objects_.size(); ++i)
+	{
+		objects_.at(i)->save(out);
+	}
+	file.close();
+}
+
 void MainWindow::loadObjects()
 {
 	QString fileName = QFileDialog::getOpenFileName(this, tr("Load objects..."), Settings::workingDirectory(), "*.obj");
 	if(!fileName.isEmpty())
 	{
-		QFile file(fileName);
-		file.open(QIODevice::ReadOnly);
-		QDataStream in(&file);
-		while(!in.atEnd())
-		{
-			ObjWidget * obj = new ObjWidget();
-			obj->load(in);
-			bool alreadyLoaded = false;
-			for(int i=0; i<objects_.size(); ++i)
-			{
-				if(objects_.at(i)->id() == obj->id())
-				{
-					alreadyLoaded = true;
-					break;
-				}
-			}
-			if(!alreadyLoaded)
-			{
-				objects_.append(obj);
-				showObject(obj);
-			}
-			else
-			{
-				delete obj;
-			}
-		}
-		file.close();
+		loadObjects(fileName);
 	}
 }
 void MainWindow::saveObjects()
@@ -129,15 +146,7 @@ void MainWindow::saveObjects()
 		{
 			fileName.append(".obj");//default
 		}
-
-		QFile file(fileName);
-		file.open(QIODevice::WriteOnly);
-		QDataStream out(&file);
-		for(int i=0; i<objects_.size(); ++i)
-		{
-			objects_.at(i)->save(out);
-		}
-		file.close();
+		saveObjects(fileName);
 	}
 }
 
@@ -153,7 +162,7 @@ void MainWindow::removeObject(ObjWidget * object)
 
 void MainWindow::addObject()
 {
-	this->stopCamera();
+	this->stopProcessing();
 	AddObjectDialog dialog(camera_, &objects_, this);
 	if(dialog.exec() == QDialog::Accepted)
 	{
@@ -255,7 +264,7 @@ void MainWindow::updateData()
 	}
 }
 
-void MainWindow::startCamera()
+void MainWindow::startProcessing()
 {
 	if(camera_->start())
 	{
@@ -269,7 +278,7 @@ void MainWindow::startCamera()
 	}
 }
 
-void MainWindow::stopCamera()
+void MainWindow::stopProcessing()
 {
 	if(camera_)
 	{
@@ -354,11 +363,15 @@ void MainWindow::update(const cv::Mat & image)
 
 
 			// PROCESS RESULTS
-			ui_->imageView_source->setData(keypoints, cv::Mat(), &iplImage);
+			if(this->isVisible())
+			{
+				ui_->imageView_source->setData(keypoints, cv::Mat(), &iplImage);
+			}
 			int j=0;
 			std::vector<cv::Point2f> mpts_1, mpts_2;
 			std::vector<int> indexes_1, indexes_2;
 			std::vector<uchar> outlier_mask;
+			QMap<int, QPoint> objectsPos;
 			for(int i=0; i<dataTree_.rows; ++i)
 			{
 				// Check if this descriptor matches with those of the objects
@@ -375,7 +388,7 @@ void MainWindow::update(const cv::Mat & image)
 						mpts_1.push_back(objects_.at(j)->keypoints().at(i).pt);
 						indexes_1.push_back(i);
 					}
-					mpts_2.push_back(ui_->imageView_source->keypoints().at(results.at<int>(i,0)).pt);
+					mpts_2.push_back(keypoints.at(results.at<int>(i,0)).pt);
 					indexes_2.push_back(results.at<int>(i,0));
 				}
 
@@ -407,31 +420,43 @@ void MainWindow::update(const cv::Mat & image)
 						// COLORIZE
 						if(inliers >= Settings::getHomography_minimumInliers().toInt())
 						{
-							for(unsigned int k=0; k<mpts_1.size();++k)
+							if(this->isVisible())
 							{
-								if(outlier_mask.at(k))
+								for(unsigned int k=0; k<mpts_1.size();++k)
 								{
-									objects_.at(j)->setKptColor(indexes_1.at(k), color);
-									ui_->imageView_source->setKptColor(indexes_2.at(k), color);
-								}
-								else
-								{
-									objects_.at(j)->setKptColor(indexes_1.at(k), QColor(0,0,0,alpha));
+									if(outlier_mask.at(k))
+									{
+										objects_.at(j)->setKptColor(indexes_1.at(k), color);
+										ui_->imageView_source->setKptColor(indexes_2.at(k), color);
+									}
+									else
+									{
+										objects_.at(j)->setKptColor(indexes_1.at(k), QColor(0,0,0,alpha));
+									}
 								}
 							}
 
-							label->setText(QString("%1 in %2 out").arg(inliers).arg(outliers));
 							QTransform hTransform(
-									H.at<double>(0,0), H.at<double>(1,0), H.at<double>(2,0),
-									H.at<double>(0,1), H.at<double>(1,1), H.at<double>(2,1),
-									H.at<double>(0,2), H.at<double>(1,2), H.at<double>(2,2));
-							QPen rectPen(color);
-							rectPen.setWidth(4);
-							QGraphicsRectItem * rectItem = new QGraphicsRectItem(objects_.at(j)->image().rect());
-							rectItem->setPen(rectPen);
-							rectItem->setTransform(hTransform);
-							ui_->imageView_source->addRect(rectItem);
+								H.at<double>(0,0), H.at<double>(1,0), H.at<double>(2,0),
+								H.at<double>(0,1), H.at<double>(1,1), H.at<double>(2,1),
+								H.at<double>(0,2), H.at<double>(1,2), H.at<double>(2,2));
 
+							// find center of object
+							QRect rect = objects_.at(j)->image().rect();
+							QPoint pos(rect.width()/2, rect.height()/2);
+							objectsPos.insert(objects_.at(j)->id(), hTransform.map(pos));
+
+							// add rectangle
+							if(this->isVisible())
+							{
+								label->setText(QString("%1 in %2 out").arg(inliers).arg(outliers));
+								QPen rectPen(color);
+								rectPen.setWidth(4);
+								QGraphicsRectItem * rectItem = new QGraphicsRectItem(rect);
+								rectItem->setPen(rectPen);
+								rectItem->setTransform(hTransform);
+								ui_->imageView_source->addRect(rectItem);
+							}
 						}
 						else
 						{
@@ -450,16 +475,24 @@ void MainWindow::update(const cv::Mat & image)
 					++j;
 				}
 			}
+
+			if(objectsPos.size())
+			{
+				emit objectsFound(objectsPos);
+			}
 		}
-		else
+		else if(this->isVisible())
 		{
 			ui_->imageView_source->setData(keypoints, cv::Mat(), &iplImage);
 		}
 
-		//Update object pictures
-		for(int i=0; i<objects_.size(); ++i)
+		if(this->isVisible())
 		{
-			objects_[i]->update();
+			//Update object pictures
+			for(int i=0; i<objects_.size(); ++i)
+			{
+				objects_[i]->update();
+			}
 		}
 
 		ui_->label_nfeatures->setText(QString::number(keypoints.size()));
