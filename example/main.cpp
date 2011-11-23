@@ -129,7 +129,7 @@ int main(int argc, char * argv[])
 		std::vector<cv::Point2f> mpts_1, mpts_2; // Used for homography
 		std::vector<int> indexes_1, indexes_2; // Used for homography
 		std::vector<uchar> outlier_mask;  // Used for homography
-		for(unsigned int i=0; i<objectData.rows; ++i)
+		for(int i=0; i<objectData.rows; ++i)
 		{
 			// Check if this descriptor matches with those of the objects
 			// Apply NNDR
@@ -144,7 +144,7 @@ int main(int argc, char * argv[])
 		}
 
 		// FIND HOMOGRAPHY
-		int minInliers = 8;
+		unsigned int minInliers = 8;
 		if(mpts_1.size() >= minInliers)
 		{
 			time.start();
@@ -155,7 +155,7 @@ int main(int argc, char * argv[])
 					outlier_mask);
 			printf("Time finding homography = %d ms\n", time.restart());
 			int inliers=0, outliers=0;
-			for(int k=0; k<mpts_1.size();++k)
+			for(unsigned int k=0; k<mpts_1.size();++k)
 			{
 				if(outlier_mask.at(k))
 				{
@@ -175,7 +175,7 @@ int main(int argc, char * argv[])
 			QColor color(Qt::green);
 			int alpha = 130;
 			color.setAlpha(alpha);
-			for(int k=0; k<mpts_1.size();++k)
+			for(unsigned int k=0; k<mpts_1.size();++k)
 			{
 				if(outlier_mask.at(k))
 				{

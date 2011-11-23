@@ -168,7 +168,7 @@ void ObjWidget::setSizedFeatures(bool on)
 	_sizedFeatures->setChecked(on);
 	if(graphicsViewInitialized_)
 	{
-		for(unsigned int i=0; i<keypointItems_.size() && i<keypoints_.size(); ++i)
+		for(unsigned int i=0; i<(unsigned int)keypointItems_.size() && i<keypoints_.size(); ++i)
 		{
 			float size = 14;
 			if(on && keypoints_[i].size>14.0f)
@@ -254,7 +254,7 @@ void ObjWidget::resetKptsColor()
 	rectItems_.clear();
 }
 
-void ObjWidget::setKptColor(unsigned int index, const QColor & color)
+void ObjWidget::setKptColor(int index, const QColor & color)
 {
 	if(index < kptColors_.size())
 	{
@@ -311,7 +311,7 @@ void ObjWidget::save(QDataStream & streamPtr) const
 {
 	streamPtr << id_ << detectorType_ << descriptorType_;
 	streamPtr << (int)keypoints_.size();
-	for(int j=0; j<keypoints_.size(); ++j)
+	for(unsigned int j=0; j<keypoints_.size(); ++j)
 	{
 		streamPtr << keypoints_.at(j).angle <<
 				keypoints_.at(j).class_id <<

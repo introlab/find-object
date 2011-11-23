@@ -74,7 +74,7 @@ void ParametersToolBox::setupUi()
 		if(currentItem == 0 || currentItem->objectName().compare(group) != 0)
 		{
 			currentItem = new QWidget(this);
-			int index = this->addItem(currentItem, group);
+			this->addItem(currentItem, group);
 			currentItem->setObjectName(group);
 			QVBoxLayout * layout = new QVBoxLayout(currentItem);
 			currentItem->setLayout(layout);

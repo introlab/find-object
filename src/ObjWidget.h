@@ -40,7 +40,7 @@ public:
 			const cv::Mat & descriptors,
 			const IplImage * image);
 	void resetKptsColor();
-	void setKptColor(unsigned int index, const QColor & color);
+	void setKptColor(int index, const QColor & color);
 	void setGraphicsViewMode(bool on);
 	void setAutoScale(bool autoScale);
 	void setSizedFeatures(bool on);

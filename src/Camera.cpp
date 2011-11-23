@@ -50,8 +50,8 @@ void Camera::takeImage()
 		if(img &&
 			Settings::getCamera_imageWidth().toInt() &&
 			Settings::getCamera_imageHeight().toInt() &&
-			Settings::getCamera_imageWidth().toInt() != (unsigned int)img->width &&
-			Settings::getCamera_imageHeight().toInt() != (unsigned int)img->height)
+			Settings::getCamera_imageWidth().toInt() != img->width &&
+			Settings::getCamera_imageHeight().toInt() != img->height)
 		{
 			// declare a destination IplImage object with correct size, depth and channels
 			cv::Mat imgMat(cvSize(Settings::getCamera_imageWidth().toInt(), Settings::getCamera_imageHeight().toInt()),

@@ -173,7 +173,7 @@ void AddObjectDialog::setState(int state)
 			cv::DescriptorExtractor * extractor = Settings::createDescriptorsExtractor();
 			extractor->compute(cvImage_, selectedKeypoints, descriptors);
 			delete extractor;
-			if(selectedKeypoints.size() != descriptors.rows)
+			if(selectedKeypoints.size() != (unsigned int)descriptors.rows)
 			{
 				printf("ERROR : keypoints=%lu != descriptors=%d\n", selectedKeypoints.size(), descriptors.rows);
 			}
@@ -231,8 +231,8 @@ void AddObjectDialog::update(const cv::Mat & image)
 
 CvRect AddObjectDialog::computeROI(const std::vector<cv::KeyPoint> & kpts)
 {
-	CvRect roi;
-	int x1,x2,h1,h2;
+	CvRect roi = cvRect(0,0,0,0);
+	int x1=0,x2=0,h1=0,h2=0;
 	for(unsigned int i=0; i<kpts.size(); ++i)
 	{
 		float radius = kpts.at(i).size / 2;

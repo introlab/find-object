@@ -324,7 +324,7 @@ void MainWindow::update(const cv::Mat & image)
 		cv::DescriptorExtractor * extractor = Settings::createDescriptorsExtractor();
 		extractor->compute(img, keypoints, descriptors);
 		delete extractor;
-		if(keypoints.size() != descriptors.rows)
+		if((int)keypoints.size() != descriptors.rows)
 		{
 			printf("ERROR : kpt=%lu != descriptors=%d\n", keypoints.size(), descriptors.rows);
 		}
@@ -359,7 +359,7 @@ void MainWindow::update(const cv::Mat & image)
 			std::vector<cv::Point2f> mpts_1, mpts_2;
 			std::vector<int> indexes_1, indexes_2;
 			std::vector<uchar> outlier_mask;
-			for(unsigned int i=0; i<dataTree_.rows; ++i)
+			for(int i=0; i<dataTree_.rows; ++i)
 			{
 				// Check if this descriptor matches with those of the objects
 				// Apply NNDR
@@ -382,7 +382,7 @@ void MainWindow::update(const cv::Mat & image)
 				if(i+1 >= dataRange_.at(j))
 				{
 					QLabel * label = ui_->dockWidget_objects->findChild<QLabel*>(QString("%1detection").arg(objects_.at(j)->id()));
-					if(mpts_1.size() >= Settings::getHomography_minimumInliers().toInt())
+					if(mpts_1.size() >= Settings::getHomography_minimumInliers().toUInt())
 					{
 						cv::Mat H = findHomography(mpts_1,
 								mpts_2,
@@ -392,7 +392,7 @@ void MainWindow::update(const cv::Mat & image)
 						int inliers=0, outliers=0;
 						QColor color((Qt::GlobalColor)(j % 12 + 7 ));
 						color.setAlpha(alpha);
-						for(int k=0; k<mpts_1.size();++k)
+						for(unsigned int k=0; k<mpts_1.size();++k)
 						{
 							if(outlier_mask.at(k))
 							{
@@ -407,7 +407,7 @@ void MainWindow::update(const cv::Mat & image)
 						// COLORIZE
 						if(inliers >= Settings::getHomography_minimumInliers().toInt())
 						{
-							for(int k=0; k<mpts_1.size();++k)
+							for(unsigned int k=0; k<mpts_1.size();++k)
 							{
 								if(outlier_mask.at(k))
 								{
