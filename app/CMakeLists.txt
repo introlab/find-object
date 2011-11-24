@@ -16,12 +16,12 @@ SET(uis
     ../src/ui/aboutDialog.ui
 )
 
-#SET(qrc 
-#    ./GuiLib.qrc
-#)
+SET(qrc 
+    ../src/resources.qrc
+)
 
 # generate rules for building source files from the resources
-#QT4_ADD_RESOURCES(srcs_qrc ${qrc})
+QT4_ADD_RESOURCES(srcs_qrc ${qrc})
 
 #Generate .h files from the .ui files
 QT4_WRAP_UI(moc_uis ${uis})
@@ -44,7 +44,7 @@ SET(SRC_FILES
 	../src/AboutDialog.cpp
 	${moc_srcs} 
 	${moc_uis} 
-	#${srcs_qrc}
+	${srcs_qrc}
 )
 
 SET(INCLUDE_DIRS
@@ -63,6 +63,29 @@ SET(LIBRARIES
 
 #include files
 INCLUDE_DIRECTORIES(${INCLUDE_DIRS})
+
+# For Apple set the icns file containing icons
+IF(APPLE AND BUILD_AS_BUNDLE)
+  # set how it shows up in the Info.plist file
+  SET(MACOSX_BUNDLE_ICON_FILE ${PROJECT_NAME}.icns) 
+  # set where in the bundle to put the icns file
+  SET_SOURCE_FILES_PROPERTIES(${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+  # include the icns file in the target
+  SET(SRC_FILES ${SRC_FILES} ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}.icns)
+ENDIF(APPLE AND BUILD_AS_BUNDLE)
+
+# Add exe icon resource
+IF(WIN32)
+  IF( MINGW )
+    # resource compilation for MinGW
+    ADD_CUSTOM_COMMAND( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/AppIco.o
+                        COMMAND windres.exe -I${CMAKE_CURRENT_SOURCE_DIR} -i${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}.rc 
+                             -o ${CMAKE_CURRENT_BINARY_DIR}/AppIco.o )
+    SET(SRC_FILES ${SRC_FILES} ${CMAKE_CURRENT_BINARY_DIR}/AppIco.o)
+  ELSE( MINGW )
+    SET(SRC_FILES ${SRC_FILES} ${PROJECT_NAME}.rc)
+  ENDIF( MINGW )
+ENDIF(WIN32)
 
 # create an executable file
 IF(APPLE AND BUILD_AS_BUNDLE)

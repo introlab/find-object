@@ -175,7 +175,7 @@ void AddObjectDialog::setState(int state)
 			delete extractor;
 			if(selectedKeypoints.size() != (unsigned int)descriptors.rows)
 			{
-				printf("ERROR : keypoints=%lu != descriptors=%d\n", selectedKeypoints.size(), descriptors.rows);
+				printf("ERROR : keypoints=%d != descriptors=%d\n", (int)selectedKeypoints.size(), descriptors.rows);
 			}
 
 			CvRect roi = computeROI(selectedKeypoints);

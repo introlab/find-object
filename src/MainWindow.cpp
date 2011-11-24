@@ -351,7 +351,7 @@ void MainWindow::update(const cv::Mat & image)
 		delete extractor;
 		if((int)keypoints.size() != descriptors.rows)
 		{
-			printf("ERROR : kpt=%lu != descriptors=%d\n", keypoints.size(), descriptors.rows);
+			printf("ERROR : kpt=%d != descriptors=%d\n", (int)keypoints.size(), descriptors.rows);
 		}
 		if(imageGrayScale)
 		{
