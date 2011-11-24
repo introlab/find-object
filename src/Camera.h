@@ -20,15 +20,20 @@ public:
 
 	virtual bool start();
 	virtual void stop();
+	virtual bool isRunning() {return cameraTimer_.isActive();}
 
 signals:
 	void imageReceived(const cv::Mat & image);
 
 public slots:
-	void updateImageRate();
+	virtual void updateImageRate();
 
 private slots:
-	void takeImage();
+	virtual void takeImage();
+
+protected:
+	void startTimer();
+	void stopTimer();
 
 private:
 	CvCapture * capture_;

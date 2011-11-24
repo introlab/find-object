@@ -25,7 +25,7 @@ Camera::~Camera()
 
 void Camera::stop()
 {
-	cameraTimer_.stop();
+	stopTimer();
 	if(capture_)
 	{
 		cvReleaseCapture(&capture_);
@@ -75,28 +75,43 @@ bool Camera::start()
 {
 	if(!capture_)
 	{
-		if(!capture_)
+		capture_ = cvCaptureFromCAM(Settings::getCamera_deviceId().toInt());
+		if(capture_)
 		{
-			capture_ = cvCaptureFromCAM(Settings::getCamera_deviceId().toInt());
-			if(capture_)
-			{
-				cvSetCaptureProperty(capture_, CV_CAP_PROP_FRAME_WIDTH, double(Settings::getCamera_imageWidth().toInt()));
-				cvSetCaptureProperty(capture_, CV_CAP_PROP_FRAME_HEIGHT, double(Settings::getCamera_imageHeight().toInt()));
-			}
-		}
-		if(!capture_)
-		{
-			printf("Failed to create a capture object!\n");
-			return false;
+			cvSetCaptureProperty(capture_, CV_CAP_PROP_FRAME_WIDTH, double(Settings::getCamera_imageWidth().toInt()));
+			cvSetCaptureProperty(capture_, CV_CAP_PROP_FRAME_HEIGHT, double(Settings::getCamera_imageHeight().toInt()));
 		}
 	}
+	if(!capture_)
+	{
+		printf("Failed to create a capture object!\n");
+		return false;
+	}
 
-	cameraTimer_.start(1000/Settings::getCamera_imageRate().toInt());
+	startTimer();
 	return true;
+}
+
+void Camera::startTimer()
+{
+	updateImageRate();
+	cameraTimer_.start();
+}
+
+void Camera::stopTimer()
+{
+	cameraTimer_.stop();
 }
 
 void Camera::updateImageRate()
 {
-	cameraTimer_.setInterval(1000/Settings::getCamera_imageRate().toInt());
+	if(Settings::getCamera_imageRate().toInt())
+	{
+		cameraTimer_.setInterval(1000/Settings::getCamera_imageRate().toInt());
+	}
+	else
+	{
+		cameraTimer_.setInterval(0);
+	}
 }
 
