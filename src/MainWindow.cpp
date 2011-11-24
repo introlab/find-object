@@ -8,6 +8,7 @@
 #include "Camera.h"
 #include "Settings.h"
 #include "ParametersToolBox.h"
+#include "AboutDialog.h"
 
 #include <iostream>
 #include <stdio.h>
@@ -31,6 +32,7 @@ MainWindow::MainWindow(Camera * camera, QWidget * parent) :
 {
 	ui_ = new Ui_mainWindow();
 	ui_->setupUi(this);
+	aboutDialog_ = new AboutDialog(this);
 
 	if(!camera_)
 	{
@@ -69,6 +71,7 @@ MainWindow::MainWindow(Camera * camera, QWidget * parent) :
 	connect(ui_->actionExit, SIGNAL(triggered()), this, SLOT(close()));
 	connect(ui_->actionSave_objects, SIGNAL(triggered()), this, SLOT(saveObjects()));
 	connect(ui_->actionLoad_objects, SIGNAL(triggered()), this, SLOT(loadObjects()));
+	connect(ui_->actionAbout, SIGNAL(triggered()), aboutDialog_ , SLOT(exec()));
 
 	startProcessing();
 }

@@ -17,6 +17,7 @@ class ObjWidget;
 class Camera;
 class ParametersToolBox;
 class QLabel;
+class AboutDialog;
 
 class MainWindow : public QMainWindow
 {
@@ -55,6 +56,7 @@ private:
 private:
 	Ui_mainWindow * ui_;
 	Camera * camera_;
+	AboutDialog * aboutDialog_;
 	QList<ObjWidget*> objects_;
 	cv::Mat dataTree_;
 	QList<int> dataRange_;

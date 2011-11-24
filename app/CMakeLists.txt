@@ -7,11 +7,13 @@ SET(headers_ui
 	../src/ObjWidget.h
 	../src/Camera.h
 	../src/ParametersToolBox.h
+	../src/AboutDialog.h
 )
 
 SET(uis
     ../src/ui/mainWindow.ui
     ../src/ui/addObjectDialog.ui
+    ../src/ui/aboutDialog.ui
 )
 
 #SET(qrc 
@@ -39,6 +41,7 @@ SET(SRC_FILES
 	../src/ParametersToolBox.cpp
 	../src/Settings.cpp
 	../src/ObjWidget.cpp
+	../src/AboutDialog.cpp
 	${moc_srcs} 
 	${moc_uis} 
 	#${srcs_qrc}
