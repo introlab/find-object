@@ -1,6 +1,6 @@
 # Top-Level CmakeLists.txt
 cmake_minimum_required(VERSION 2.8.2)
-PROJECT( FindObject )
+PROJECT( Find-Object )
 SET(PROJECT_PREFIX find_object)
 
 ADD_DEFINITIONS(-DPROJECT_PREFIX="${PROJECT_PREFIX}")
@@ -10,7 +10,8 @@ ADD_DEFINITIONS( "-Wall" )
 #######################
 # VERSION
 #######################
-SET(PROJECT_VERSION "0.1.1")
+SET(PROJECT_VERSION "0.2.0")
+ADD_DEFINITIONS(-DPROJECT_VERSION="${PROJECT_VERSION}")
 
 STRING(REGEX MATCHALL "[0-9]" PROJECT_VERSION_PARTS "${PROJECT_VERSION}")
 
