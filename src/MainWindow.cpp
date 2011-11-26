@@ -23,6 +23,7 @@
 #include <QtGui/QGraphicsScene>
 #include <QtGui/QGraphicsRectItem>
 #include <QtGui/QSpinBox>
+#include <QtGui/QStatusBar>
 
 // Camera ownership transferred
 MainWindow::MainWindow(Camera * camera, QWidget * parent) :
@@ -33,6 +34,7 @@ MainWindow::MainWindow(Camera * camera, QWidget * parent) :
 	ui_ = new Ui_mainWindow();
 	ui_->setupUi(this);
 	aboutDialog_ = new AboutDialog(this);
+	this->setStatusBar(new QStatusBar());
 
 	if(!camera_)
 	{
@@ -73,7 +75,7 @@ MainWindow::MainWindow(Camera * camera, QWidget * parent) :
 	connect(ui_->actionLoad_objects, SIGNAL(triggered()), this, SLOT(loadObjects()));
 	connect(ui_->actionAbout, SIGNAL(triggered()), aboutDialog_ , SLOT(exec()));
 
-	startProcessing();
+	QTimer::singleShot(1000, this, SLOT(startProcessing()));
 }
 
 MainWindow::~MainWindow()
@@ -282,14 +284,17 @@ void MainWindow::updateData()
 
 void MainWindow::startProcessing()
 {
+	this->statusBar()->showMessage(tr("Starting camera..."));
 	if(camera_->start())
 	{
 		connect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
 		ui_->actionStop_camera->setEnabled(true);
 		ui_->actionStart_camera->setEnabled(false);
+		this->statusBar()->showMessage(tr("Camera started."), 2000);
 	}
 	else
 	{
+		this->statusBar()->clearMessage();
 		QMessageBox::critical(this, tr("Camera error"), tr("Camera initialization failed! (with device %1)").arg(Settings::getCamera_deviceId().toInt()));
 	}
 }
