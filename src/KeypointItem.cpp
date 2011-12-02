@@ -1,4 +1,6 @@
-
+/*
+ * Copyright (C) 2011, Mathieu Labbe - IntRoLab - Universite de Sherbrooke
+ */
 
 #include "KeypointItem.h"
 

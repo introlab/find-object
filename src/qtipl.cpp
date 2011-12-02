@@ -1,3 +1,6 @@
+/*
+ * Copyright (C) 2011, Mathieu Labbe - IntRoLab - Universite de Sherbrooke
+ */
 
 #include "qtipl.h"
 #include <opencv2/core/core_c.h>

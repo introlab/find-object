@@ -1,8 +1,5 @@
 /*
- * Camera.cpp
- *
- *  Created on: 2011-10-21
- *      Author: matlab
+ * Copyright (C) 2011, Mathieu Labbe - IntRoLab - Universite de Sherbrooke
  */
 
 #include "Camera.h"

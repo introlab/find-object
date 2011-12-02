@@ -1,3 +1,7 @@
+/*
+ * Copyright (C) 2011, Mathieu Labbe - IntRoLab - Universite de Sherbrooke
+ */
+
 #ifndef ADDOBJECTDIALOG_H_
 #define ADDOBJECTDIALOG_H_
 

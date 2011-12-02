@@ -1,3 +1,6 @@
+/*
+ * Copyright (C) 2011, Mathieu Labbe - IntRoLab - Universite de Sherbrooke
+ */
 
 #ifndef KEYPOINTITEM_H_
 #define KEYPOINTITEM_H_

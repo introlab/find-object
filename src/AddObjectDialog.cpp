@@ -1,3 +1,6 @@
+/*
+ * Copyright (C) 2011, Mathieu Labbe - IntRoLab - Universite de Sherbrooke
+ */
 
 #include "AddObjectDialog.h"
 #include "ui_addObjectDialog.h"

@@ -1,8 +1,5 @@
 /*
- * ParametersToolbox.cpp
- *
- *  Created on: 2011-10-22
- *      Author: matlab
+ * Copyright (C) 2011, Mathieu Labbe - IntRoLab - Universite de Sherbrooke
  */
 
 #include "ParametersToolBox.h"
