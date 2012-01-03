@@ -78,7 +78,7 @@ MainWindow::MainWindow(Camera * camera, QWidget * parent) :
 	connect(ui_->actionLoad_objects, SIGNAL(triggered()), this, SLOT(loadObjects()));
 	connect(ui_->actionAbout, SIGNAL(triggered()), aboutDialog_ , SLOT(exec()));
 
-	QTimer::singleShot(1000, this, SLOT(startProcessing()));
+	QTimer::singleShot(10, this, SLOT(startProcessing()));
 }
 
 MainWindow::~MainWindow()

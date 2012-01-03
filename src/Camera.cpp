@@ -52,9 +52,10 @@ void Camera::takeImage()
 			Settings::getCamera_imageHeight().toInt() != img->height)
 		{
 			// declare a destination IplImage object with correct size, depth and channels
-			cv::Mat imgMat(cvSize(Settings::getCamera_imageWidth().toInt(), Settings::getCamera_imageHeight().toInt()),
-						   img->depth,
-						   img->nChannels );
+			cv::Mat headerImg = img;
+			cv::Mat imgMat(Settings::getCamera_imageHeight().toInt(),
+						   Settings::getCamera_imageWidth().toInt(),
+						   headerImg.type());
 
 			//use cvResize to resize source to a destination image (linear interpolation)
 			IplImage resampledImg = imgMat;
