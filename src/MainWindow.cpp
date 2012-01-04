@@ -400,7 +400,7 @@ void MainWindow::update(const cv::Mat & image)
 			std::vector<cv::Point2f> mpts_1, mpts_2;
 			std::vector<int> indexes_1, indexes_2;
 			std::vector<uchar> outlier_mask;
-			QMap<int, QPoint> objectsPos;
+			QMap<int, QPair<QRect, QTransform> > objectsDetected;
 			float minMatchedDistance = -1.0f;
 			float maxMatchedDistance = -1.0f;
 			for(int i=0; i<dataTree_.rows; ++i)
@@ -500,9 +500,11 @@ void MainWindow::update(const cv::Mat & image)
 
 							// find center of object
 							QRect rect = objects_.at(j)->image().rect();
-							QPoint pos(rect.width()/2, rect.height()/2);
-							objectsPos.insert(objects_.at(j)->id(), hTransform.map(pos));
-
+							objectsDetected.insert(objects_.at(j)->id(), QPair<QRect, QTransform>(rect, hTransform));
+							// Example getting the center of the object in the scene using the homography
+							//QPoint pos(rect.width()/2, rect.height()/2);
+							//hTransform.map(pos)
+							
 							// add rectangle
 							if(this->isVisible())
 							{
@@ -535,9 +537,9 @@ void MainWindow::update(const cv::Mat & image)
 			ui_->label_minMatchedDistance->setNum(minMatchedDistance);
 			ui_->label_maxMatchedDistance->setNum(maxMatchedDistance);
 
-			if(objectsPos.size())
+			if(objectsDetected.size())
 			{
-				emit objectsFound(objectsPos);
+				emit objectsFound(objectsDetected);
 			}
 		}
 		else if(this->isVisible())

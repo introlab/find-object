@@ -49,7 +49,7 @@ private slots:
 	void update(const cv::Mat & image);
 
 signals:
-	void objectsFound(const QMap<int, QPoint> &);
+	void objectsFound(const QMap<int, QPair<QRect, QTransform> > &);
 
 private:
 	void showObject(ObjWidget * obj);
