@@ -405,6 +405,8 @@ void MainWindow::update(const cv::Mat & image)
 			float maxMatchedDistance = -1.0f;
 			for(int i=0; i<dataTree_.rows; ++i)
 			{
+				QColor color((Qt::GlobalColor)(j % 12 + 7 ));
+				color.setAlpha(alpha);
 				bool matched = false;
 				// Check if this descriptor matches with those of the objects
 				if(Settings::getNearestNeighbor_nndrRatioUsed() &&
@@ -447,84 +449,96 @@ void MainWindow::update(const cv::Mat & image)
 					}
 					mpts_2.push_back(keypoints.at(results.at<int>(i,0)).pt);
 					indexes_2.push_back(results.at<int>(i,0));
+
+					// colorize all matched if homography is not computed
+					if(!Settings::getHomography_homographyComputed())
+					{
+						objects_.at(j)->setKptColor(indexes_1.back(), color);
+						ui_->imageView_source->setKptColor(results.at<int>(i,0), color);
+					}
 				}
 
 				if(i+1 >= dataRange_.at(j))
 				{
 					QLabel * label = ui_->dockWidget_objects->findChild<QLabel*>(QString("%1detection").arg(objects_.at(j)->id()));
-					if(mpts_1.size() >= Settings::getHomography_minimumInliers())
+					if(Settings::getHomography_homographyComputed())
 					{
-						cv::Mat H = findHomography(mpts_1,
-								mpts_2,
-								cv::RANSAC,
-								Settings::getHomography_ransacReprojThr(),
-								outlier_mask);
-						uint inliers=0, outliers=0;
-						QColor color((Qt::GlobalColor)(j % 12 + 7 ));
-						color.setAlpha(alpha);
-						for(unsigned int k=0; k<mpts_1.size();++k)
+						if(mpts_1.size() >= Settings::getHomography_minimumInliers())
 						{
-							if(outlier_mask.at(k))
+							cv::Mat H = findHomography(mpts_1,
+									mpts_2,
+									cv::RANSAC,
+									Settings::getHomography_ransacReprojThr(),
+									outlier_mask);
+							uint inliers=0, outliers=0;
+							for(unsigned int k=0; k<mpts_1.size();++k)
 							{
-								++inliers;
-							}
-							else
-							{
-								++outliers;
-							}
-						}
-
-						// COLORIZE
-						if(inliers >= Settings::getHomography_minimumInliers())
-						{
-							if(this->isVisible())
-							{
-								for(unsigned int k=0; k<mpts_1.size();++k)
+								if(outlier_mask.at(k))
 								{
-									if(outlier_mask.at(k))
-									{
-										objects_.at(j)->setKptColor(indexes_1.at(k), color);
-										ui_->imageView_source->setKptColor(indexes_2.at(k), color);
-									}
-									else
-									{
-										objects_.at(j)->setKptColor(indexes_1.at(k), QColor(0,0,0,alpha));
-									}
+									++inliers;
+								}
+								else
+								{
+									++outliers;
 								}
 							}
 
-							QTransform hTransform(
-								H.at<double>(0,0), H.at<double>(1,0), H.at<double>(2,0),
-								H.at<double>(0,1), H.at<double>(1,1), H.at<double>(2,1),
-								H.at<double>(0,2), H.at<double>(1,2), H.at<double>(2,2));
-
-							// find center of object
-							QRect rect = objects_.at(j)->image().rect();
-							objectsDetected.insert(objects_.at(j)->id(), QPair<QRect, QTransform>(rect, hTransform));
-							// Example getting the center of the object in the scene using the homography
-							//QPoint pos(rect.width()/2, rect.height()/2);
-							//hTransform.map(pos)
-							
-							// add rectangle
-							if(this->isVisible())
+							// COLORIZE
+							if(inliers >= Settings::getHomography_minimumInliers())
 							{
-								label->setText(QString("%1 in %2 out").arg(inliers).arg(outliers));
-								QPen rectPen(color);
-								rectPen.setWidth(4);
-								QGraphicsRectItem * rectItem = new QGraphicsRectItem(rect);
-								rectItem->setPen(rectPen);
-								rectItem->setTransform(hTransform);
-								ui_->imageView_source->addRect(rectItem);
+								if(this->isVisible())
+								{
+									for(unsigned int k=0; k<mpts_1.size();++k)
+									{
+										if(outlier_mask.at(k))
+										{
+											objects_.at(j)->setKptColor(indexes_1.at(k), color);
+											ui_->imageView_source->setKptColor(indexes_2.at(k), color);
+										}
+										else
+										{
+											objects_.at(j)->setKptColor(indexes_1.at(k), QColor(0,0,0,alpha));
+										}
+									}
+								}
+
+								QTransform hTransform(
+									H.at<double>(0,0), H.at<double>(1,0), H.at<double>(2,0),
+									H.at<double>(0,1), H.at<double>(1,1), H.at<double>(2,1),
+									H.at<double>(0,2), H.at<double>(1,2), H.at<double>(2,2));
+
+								// find center of object
+								QRect rect = objects_.at(j)->image().rect();
+								objectsDetected.insert(objects_.at(j)->id(), QPair<QRect, QTransform>(rect, hTransform));
+								// Example getting the center of the object in the scene using the homography
+								//QPoint pos(rect.width()/2, rect.height()/2);
+								//hTransform.map(pos)
+
+								// add rectangle
+								if(this->isVisible())
+								{
+									label->setText(QString("%1 in %2 out").arg(inliers).arg(outliers));
+									QPen rectPen(color);
+									rectPen.setWidth(4);
+									QGraphicsRectItem * rectItem = new QGraphicsRectItem(rect);
+									rectItem->setPen(rectPen);
+									rectItem->setTransform(hTransform);
+									ui_->imageView_source->addRect(rectItem);
+								}
+							}
+							else
+							{
+								label->setText(QString("Too low inliers (%1)").arg(inliers));
 							}
 						}
 						else
 						{
-							label->setText(QString("Too low inliers (%1)").arg(inliers));
+							label->setText(QString("Too low matches (%1)").arg(mpts_1.size()));
 						}
 					}
 					else
 					{
-						label->setText(QString("Too low matches (%1)").arg(mpts_1.size()));
+						label->setText(QString("%1 matches").arg(mpts_1.size()));
 					}
 					mpts_1.clear();
 					mpts_2.clear();

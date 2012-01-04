@@ -126,6 +126,7 @@ class Settings
 
 	PARAMETER(General, nextObjID, uint, 1);
 
+	PARAMETER(Homography, homographyComputed, bool, true);
 	PARAMETER(Homography, ransacReprojThr, double, 1.0);
 	PARAMETER(Homography, minimumInliers, uint, 10);
 
