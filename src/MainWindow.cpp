@@ -27,6 +27,7 @@
 #include <QtGui/QGraphicsRectItem>
 #include <QtGui/QSpinBox>
 #include <QtGui/QStatusBar>
+#include <QtGui/QProgressDialog>
 
 // Camera ownership transferred
 MainWindow::MainWindow(Camera * camera, QWidget * parent) :
@@ -199,7 +200,7 @@ void MainWindow::showObject(ObjWidget * obj)
 		QList<ObjWidget*> objs = ui_->objects_area->findChildren<ObjWidget*>();
 		QVBoxLayout * vLayout = new QVBoxLayout();
 		obj->setMinimumSize(obj->image().width(), obj->image().height());
-		int id = Settings::getGeneral_nextObjID().toInt();
+		int id = Settings::getGeneral_nextObjID();
 		if(obj->id() == 0)
 		{
 			obj->setId(id++);
@@ -298,7 +299,7 @@ void MainWindow::startProcessing()
 	else
 	{
 		this->statusBar()->clearMessage();
-		QMessageBox::critical(this, tr("Camera error"), tr("Camera initialization failed! (with device %1)").arg(Settings::getCamera_deviceId().toInt()));
+		QMessageBox::critical(this, tr("Camera error"), tr("Camera initialization failed! (with device %1)").arg(Settings::getCamera_deviceId()));
 	}
 }
 
@@ -369,7 +370,7 @@ void MainWindow::update(const cv::Mat & image)
 
 		// COMPARE
 		int alpha = 20*255/100;
-		if(!dataTree_.empty())
+		if(!dataTree_.empty() && (Settings::getNearestNeighbor_nndrRatioUsed() || Settings::getNearestNeighbor_minDistanceUsed()))
 		{
 			// CREATE INDEX
 			cv::Mat environment(descriptors.rows, descriptors.cols, CV_32F);
@@ -378,7 +379,11 @@ void MainWindow::update(const cv::Mat & image)
 			ui_->label_timeIndexing->setText(QString::number(time.restart()));
 
 			// DO NEAREST NEIGHBOR
-			int k = 2;
+			int k = 1;
+			if(Settings::getNearestNeighbor_nndrRatioUsed())
+			{
+				k = 2;
+			}
 			int emax = 64;
 			cv::Mat results(dataTree_.rows, k, CV_32SC1); // results index
 			cv::Mat dists(dataTree_.rows, k, CV_32FC1); // Distance results are CV_32FC1
@@ -396,11 +401,39 @@ void MainWindow::update(const cv::Mat & image)
 			std::vector<int> indexes_1, indexes_2;
 			std::vector<uchar> outlier_mask;
 			QMap<int, QPoint> objectsPos;
+			float minMatchedDistance = -1.0f;
+			float maxMatchedDistance = -1.0f;
 			for(int i=0; i<dataTree_.rows; ++i)
 			{
+				bool matched = false;
 				// Check if this descriptor matches with those of the objects
-				// Apply NNDR
-				if(dists.at<float>(i,0) <= Settings::getNearestNeighbor_nndrRatio().toFloat() * dists.at<float>(i,1))
+				if(Settings::getNearestNeighbor_nndrRatioUsed() &&
+				   dists.at<float>(i,0) <= Settings::getNearestNeighbor_nndrRatio() * dists.at<float>(i,1))
+				{
+					matched = true;
+				}
+				if((matched || !Settings::getNearestNeighbor_nndrRatioUsed()) &&
+				   Settings::getNearestNeighbor_minDistanceUsed())
+				{
+					if(dists.at<float>(i,0) <= Settings::getNearestNeighbor_minDistance())
+					{
+						matched = true;
+					}
+					else
+					{
+						matched = false;
+					}
+				}
+				if(minMatchedDistance == -1 || minMatchedDistance>dists.at<float>(i,0))
+				{
+					minMatchedDistance = dists.at<float>(i,0);
+				}
+				if(maxMatchedDistance == -1 || maxMatchedDistance<dists.at<float>(i,0))
+				{
+					maxMatchedDistance = dists.at<float>(i,0);
+				}
+
+				if(matched)
 				{
 					if(j>0)
 					{
@@ -419,14 +452,14 @@ void MainWindow::update(const cv::Mat & image)
 				if(i+1 >= dataRange_.at(j))
 				{
 					QLabel * label = ui_->dockWidget_objects->findChild<QLabel*>(QString("%1detection").arg(objects_.at(j)->id()));
-					if(mpts_1.size() >= Settings::getHomography_minimumInliers().toUInt())
+					if(mpts_1.size() >= Settings::getHomography_minimumInliers())
 					{
 						cv::Mat H = findHomography(mpts_1,
 								mpts_2,
 								cv::RANSAC,
-								Settings::getHomography_ransacReprojThr().toDouble(),
+								Settings::getHomography_ransacReprojThr(),
 								outlier_mask);
-						int inliers=0, outliers=0;
+						uint inliers=0, outliers=0;
 						QColor color((Qt::GlobalColor)(j % 12 + 7 ));
 						color.setAlpha(alpha);
 						for(unsigned int k=0; k<mpts_1.size();++k)
@@ -442,7 +475,7 @@ void MainWindow::update(const cv::Mat & image)
 						}
 
 						// COLORIZE
-						if(inliers >= Settings::getHomography_minimumInliers().toInt())
+						if(inliers >= Settings::getHomography_minimumInliers())
 						{
 							if(this->isVisible())
 							{
@@ -499,6 +532,8 @@ void MainWindow::update(const cv::Mat & image)
 					++j;
 				}
 			}
+			ui_->label_minMatchedDistance->setNum(minMatchedDistance);
+			ui_->label_maxMatchedDistance->setNum(maxMatchedDistance);
 
 			if(objectsPos.size())
 			{
@@ -533,9 +568,9 @@ void MainWindow::update(const cv::Mat & image)
 	// Refresh the label only after each 1000 ms
 	if(refreshStartTime_.elapsed() > 1000)
 	{
-		if(Settings::getCamera_imageRate().toInt()>0)
+		if(Settings::getCamera_imageRate()>0)
 		{
-			ui_->label_timeRefreshRate->setText(QString("(%1 Hz - %2 Hz)").arg(QString::number(Settings::getCamera_imageRate().toInt())).arg(QString::number(lowestRefreshRate_)));
+			ui_->label_timeRefreshRate->setText(QString("(%1 Hz - %2 Hz)").arg(QString::number(Settings::getCamera_imageRate())).arg(QString::number(lowestRefreshRate_)));
 		}
 		else
 		{

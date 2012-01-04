@@ -15,13 +15,29 @@ class Camera;
 typedef QMap<QString, QVariant> ParametersMap; // Key, value
 typedef QMap<QString, QString> ParametersType; // Key, type
 
+typedef unsigned int uint;
+
 // MACRO BEGIN
+
+#define PARAMETER_GETTER_bool(PREFIX, NAME) \
+	static bool get##PREFIX##_##NAME() {return parameters_.value(#PREFIX "/" #NAME).toBool();}
+#define PARAMETER_GETTER_int(PREFIX, NAME) \
+	static int get##PREFIX##_##NAME() {return parameters_.value(#PREFIX "/" #NAME).toInt();}
+#define PARAMETER_GETTER_uint(PREFIX, NAME) \
+	static uint get##PREFIX##_##NAME() {return parameters_.value(#PREFIX "/" #NAME).toUInt();}
+#define PARAMETER_GETTER_float(PREFIX, NAME) \
+	static float get##PREFIX##_##NAME() {return parameters_.value(#PREFIX "/" #NAME).toFloat();}
+#define PARAMETER_GETTER_double(PREFIX, NAME) \
+	static double get##PREFIX##_##NAME() {return parameters_.value(#PREFIX "/" #NAME).toDouble();}
+#define PARAMETER_GETTER_QString(PREFIX, NAME) \
+	static QString get##PREFIX##_##NAME() {return parameters_.value(#PREFIX "/" #NAME).toString();}
+
 #define PARAMETER(PREFIX, NAME, TYPE, DEFAULT_VALUE) \
 	public: \
 		static QString k##PREFIX##_##NAME() {return QString(#PREFIX "/" #NAME);} \
 		static TYPE default##PREFIX##_##NAME() {return DEFAULT_VALUE;} \
 		static QString type##PREFIX##_##NAME() {return QString(#TYPE);} \
-		static QVariant get##PREFIX##_##NAME() {return parameters_.value(#PREFIX "/" #NAME);} \
+		PARAMETER_GETTER_##TYPE(PREFIX, NAME) \
 		static void set##PREFIX##_##NAME(const TYPE & value) {parameters_[#PREFIX "/" #NAME] = value;} \
 	private: \
 		class Dummy##PREFIX##_##NAME { \
@@ -65,11 +81,11 @@ class Settings
 	PARAMETER(GoodFeaturesToTrack, useHarrisDetector, bool, cv::GoodFeaturesToTrackDetector::Params().useHarrisDetector);
 	PARAMETER(GoodFeaturesToTrack, k, double, cv::GoodFeaturesToTrackDetector::Params().k);
 
-	PARAMETER(Orb, nFeatures, unsigned int, 700);
+	PARAMETER(Orb, nFeatures, uint, 700);
 	PARAMETER(Orb, scaleFactor, float, cv::ORB::CommonParams().scale_factor_);
-	PARAMETER(Orb, nLevels, unsigned int, cv::ORB::CommonParams().n_levels_);
-	PARAMETER(Orb, firstLevel, unsigned int, cv::ORB::CommonParams().first_level_);
-	PARAMETER(Orb, edgeThreshold, int, cv::ORB::CommonParams().edge_threshold_);
+	PARAMETER(Orb, nLevels, uint, cv::ORB::CommonParams().n_levels_);
+	PARAMETER(Orb, firstLevel, uint, cv::ORB::CommonParams().first_level_);
+	PARAMETER(Orb, edgeThreshold, uint, cv::ORB::CommonParams().edge_threshold_);
 
 	PARAMETER(Mser, delta, int, cvMSERParams().delta);
 	PARAMETER(Mser, minArea, int, cvMSERParams().minArea);
@@ -103,12 +119,15 @@ class Settings
 	PARAMETER(Surf, upright, bool, false);
 	PARAMETER(Surf, extended, bool, false);
 
-	PARAMETER(NearestNeighbor, nndrRatio, float, 0.8f); // NNDR RATIO
+	PARAMETER(NearestNeighbor, nndrRatioUsed, bool, true);
+	PARAMETER(NearestNeighbor, nndrRatio, float, 0.8f);
+	PARAMETER(NearestNeighbor, minDistanceUsed, bool, false);
+	PARAMETER(NearestNeighbor, minDistance, float, 1.6f);
 
-	PARAMETER(General, nextObjID, unsigned int, 1);
+	PARAMETER(General, nextObjID, uint, 1);
 
 	PARAMETER(Homography, ransacReprojThr, double, 1.0);
-	PARAMETER(Homography, minimumInliers, int, 10);
+	PARAMETER(Homography, minimumInliers, uint, 10);
 
 public:
 	virtual ~Settings(){}

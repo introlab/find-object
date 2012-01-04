@@ -157,11 +157,11 @@ void ParametersToolBox::addParameter(QVBoxLayout * layout,
 
 	if(def>0.0)
 	{
-		widget->setMaximum(def*10.0);
+		widget->setMaximum(def*1000000.0);
 	}
 	else if(def<0.0)
 	{
-		widget->setMinimum(def*10.0);
+		widget->setMinimum(def*1000000.0);
 		widget->setMaximum(0.0);
 	}
 	widget->setValue(value);

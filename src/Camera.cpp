@@ -46,15 +46,15 @@ void Camera::takeImage()
 
 		//resize
 		if(img &&
-			Settings::getCamera_imageWidth().toInt() &&
-			Settings::getCamera_imageHeight().toInt() &&
-			Settings::getCamera_imageWidth().toInt() != img->width &&
-			Settings::getCamera_imageHeight().toInt() != img->height)
+			Settings::getCamera_imageWidth() &&
+			Settings::getCamera_imageHeight() &&
+			Settings::getCamera_imageWidth() != img->width &&
+			Settings::getCamera_imageHeight() != img->height)
 		{
 			// declare a destination IplImage object with correct size, depth and channels
 			cv::Mat headerImg = img;
-			cv::Mat imgMat(Settings::getCamera_imageHeight().toInt(),
-						   Settings::getCamera_imageWidth().toInt(),
+			cv::Mat imgMat(Settings::getCamera_imageHeight(),
+						   Settings::getCamera_imageWidth(),
 						   headerImg.type());
 
 			//use cvResize to resize source to a destination image (linear interpolation)
@@ -73,11 +73,11 @@ bool Camera::start()
 {
 	if(!capture_)
 	{
-		capture_ = cvCaptureFromCAM(Settings::getCamera_deviceId().toInt());
+		capture_ = cvCaptureFromCAM(Settings::getCamera_deviceId());
 		if(capture_)
 		{
-			cvSetCaptureProperty(capture_, CV_CAP_PROP_FRAME_WIDTH, double(Settings::getCamera_imageWidth().toInt()));
-			cvSetCaptureProperty(capture_, CV_CAP_PROP_FRAME_HEIGHT, double(Settings::getCamera_imageHeight().toInt()));
+			cvSetCaptureProperty(capture_, CV_CAP_PROP_FRAME_WIDTH, double(Settings::getCamera_imageWidth()));
+			cvSetCaptureProperty(capture_, CV_CAP_PROP_FRAME_HEIGHT, double(Settings::getCamera_imageHeight()));
 		}
 	}
 	if(!capture_)
@@ -103,9 +103,9 @@ void Camera::stopTimer()
 
 void Camera::updateImageRate()
 {
-	if(Settings::getCamera_imageRate().toInt())
+	if(Settings::getCamera_imageRate())
 	{
-		cameraTimer_.setInterval(1000/Settings::getCamera_imageRate().toInt());
+		cameraTimer_.setInterval(1000/Settings::getCamera_imageRate());
 	}
 	else
 	{

@@ -92,7 +92,7 @@ void Settings::saveSettings(const QString & fileName, const QByteArray & windowG
 cv::FeatureDetector * Settings::createFeaturesDetector()
 {
 	cv::FeatureDetector * detector = 0;
-	QString str = getDetector_Type().toString();
+	QString str = getDetector_Type();
 	QStringList split = str.split(':');
 	if(split.size()==2)
 	{
@@ -109,13 +109,13 @@ cv::FeatureDetector * Settings::createFeaturesDetector()
 					if(strategies.at(index).compare("Dense") == 0)
 					{
 						cv::DenseFeatureDetector::Params params;
-						params.initFeatureScale = getDense_initFeatureScale().toFloat();
-						params.featureScaleLevels = getDense_featureScaleLevels().toInt();
-						params.featureScaleMul = getDense_featureScaleMul().toFloat();
-						params.initXyStep = getDense_initXyStep().toInt();
-						params.initImgBound = getDense_initImgBound().toInt();
-						params.varyXyStepWithScale = getDense_varyXyStepWithScale().toBool();
-						params.varyImgBoundWithScale = getDense_varyImgBoundWithScale().toBool();
+						params.initFeatureScale = getDense_initFeatureScale();
+						params.featureScaleLevels = getDense_featureScaleLevels();
+						params.featureScaleMul = getDense_featureScaleMul();
+						params.initXyStep = getDense_initXyStep();
+						params.initImgBound = getDense_initImgBound();
+						params.varyXyStepWithScale = getDense_varyXyStepWithScale();
+						params.varyImgBoundWithScale = getDense_varyImgBoundWithScale();
 						detector = new cv::DenseFeatureDetector(params);
 					}
 					break;
@@ -123,20 +123,20 @@ cv::FeatureDetector * Settings::createFeaturesDetector()
 					if(strategies.at(index).compare("Fast") == 0)
 					{
 						detector = new cv::FastFeatureDetector(
-								getFast_threshold().toInt(),
-								getFast_nonmaxSuppression().toBool());
+								getFast_threshold(),
+								getFast_nonmaxSuppression());
 					}
 					break;
 				case 2:
 					if(strategies.at(index).compare("GoodFeaturesToTrack") == 0)
 					{
 						cv::GoodFeaturesToTrackDetector::Params params;
-						params.maxCorners = getGoodFeaturesToTrack_maxCorners().toInt();
-						params.qualityLevel = getGoodFeaturesToTrack_qualityLevel().toDouble();
-						params.minDistance = getGoodFeaturesToTrack_minDistance().toDouble();
-						params.blockSize = getGoodFeaturesToTrack_blockSize().toInt();
-						params.useHarrisDetector = getGoodFeaturesToTrack_useHarrisDetector().toBool();
-						params.k = getGoodFeaturesToTrack_k().toDouble();
+						params.maxCorners = getGoodFeaturesToTrack_maxCorners();
+						params.qualityLevel = getGoodFeaturesToTrack_qualityLevel();
+						params.minDistance = getGoodFeaturesToTrack_minDistance();
+						params.blockSize = getGoodFeaturesToTrack_blockSize();
+						params.useHarrisDetector = getGoodFeaturesToTrack_useHarrisDetector();
+						params.k = getGoodFeaturesToTrack_k();
 						detector = new cv::GoodFeaturesToTrackDetector(params);
 					}
 					break;
@@ -144,15 +144,15 @@ cv::FeatureDetector * Settings::createFeaturesDetector()
 					if(strategies.at(index).compare("Mser") == 0)
 					{
 						CvMSERParams params = cvMSERParams();
-						params.delta = getMser_delta().toInt();
-						params.maxArea = getMser_maxArea().toInt();
-						params.minArea = getMser_minArea().toInt();
-						params.maxVariation = getMser_maxVariation().toFloat();
-						params.minDiversity = getMser_minDiversity().toFloat();
-						params.maxEvolution = getMser_maxEvolution().toInt();
-						params.areaThreshold = getMser_areaThreshold().toDouble();
-						params.minMargin = getMser_minMargin().toDouble();
-						params.edgeBlurSize = getMser_edgeBlurSize().toInt();
+						params.delta = getMser_delta();
+						params.maxArea = getMser_maxArea();
+						params.minArea = getMser_minArea();
+						params.maxVariation = getMser_maxVariation();
+						params.minDiversity = getMser_minDiversity();
+						params.maxEvolution = getMser_maxEvolution();
+						params.areaThreshold = getMser_areaThreshold();
+						params.minMargin = getMser_minMargin();
+						params.edgeBlurSize = getMser_edgeBlurSize();
 						detector = new cv::MserFeatureDetector(params);
 					}
 					break;
@@ -160,12 +160,12 @@ cv::FeatureDetector * Settings::createFeaturesDetector()
 					if(strategies.at(index).compare("Orb") == 0)
 					{
 						cv::ORB::CommonParams params;
-						params.scale_factor_ = getOrb_scaleFactor().toFloat();
-						params.n_levels_ = getOrb_nLevels().toUInt();
-						params.first_level_ = getOrb_firstLevel().toUInt();
-						params.edge_threshold_ = getOrb_edgeThreshold().toInt();
+						params.scale_factor_ = getOrb_scaleFactor();
+						params.n_levels_ = getOrb_nLevels();
+						params.first_level_ = getOrb_firstLevel();
+						params.edge_threshold_ = getOrb_edgeThreshold();
 						detector = new cv::OrbFeatureDetector(
-								getOrb_nFeatures().toUInt(),
+								getOrb_nFeatures(),
 								params);
 					}
 					break;
@@ -173,13 +173,13 @@ cv::FeatureDetector * Settings::createFeaturesDetector()
 					if(strategies.at(index).compare("Sift") == 0)
 					{
 						cv::SIFT::DetectorParams detectorParams;
-						detectorParams.edgeThreshold = getSift_edgeThreshold().toDouble();
-						detectorParams.threshold = getSift_threshold().toDouble();
+						detectorParams.edgeThreshold = getSift_edgeThreshold();
+						detectorParams.threshold = getSift_threshold();
 						cv::SIFT::CommonParams commonParams;
-						commonParams.angleMode = getSift_angleMode().toInt();
-						commonParams.firstOctave = getSift_firstOctave().toInt();
-						commonParams.nOctaveLayers = getSift_nOctaveLayers().toInt();
-						commonParams.nOctaves = getSift_nOctaves().toInt();
+						commonParams.angleMode = getSift_angleMode();
+						commonParams.firstOctave = getSift_firstOctave();
+						commonParams.nOctaveLayers = getSift_nOctaveLayers();
+						commonParams.nOctaves = getSift_nOctaves();
 						detector = new cv::SiftFeatureDetector(
 								detectorParams,
 								commonParams);
@@ -189,11 +189,11 @@ cv::FeatureDetector * Settings::createFeaturesDetector()
 					if(strategies.at(index).compare("Star") == 0)
 					{
 						CvStarDetectorParams params = cvStarDetectorParams();
-						params.lineThresholdBinarized = getStar_lineThresholdBinarized().toInt();
-						params.lineThresholdProjected = getStar_lineThresholdProjected().toInt();
-						params.maxSize = getStar_maxSize().toInt();
-						params.responseThreshold = getStar_responseThreshold().toInt();
-						params.suppressNonmaxSize = getStar_suppressNonmaxSize().toInt();
+						params.lineThresholdBinarized = getStar_lineThresholdBinarized();
+						params.lineThresholdProjected = getStar_lineThresholdProjected();
+						params.maxSize = getStar_maxSize();
+						params.responseThreshold = getStar_responseThreshold();
+						params.suppressNonmaxSize = getStar_suppressNonmaxSize();
 						detector = new cv::StarFeatureDetector(params);
 					}
 					break;
@@ -201,10 +201,10 @@ cv::FeatureDetector * Settings::createFeaturesDetector()
 					if(strategies.at(index).compare("Surf") == 0)
 					{
 						detector = new cv::SurfFeatureDetector(
-								getSurf_hessianThreshold().toDouble(),
-								getSurf_octaves().toInt(),
-								getSurf_octaveLayers().toInt(),
-								getSurf_upright().toBool());
+								getSurf_hessianThreshold(),
+								getSurf_octaves(),
+								getSurf_octaveLayers(),
+								getSurf_upright());
 					}
 					break;
 				default:
@@ -219,7 +219,7 @@ cv::FeatureDetector * Settings::createFeaturesDetector()
 cv::DescriptorExtractor * Settings::createDescriptorsExtractor()
 {
 	cv::DescriptorExtractor * extractor = 0;
-	QString str = getDescriptor_Type().toString();
+	QString str = getDescriptor_Type();
 	QStringList split = str.split(':');
 	if(split.size()==2)
 	{
@@ -236,17 +236,17 @@ cv::DescriptorExtractor * Settings::createDescriptorsExtractor()
 					if(strategies.at(index).compare("Brief") == 0)
 					{
 						extractor = new cv::BriefDescriptorExtractor(
-								getBrief_bytes().toInt());
+								getBrief_bytes());
 					}
 					break;
 				case 1:
 					if(strategies.at(index).compare("Orb") == 0)
 					{
 						cv::ORB::CommonParams params;
-						params.scale_factor_ = getOrb_scaleFactor().toFloat();
-						params.n_levels_ = getOrb_nLevels().toUInt();
-						params.first_level_ = getOrb_firstLevel().toUInt();
-						params.edge_threshold_ = getOrb_edgeThreshold().toInt();
+						params.scale_factor_ = getOrb_scaleFactor();
+						params.n_levels_ = getOrb_nLevels();
+						params.first_level_ = getOrb_firstLevel();
+						params.edge_threshold_ = getOrb_edgeThreshold();
 						extractor = new cv::OrbDescriptorExtractor(params);
 					}
 					break;
@@ -254,14 +254,14 @@ cv::DescriptorExtractor * Settings::createDescriptorsExtractor()
 					if(strategies.at(index).compare("Sift") == 0)
 					{
 						cv::SIFT::DescriptorParams descriptorParams;
-						descriptorParams.isNormalize = getSift_isNormalize().toBool();
-						descriptorParams.magnification = getSift_magnification().toDouble();
-						descriptorParams.recalculateAngles = getSift_recalculateAngles().toBool();
+						descriptorParams.isNormalize = getSift_isNormalize();
+						descriptorParams.magnification = getSift_magnification();
+						descriptorParams.recalculateAngles = getSift_recalculateAngles();
 						cv::SIFT::CommonParams commonParams;
-						commonParams.angleMode = getSift_angleMode().toInt();
-						commonParams.firstOctave = getSift_firstOctave().toInt();
-						commonParams.nOctaveLayers = getSift_nOctaveLayers().toInt();
-						commonParams.nOctaves = getSift_nOctaves().toInt();
+						commonParams.angleMode = getSift_angleMode();
+						commonParams.firstOctave = getSift_firstOctave();
+						commonParams.nOctaveLayers = getSift_nOctaveLayers();
+						commonParams.nOctaves = getSift_nOctaves();
 						extractor = new cv::SiftDescriptorExtractor(
 								descriptorParams,
 								commonParams);
@@ -271,10 +271,10 @@ cv::DescriptorExtractor * Settings::createDescriptorsExtractor()
 					if(strategies.at(index).compare("Surf") == 0)
 					{
 						extractor = new cv::SurfDescriptorExtractor(
-								getSurf_octaves().toInt(),
-								getSurf_octaveLayers().toInt(),
-								getSurf_extended().toBool(),
-								getSurf_upright().toBool());
+								getSurf_octaves(),
+								getSurf_octaveLayers(),
+								getSurf_extended(),
+								getSurf_upright());
 					}
 					break;
 				default:
@@ -289,13 +289,13 @@ cv::DescriptorExtractor * Settings::createDescriptorsExtractor()
 
 QString Settings::currentDetectorType()
 {
-	int index = Settings::getDetector_Type().toString().split(':').first().toInt();
-	return getDetector_Type().toString().split(':').last().split(';').at(index);
+	int index = Settings::getDetector_Type().split(':').first().toInt();
+	return getDetector_Type().split(':').last().split(';').at(index);
 }
 
 QString Settings::currentDescriptorType()
 {
-	int index = Settings::getDescriptor_Type().toString().split(':').first().toInt();
-	return getDescriptor_Type().toString().split(':').last().split(';').at(index);
+	int index = Settings::getDescriptor_Type().split(':').first().toInt();
+	return getDescriptor_Type().split(':').last().split(';').at(index);
 }
 
