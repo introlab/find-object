@@ -99,7 +99,7 @@ void ParametersToolBox::addParameter(QVBoxLayout * layout,
 	{
 		addParameter(layout, key, value.toInt());
 	}
-	else if(type.compare("unsigned int") == 0)
+	else if(type.compare("uint") == 0)
 	{
 		addParameter(layout, key, value.toInt());
 	}
