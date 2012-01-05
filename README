@@ -20,7 +20,7 @@ Windows
  $ cmake -G"MinGW Makefiles" ..
  $ make
  $ cd ../bin
- $ find_object
+ $ FindObject.exe
  
 +---------------------------------------------------
 + Packaging
