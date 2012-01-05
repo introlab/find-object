@@ -353,31 +353,38 @@ void MainWindow::update(const cv::Mat & image)
 		delete detector;
 		ui_->label_timeDetection->setText(QString::number(time.restart()));
 
-		// EXTRACT DESCRIPTORS
 		cv::Mat descriptors;
-		cv::DescriptorExtractor * extractor = Settings::createDescriptorsExtractor();
-		extractor->compute(img, keypoints, descriptors);
-		delete extractor;
-		if((int)keypoints.size() != descriptors.rows)
+		if(keypoints.size())
 		{
-			printf("ERROR : kpt=%d != descriptors=%d\n", (int)keypoints.size(), descriptors.rows);
+			// EXTRACT DESCRIPTORS
+			cv::DescriptorExtractor * extractor = Settings::createDescriptorsExtractor();
+			extractor->compute(img, keypoints, descriptors);
+			delete extractor;
+			if((int)keypoints.size() != descriptors.rows)
+			{
+				printf("ERROR : kpt=%d != descriptors=%d\n", (int)keypoints.size(), descriptors.rows);
+			}
+			if(imageGrayScale)
+			{
+				cvReleaseImage(&imageGrayScale);
+			}
+			ui_->label_timeExtraction->setText(QString::number(time.restart()));
 		}
-		if(imageGrayScale)
+		else
 		{
-			cvReleaseImage(&imageGrayScale);
+			printf("WARNING: no features detected !?!\n");
+			ui_->label_timeExtraction->setText(QString::number(0));
 		}
-		ui_->label_timeExtraction->setText(QString::number(time.restart()));
 
 		// COMPARE
-		int alpha = 20*255/100;
-		if(!dataTree_.empty() && (Settings::getNearestNeighbor_nndrRatioUsed() || Settings::getNearestNeighbor_minDistanceUsed()))
+		if(!dataTree_.empty() && keypoints.size() && (Settings::getNearestNeighbor_nndrRatioUsed() || Settings::getNearestNeighbor_minDistanceUsed()))
 		{
 			// CREATE INDEX
 			cv::Mat environment(descriptors.rows, descriptors.cols, CV_32F);
 			descriptors.convertTo(environment, CV_32F);
 			cv::flann::Index treeFlannIndex(environment, cv::flann::KDTreeIndexParams());
 			ui_->label_timeIndexing->setText(QString::number(time.restart()));
-
+			
 			// DO NEAREST NEIGHBOR
 			int k = 1;
 			if(Settings::getNearestNeighbor_nndrRatioUsed())
@@ -389,7 +396,6 @@ void MainWindow::update(const cv::Mat & image)
 			cv::Mat dists(dataTree_.rows, k, CV_32FC1); // Distance results are CV_32FC1
 			treeFlannIndex.knnSearch(dataTree_, results, dists, k, cv::flann::SearchParams(emax) ); // maximum number of leafs checked
 			ui_->label_timeMatching->setText(QString::number(time.restart()));
-
 
 			// PROCESS RESULTS
 			if(this->isVisible())
@@ -406,7 +412,6 @@ void MainWindow::update(const cv::Mat & image)
 			for(int i=0; i<dataTree_.rows; ++i)
 			{
 				QColor color((Qt::GlobalColor)(j % 12 + 7 ));
-				color.setAlpha(alpha);
 				bool matched = false;
 				// Check if this descriptor matches with those of the objects
 				if(Settings::getNearestNeighbor_nndrRatioUsed() &&
@@ -497,7 +502,7 @@ void MainWindow::update(const cv::Mat & image)
 										}
 										else
 										{
-											objects_.at(j)->setKptColor(indexes_1.at(k), QColor(0,0,0,alpha));
+											objects_.at(j)->setKptColor(indexes_1.at(k), QColor(0,0,0));
 										}
 									}
 								}

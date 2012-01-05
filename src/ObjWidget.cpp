@@ -20,6 +20,7 @@
 #include <QtGui/QVBoxLayout>
 #include <QtGui/QGraphicsRectItem>
 #include <QtGui/QInputDialog>
+#include <QtGui/QPen>
 
 #include <QtCore/QDir>
 
@@ -201,6 +202,14 @@ void ObjWidget::setAlpha(int alpha)
 				color.setAlpha(alpha_);
 				keypointItems_.at(i)->setColor(color);
 			}
+			for(int i=0; i<rectItems_.size(); ++i)
+			{
+				QPen pen = rectItems_.at(i)->pen();
+				QColor color = pen.color();
+				color.setAlpha(alpha_);
+				pen.setColor(color);
+				rectItems_.at(i)->setPen(pen);
+			}
 		}
 		if(!_graphicsViewMode->isChecked())
 		{
@@ -282,6 +291,11 @@ void ObjWidget::addRect(QGraphicsRectItem * rect)
 		graphicsView_->scene()->addItem(rect);
 	}
 	rect->setZValue(2);
+	QPen pen = rect->pen();
+	QColor color = pen.color();
+	color.setAlpha(alpha_);
+	pen.setColor(color);
+	rect->setPen(pen);
 	rectItems_.append(rect);
 }
 
