@@ -34,6 +34,7 @@ private slots:
 	void changeParameter(const QString & value);
 	void changeParameter(const int & value);
 	void resetCurrentPage();
+	void resetAllPages();
 };
 
 #endif /* PARAMETERSTOOLBOX_H_ */

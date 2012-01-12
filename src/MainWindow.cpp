@@ -78,6 +78,7 @@ MainWindow::MainWindow(Camera * camera, QWidget * parent) :
 	connect(ui_->actionSave_objects, SIGNAL(triggered()), this, SLOT(saveObjects()));
 	connect(ui_->actionLoad_objects, SIGNAL(triggered()), this, SLOT(loadObjects()));
 	connect(ui_->actionAbout, SIGNAL(triggered()), aboutDialog_ , SLOT(exec()));
+	connect(ui_->actionRestore_all_default_settings, SIGNAL(triggered()), ui_->toolBox, SLOT(resetAllPages()));
 
 	QTimer::singleShot(10, this, SLOT(startProcessing()));
 }

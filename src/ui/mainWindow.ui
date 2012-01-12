@@ -150,6 +150,8 @@
     <addaction name="actionAdd_object"/>
     <addaction name="actionStart_camera"/>
     <addaction name="actionStop_camera"/>
+    <addaction name="separator"/>
+    <addaction name="actionRestore_all_default_settings"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -465,6 +467,11 @@
   <action name="actionAbout">
    <property name="text">
     <string>About...</string>
+   </property>
+  </action>
+  <action name="actionRestore_all_default_settings">
+   <property name="text">
+    <string>Restore all default settings</string>
    </property>
   </action>
  </widget>

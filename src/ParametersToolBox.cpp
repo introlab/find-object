@@ -57,6 +57,43 @@ void ParametersToolBox::resetCurrentPage()
 	}
 }
 
+void ParametersToolBox::resetAllPages()
+{
+	for(int i=0; i< this->count(); ++i)
+	{
+		const QObjectList & children = this->widget(i)->children();
+		for(int j=0; j<children.size();++j)
+		{
+			QString key = children.at(j)->objectName();
+			// ignore only the nextObjID setting, to avoid problem with saved objects
+			if(key.compare(Settings::kGeneral_nextObjID()) != 0)
+			{
+				QVariant value = Settings::getDefaultParameters().value(key, QVariant());
+				if(value.isValid())
+				{
+					if(qobject_cast<QComboBox*>(children.at(j)))
+					{
+						((QComboBox*)children.at(j))->setCurrentIndex(value.toString().split(':').first().toInt());
+					}
+					else if(qobject_cast<QSpinBox*>(children.at(j)))
+					{
+						((QSpinBox*)children.at(j))->setValue(value.toInt());
+					}
+					else if(qobject_cast<QDoubleSpinBox*>(children.at(j)))
+					{
+						((QDoubleSpinBox*)children.at(j))->setValue(value.toDouble());
+					}
+					else if(qobject_cast<QCheckBox*>(children.at(j)))
+					{
+						((QCheckBox*)children.at(j))->setChecked(value.toBool());
+					}
+					Settings::setParameter(key, value);
+				}
+			}
+		}
+	}
+}
+
 void ParametersToolBox::setupUi()
 {
 	QWidget * currentItem = 0;
