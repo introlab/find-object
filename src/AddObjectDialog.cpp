@@ -19,7 +19,7 @@
 #include <opencv2/imgproc/imgproc_c.h>
 #include <opencv2/highgui/highgui_c.h>
 
-AddObjectDialog::AddObjectDialog(Camera * camera, QList<ObjWidget*> * objects, QWidget * parent, Qt::WindowFlags f) :
+AddObjectDialog::AddObjectDialog(Camera * camera, QList<ObjWidget*> * objects, bool mirrorView, QWidget * parent, Qt::WindowFlags f) :
 		QDialog(parent, f),
 		camera_(camera),
 		objects_(objects),
@@ -32,8 +32,11 @@ AddObjectDialog::AddObjectDialog(Camera * camera, QList<ObjWidget*> * objects, Q
 	connect(ui_->pushButton_back, SIGNAL(clicked()), this, SLOT(back()));
 	connect(ui_->pushButton_next, SIGNAL(clicked()), this, SLOT(next()));
 	connect(ui_->pushButton_takePicture, SIGNAL(clicked()), this, SLOT(takePicture()));
+	connect(ui_->comboBox_selection, SIGNAL(currentIndexChanged(int)), this, SLOT(changeSelectionMode()));
 
 	connect(ui_->cameraView, SIGNAL(selectionChanged()), this, SLOT(updateNextButton()));
+	connect(ui_->cameraView, SIGNAL(roiChanged(const QRect &)), this, SLOT(updateNextButton(const QRect &)));
+	ui_->cameraView->setMirrorView(mirrorView);
 
 	this->setState(kTakePicture);
 }
@@ -72,17 +75,42 @@ void AddObjectDialog::takePicture()
 
 void AddObjectDialog::updateNextButton()
 {
+	updateNextButton(QRect());
+}
+
+void AddObjectDialog::updateNextButton(const QRect & rect)
+{
+	roi_ = rect;
 	if(state_ == kSelectFeatures)
 	{
-		if(ui_->cameraView->selectedItems().size() > 0)
+		if(ui_->comboBox_selection->currentIndex() == 1)
 		{
-			ui_->pushButton_next->setEnabled(true);
+			if(ui_->cameraView->selectedItems().size() > 0)
+			{
+				ui_->pushButton_next->setEnabled(true);
+			}
+			else
+			{
+				ui_->pushButton_next->setEnabled(false);
+			}
 		}
 		else
 		{
-			ui_->pushButton_next->setEnabled(false);
+			if(roi_.isNull())
+			{
+				ui_->pushButton_next->setEnabled(false);
+			}
+			else
+			{
+				ui_->pushButton_next->setEnabled(true);
+			}
 		}
 	}
+}
+
+void AddObjectDialog::changeSelectionMode()
+{
+	this->setState(kSelectFeatures);
 }
 
 void AddObjectDialog::setState(int state)
@@ -97,8 +125,10 @@ void AddObjectDialog::setState(int state)
 		ui_->label_instruction->setText(tr("Place the object in front of the camera and click \"Take picture\"."));
 		ui_->pushButton_next->setText(tr("Next"));
 		ui_->cameraView->setVisible(true);
+		ui_->cameraView->clearRoiSelection();
 		ui_->objectView->setVisible(false);
 		ui_->cameraView->setGraphicsViewMode(false);
+		ui_->comboBox_selection->setVisible(false);
 		if(!camera_ || !camera_->start())
 		{
 			QMessageBox::critical(this, tr("Camera error"), tr("Camera is not started!"));
@@ -118,12 +148,23 @@ void AddObjectDialog::setState(int state)
 		ui_->pushButton_back->setEnabled(true);
 		ui_->pushButton_next->setEnabled(false);
 		ui_->pushButton_takePicture->setEnabled(false);
-		ui_->label_instruction->setText(tr("Select features representing the object."));
 		ui_->pushButton_next->setText(tr("Next"));
 		ui_->cameraView->setVisible(true);
+		ui_->cameraView->clearRoiSelection();
 		ui_->objectView->setVisible(false);
-		ui_->cameraView->setGraphicsViewMode(true);
-		updateNextButton();
+		ui_->comboBox_selection->setVisible(true);
+
+		if(ui_->comboBox_selection->currentIndex() == 1)
+		{
+			ui_->label_instruction->setText(tr("Select features representing the object."));
+			ui_->cameraView->setGraphicsViewMode(true);
+		}
+		else
+		{
+			ui_->label_instruction->setText(tr("Select region representing the object."));
+			ui_->cameraView->setGraphicsViewMode(false);
+		}
+		updateNextButton(QRect());
 	}
 	else if(state == kVerifySelection)
 	{
@@ -136,24 +177,59 @@ void AddObjectDialog::setState(int state)
 		ui_->pushButton_next->setText(tr("End"));
 		ui_->cameraView->setVisible(true);
 		ui_->objectView->setVisible(true);
-		ui_->cameraView->setGraphicsViewMode(true);
+		ui_->objectView->setMirrorView(ui_->cameraView->isMirrorView());
+		ui_->objectView->setSizedFeatures(ui_->cameraView->isSizedFeatures());
+		ui_->comboBox_selection->setVisible(false);
+		if(ui_->comboBox_selection->currentIndex() == 1)
+		{
+			ui_->cameraView->setGraphicsViewMode(true);
+		}
+		else
+		{
+			ui_->cameraView->setGraphicsViewMode(false);
+		}
 
 		std::vector<cv::KeyPoint> selectedKeypoints = ui_->cameraView->selectedKeypoints();
 
 		// Select keypoints
-		if(selectedKeypoints.size() && cvImage_)
+		if(cvImage_ &&
+				((ui_->comboBox_selection->currentIndex() == 1 && selectedKeypoints.size()) ||
+				 (ui_->comboBox_selection->currentIndex() == 0 && !roi_.isNull())))
 		{
-			CvRect roi = computeROI(selectedKeypoints);
-			cvSetImageROI(cvImage_, roi);
-			if(roi.x != 0 || roi.y != 0)
+			CvRect roi;
+			if(ui_->comboBox_selection->currentIndex() == 1)
 			{
-				for(unsigned int i=0; i<selectedKeypoints.size(); ++i)
+				roi = computeROI(selectedKeypoints);
+			}
+			else
+			{
+				roi.x = roi_.x();
+				roi.y = roi_.y();
+				roi.width = roi_.width();
+				roi.height = roi_.height();
+			}
+			cvSetImageROI(cvImage_, roi);
+
+			if(ui_->comboBox_selection->currentIndex() == 1)
+			{
+				if(roi.x != 0 || roi.y != 0)
 				{
-					selectedKeypoints.at(i).pt.x -= roi.x;
-					selectedKeypoints.at(i).pt.y -= roi.y;
+					for(unsigned int i=0; i<selectedKeypoints.size(); ++i)
+					{
+						selectedKeypoints.at(i).pt.x -= roi.x;
+						selectedKeypoints.at(i).pt.y -= roi.y;
+					}
 				}
 			}
-			ui_->objectView->setData(selectedKeypoints, cv::Mat(), cvImage_);
+			else
+			{
+				// Extract keypoints
+				selectedKeypoints.clear();
+				cv::FeatureDetector * detector = Settings::createFeaturesDetector();
+				detector->detect(cvImage_, selectedKeypoints);
+				delete detector;
+			}
+			ui_->objectView->setData(selectedKeypoints, cv::Mat(), cvImage_, Settings::currentDetectorType(), "");
 			ui_->objectView->setMinimumSize(roi.width, roi.height);
 			ui_->objectView->update();
 			cvResetImageROI(cvImage_);
@@ -168,33 +244,25 @@ void AddObjectDialog::setState(int state)
 	}
 	else if(state == kClosing)
 	{
-		std::vector<cv::KeyPoint> selectedKeypoints = ui_->cameraView->selectedKeypoints();
-		if(selectedKeypoints.size())
+		std::vector<cv::KeyPoint> keypoints = ui_->objectView->keypoints();
+		if((ui_->comboBox_selection->currentIndex() == 1 && keypoints.size()) ||
+		   (ui_->comboBox_selection->currentIndex() == 0 && !roi_.isNull()))
 		{
-			// Extract descriptors
 			cv::Mat descriptors;
-			cv::DescriptorExtractor * extractor = Settings::createDescriptorsExtractor();
-			extractor->compute(cvImage_, selectedKeypoints, descriptors);
-			delete extractor;
-			if(selectedKeypoints.size() != (unsigned int)descriptors.rows)
+			if(keypoints.size())
 			{
-				printf("ERROR : keypoints=%d != descriptors=%d\n", (int)selectedKeypoints.size(), descriptors.rows);
-			}
+				// Extract descriptors
+				cv::DescriptorExtractor * extractor = Settings::createDescriptorsExtractor();
+				extractor->compute(ui_->objectView->iplImage(), keypoints, descriptors);
+				delete extractor;
 
-			CvRect roi = computeROI(selectedKeypoints);
-			cvSetImageROI(cvImage_, roi);
-			if(roi.x != 0 || roi.y != 0)
-			{
-				for(unsigned int i=0; i<selectedKeypoints.size(); ++i)
+				if(keypoints.size() != (unsigned int)descriptors.rows)
 				{
-					selectedKeypoints.at(i).pt.x -= roi.x;
-					selectedKeypoints.at(i).pt.y -= roi.y;
+					printf("ERROR : keypoints=%d != descriptors=%d\n", (int)keypoints.size(), descriptors.rows);
 				}
 			}
-			objects_->append(new ObjWidget(0, selectedKeypoints, descriptors, cvImage_, Settings::currentDetectorType(), Settings::currentDescriptorType()));
-			cvResetImageROI(cvImage_);
 
-
+			objects_->append(new ObjWidget(0, keypoints, descriptors, ui_->objectView->iplImage(), Settings::currentDetectorType(), Settings::currentDescriptorType()));
 
 			this->accept();
 		}
@@ -227,7 +295,7 @@ void AddObjectDialog::update(const cv::Mat & image)
 		detector->detect(cvImage_, keypoints);
 		delete detector;
 
-		ui_->cameraView->setData(keypoints, cv::Mat(), cvImage_);
+		ui_->cameraView->setData(keypoints, cv::Mat(), cvImage_, Settings::currentDetectorType(), "");
 		ui_->cameraView->update();
 	}
 }

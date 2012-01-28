@@ -29,6 +29,9 @@ private:
 	void addParameter(QVBoxLayout * layout, const QString & key, const bool & value);
 	void addParameter(QVBoxLayout * layout, const QString & name, QWidget * widget);
 
+signals:
+	void parametersChanged();
+
 private slots:
 	void changeParameter();
 	void changeParameter(const QString & value);

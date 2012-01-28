@@ -269,6 +269,7 @@ void ParametersToolBox::changeParameter()
 		{
 			Settings::setParameter(sender()->objectName(), spinBox->value());
 		}
+		emit parametersChanged();
 	}
 }
 void ParametersToolBox::changeParameter(const int & value)
@@ -291,5 +292,6 @@ void ParametersToolBox::changeParameter(const int & value)
 		{
 			Settings::setParameter(sender()->objectName(), value==Qt::Checked?true:false);
 		}
+		emit parametersChanged();
 	}
 }

@@ -49,13 +49,13 @@ ObjWidget::ObjWidget(int id,
 	iplImage_(0),
 	graphicsView_(0),
 	id_(id),
-	detectorType_(detectorType),
-	descriptorType_(descriptorType),
+	detectorType_("NA"),
+	descriptorType_("NA"),
 	graphicsViewInitialized_(false),
 	alpha_(50)
 {
 	setupUi();
-	this->setData(keypoints, descriptors, iplImage);
+	this->setData(keypoints, descriptors, iplImage, detectorType, descriptorType);
 }
 ObjWidget::~ObjWidget()
 {
@@ -189,6 +189,20 @@ void ObjWidget::setSizedFeatures(bool on)
 	}
 }
 
+void ObjWidget::setMirrorView(bool on)
+{
+	_mirrorView->setChecked(on);
+	graphicsView_->setTransform(QTransform().scale(this->isMirrorView()?-1.0:1.0, 1.0));
+	if(_graphicsViewMode->isChecked() && _autoScale->isChecked())
+	{
+		graphicsView_->fitInView(graphicsView_->sceneRect(), Qt::KeepAspectRatio);
+	}
+	else if(!_graphicsViewMode->isChecked())
+	{
+		this->update();
+	}
+}
+
 void ObjWidget::setAlpha(int alpha)
 {
 	if(alpha>=0 && alpha<=255)
@@ -218,7 +232,11 @@ void ObjWidget::setAlpha(int alpha)
 	}
 }
 
-void ObjWidget::setData(const std::vector<cv::KeyPoint> & keypoints, const cv::Mat & descriptors, const IplImage * image)
+void ObjWidget::setData(const std::vector<cv::KeyPoint> & keypoints,
+		const cv::Mat & descriptors,
+		const IplImage * image,
+		const QString & detectorType,
+		const QString & descriptorType)
 {
 	keypoints_ = keypoints;
 	descriptors_ = descriptors;
@@ -227,6 +245,8 @@ void ObjWidget::setData(const std::vector<cv::KeyPoint> & keypoints, const cv::M
 	rectItems_.clear();
 	graphicsView_->scene()->clear();
 	graphicsViewInitialized_ = false;
+	detectorType_ = detectorType;
+	descriptorType_ = descriptorType;
 	if(iplImage_)
 	{
 		cvReleaseImage(&iplImage_);
@@ -314,6 +334,11 @@ bool ObjWidget::isFeaturesShown() const
 	return _showFeatures->isChecked();
 }
 
+bool ObjWidget::isSizedFeatures() const
+{
+	return _sizedFeatures->isChecked();
+}
+
 bool ObjWidget::isMirrorView() const
 {
 	return _mirrorView->isChecked();
@@ -354,7 +379,8 @@ void ObjWidget::load(QDataStream & streamPtr)
 	cv::Mat descriptors;
 
 	int nKpts;
-	streamPtr >> id_ >> detectorType_ >> descriptorType_ >> nKpts;
+	QString detectorType, descriptorType;
+	streamPtr >> id_ >> detectorType >> descriptorType >> nKpts;
 	for(int i=0;i<nKpts;++i)
 	{
 		cv::KeyPoint kpt;
@@ -376,8 +402,48 @@ void ObjWidget::load(QDataStream & streamPtr)
 	streamPtr >> data;
 	descriptors = cv::Mat(rows, cols, type, data.data()).clone();
 	streamPtr >> image_;
-	this->setData(kpts, descriptors, 0);
+	this->setData(kpts, descriptors, 0, detectorType, descriptorType);
 	//this->setMinimumSize(image_.size());
+}
+
+void ObjWidget::computeScaleOffsets(float & scale, float & offsetX, float & offsetY)
+{
+	scale = 1.0f;
+	offsetX = 0.0f;
+	offsetY = 0.0f;
+
+	if(!image_.isNull())
+	{
+		float w = image_.width();
+		float h = image_.height();
+		float widthRatio = float(this->rect().width()) / w;
+		float heightRatio = float(this->rect().height()) / h;
+
+		//printf("w=%f, h=%f, wR=%f, hR=%f, sW=%d, sH=%d\n", w, h, widthRatio, heightRatio, this->rect().width(), this->rect().height());
+		if(widthRatio < heightRatio)
+		{
+			scale = widthRatio;
+		}
+		else
+		{
+			scale = heightRatio;
+		}
+
+		//printf("ratio=%f\n",ratio);
+
+		w *= scale;
+		h *= scale;
+
+		if(w < this->rect().width())
+		{
+			offsetX = (this->rect().width() - w)/2.0f;
+		}
+		if(h < this->rect().height())
+		{
+			offsetY = (this->rect().height() - h)/2.0f;
+		}
+		//printf("offsetX=%f, offsetY=%f\n",offsetX, offsetY);
+	}
 }
 
 void ObjWidget::paintEvent(QPaintEvent *event)
@@ -391,42 +457,13 @@ void ObjWidget::paintEvent(QPaintEvent *event)
 		if(!image_.isNull())
 		{
 			//Scale
-			float w = image_.width();
-			float h = image_.height();
-			float widthRatio = float(this->rect().width()) / w;
-			float heightRatio = float(this->rect().height()) / h;
-			float ratio = 1.0f;
-			//printf("w=%f, h=%f, wR=%f, hR=%f, sW=%d, sH=%d\n", w, h, widthRatio, heightRatio, this->rect().width(), this->rect().height());
-			if(widthRatio < heightRatio)
-			{
-				ratio = widthRatio;
-			}
-			else
-			{
-				ratio = heightRatio;
-			}
-
-			//printf("ratio=%f\n",ratio);
-
-			w *= ratio;
-			h *= ratio;
-
-			float offsetX = 0.0f;
-			float offsetY = 0.0f;
-			if(w < this->rect().width())
-			{
-				offsetX = (this->rect().width() - w)/2.0f;
-			}
-			if(h < this->rect().height())
-			{
-				offsetY = (this->rect().height() - h)/2.0f;
-			}
+			float ratio, offsetX, offsetY;
+			this->computeScaleOffsets(ratio, offsetX, offsetY);
 			QPainter painter(this);
-
 
 			if(_mirrorView->isChecked())
 			{
-				painter.translate(offsetX+w, offsetY);
+				painter.translate(offsetX+image_.width()*ratio, offsetY);
 				painter.scale(-ratio, ratio);
 			}
 			else
@@ -445,7 +482,6 @@ void ObjWidget::paintEvent(QPaintEvent *event)
 				drawKeypoints(&painter);
 			}
 
-
 			for(int i=0; i<rectItems_.size(); ++i)
 			{
 				painter.save();
@@ -455,6 +491,28 @@ void ObjWidget::paintEvent(QPaintEvent *event)
 				painter.restore();
 			}
 
+			if(mouseCurrentPos_ != mousePressedPos_)
+			{
+				painter.save();
+				int left, top, right, bottom;
+				left = mousePressedPos_.x() < mouseCurrentPos_.x() ? mousePressedPos_.x():mouseCurrentPos_.x();
+				top = mousePressedPos_.y() < mouseCurrentPos_.y() ? mousePressedPos_.y():mouseCurrentPos_.y();
+				right = mousePressedPos_.x() > mouseCurrentPos_.x() ? mousePressedPos_.x():mouseCurrentPos_.x();
+				bottom = mousePressedPos_.y() > mouseCurrentPos_.y() ? mousePressedPos_.y():mouseCurrentPos_.y();
+				if(_mirrorView->isChecked())
+				{
+					int l = left;
+					left = qAbs(right - image_.width());
+					right = qAbs(l - image_.width());
+				}
+				painter.setPen(Qt::NoPen);
+				painter.setBrush(QBrush(QColor(0,0,0,100)));
+				painter.drawRect(0, 0, image_.width(), top-1);
+				painter.drawRect(0, top, left, bottom-top);
+				painter.drawRect(right, top, image_.width()-right, bottom-top);
+				painter.drawRect(0, bottom, image_.width(), image_.height()-bottom);
+				painter.restore();
+			}
 		}
 	}
 }
@@ -466,6 +524,50 @@ void ObjWidget::resizeEvent(QResizeEvent* event)
 	{
 		graphicsView_->fitInView(graphicsView_->sceneRect(), Qt::KeepAspectRatio);
 	}
+}
+
+void ObjWidget::mousePressEvent(QMouseEvent * event)
+{
+	float scale, offsetX, offsetY;
+	this->computeScaleOffsets(scale, offsetX, offsetY);
+	mousePressedPos_.setX((event->pos().x()-offsetX)/scale);
+	mousePressedPos_.setY((event->pos().y()-offsetY)/scale);
+	mouseCurrentPos_ = mousePressedPos_;
+	this->update();
+	QWidget::mousePressEvent(event);
+}
+
+void ObjWidget::mouseMoveEvent(QMouseEvent * event)
+{
+	float scale, offsetX, offsetY;
+	this->computeScaleOffsets(scale, offsetX, offsetY);
+	mouseCurrentPos_.setX((event->pos().x()-offsetX)/scale);
+	mouseCurrentPos_.setY((event->pos().y()-offsetY)/scale);
+	this->update();
+	QWidget::mouseMoveEvent(event);
+}
+
+void ObjWidget::mouseReleaseEvent(QMouseEvent * event)
+{
+	if(!image_.isNull())
+	{
+		int left,top,bottom,right;
+
+		left = mousePressedPos_.x() < mouseCurrentPos_.x() ? mousePressedPos_.x():mouseCurrentPos_.x();
+		top = mousePressedPos_.y() < mouseCurrentPos_.y() ? mousePressedPos_.y():mouseCurrentPos_.y();
+		right = mousePressedPos_.x() > mouseCurrentPos_.x() ? mousePressedPos_.x():mouseCurrentPos_.x();
+		bottom = mousePressedPos_.y() > mouseCurrentPos_.y() ? mousePressedPos_.y():mouseCurrentPos_.y();
+
+		if(_mirrorView->isChecked())
+		{
+			int l = left;
+			left = qAbs(right - image_.width());
+			right = qAbs(l - image_.width());
+		}
+
+		emit roiChanged(QRect(left, top, right-left, bottom-top));
+	}
+	QWidget::mouseReleaseEvent(event);
 }
 
 void ObjWidget::contextMenuEvent(QContextMenuEvent * event)
@@ -502,15 +604,7 @@ void ObjWidget::contextMenuEvent(QContextMenuEvent * event)
 	}
 	else if(action == _mirrorView)
 	{
-		graphicsView_->setTransform(QTransform().scale(this->isMirrorView()?-1.0:1.0, 1.0));
-		if(_graphicsViewMode->isChecked() && _autoScale->isChecked())
-		{
-			graphicsView_->fitInView(graphicsView_->sceneRect(), Qt::KeepAspectRatio);
-		}
-		else if(!_graphicsViewMode->isChecked())
-		{
-			this->update();
-		}
+		this->setMirrorView(_mirrorView->isChecked());
 	}
 	else if(action == _delete)
 	{

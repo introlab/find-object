@@ -61,11 +61,14 @@ MainWindow::MainWindow(Camera * camera, QWidget * parent) :
 	ui_->dockWidget_parameters->hide();
 	ui_->menuView->addAction(ui_->dockWidget_parameters->toggleViewAction());
 	ui_->menuView->addAction(ui_->dockWidget_objects->toggleViewAction());
+	connect(ui_->toolBox, SIGNAL(parametersChanged()), this, SLOT(notifyParametersChanged()));
 
 	ui_->imageView_source->setGraphicsViewMode(false);
 
 	//reset button
 	connect(ui_->pushButton_restoreDefaults, SIGNAL(clicked()), ui_->toolBox, SLOT(resetCurrentPage()));
+	// udpate objects button
+	connect(ui_->pushButton_updateObjects, SIGNAL(clicked()), this, SLOT(updateObjects()));
 
 	ui_->actionStop_camera->setEnabled(false);
 	ui_->actionSave_objects->setEnabled(false);
@@ -185,7 +188,7 @@ void MainWindow::removeObject(ObjWidget * object)
 void MainWindow::addObject()
 {
 	disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
-	AddObjectDialog dialog(camera_, &objects_, this);
+	AddObjectDialog dialog(camera_, &objects_, ui_->imageView_source->isMirrorView(), this);
 	if(dialog.exec() == QDialog::Accepted)
 	{
 		showObject(objects_.last());
@@ -198,6 +201,7 @@ void MainWindow::showObject(ObjWidget * obj)
 	if(obj)
 	{
 		obj->setGraphicsViewMode(false);
+		obj->setMirrorView(ui_->imageView_source->isMirrorView());
 		QList<ObjWidget*> objs = ui_->objects_area->findChildren<ObjWidget*>();
 		QVBoxLayout * vLayout = new QVBoxLayout();
 		obj->setMinimumSize(obj->image().width(), obj->image().height());
@@ -214,8 +218,10 @@ void MainWindow::showObject(ObjWidget * obj)
 		}
 
 		QLabel * title = new QLabel(QString("%1 (%2)").arg(obj->id()).arg(QString::number(obj->keypoints().size())), this);
-		QLabel * detectedLabel = new QLabel(this);
 		QLabel * detectorDescriptorType = new QLabel(QString("%1/%2").arg(obj->detectorType()).arg(obj->descriptorType()), this);
+		QLabel * detectedLabel = new QLabel(this);
+		title->setObjectName(QString("%1title").arg(obj->id()));
+		detectorDescriptorType->setObjectName(QString("%1type").arg(obj->id()));
 		detectedLabel->setObjectName(QString("%1detection").arg(obj->id()));
 		QHBoxLayout * hLayout = new QHBoxLayout();
 		hLayout->addWidget(title);
@@ -234,6 +240,46 @@ void MainWindow::showObject(ObjWidget * obj)
 
 		this->updateData();
 	}
+}
+
+void MainWindow::updateObjects()
+{
+	if(objects_.size())
+	{
+		for(int i=0; i<objects_.size(); ++i)
+		{
+			IplImage * img = cvCloneImage(objects_.at(i)->iplImage());
+			cv::FeatureDetector * detector = Settings::createFeaturesDetector();
+			std::vector<cv::KeyPoint> keypoints;
+			detector->detect(img, keypoints);
+			delete detector;
+
+			cv::Mat descriptors;
+			if(keypoints.size())
+			{
+				cv::DescriptorExtractor * extractor = Settings::createDescriptorsExtractor();
+				extractor->compute(img, keypoints, descriptors);
+				delete extractor;
+				if((int)keypoints.size() != descriptors.rows)
+				{
+					printf("ERROR : kpt=%d != descriptors=%d\n", (int)keypoints.size(), descriptors.rows);
+				}
+			}
+			else
+			{
+				printf("WARNING: no features detected in object %d !?!\n", objects_.at(i)->id());
+			}
+			objects_.at(i)->setData(keypoints, descriptors, img, Settings::currentDetectorType(), Settings::currentDescriptorType());
+
+			//update object labels
+			QLabel * title = qFindChild<QLabel*>(this, QString("%1title").arg(objects_.at(i)->id()));
+			title->setText(QString("%1 (%2)").arg(objects_.at(i)->id()).arg(QString::number(objects_.at(i)->keypoints().size())));
+			QLabel * detectorDescriptorType = qFindChild<QLabel*>(this, QString("%1type").arg(objects_.at(i)->id()));
+			detectorDescriptorType->setText(QString("%1/%2").arg(objects_.at(i)->detectorType()).arg(objects_.at(i)->descriptorType()));
+		}
+		updateData();
+	}
+	this->statusBar()->clearMessage();
 }
 
 void MainWindow::updateData()
@@ -401,7 +447,7 @@ void MainWindow::update(const cv::Mat & image)
 			// PROCESS RESULTS
 			if(this->isVisible())
 			{
-				ui_->imageView_source->setData(keypoints, cv::Mat(), &iplImage);
+				ui_->imageView_source->setData(keypoints, cv::Mat(), &iplImage, Settings::currentDetectorType(), Settings::currentDescriptorType());
 			}
 			int j=0;
 			std::vector<cv::Point2f> mpts_1, mpts_2;
@@ -564,7 +610,7 @@ void MainWindow::update(const cv::Mat & image)
 		}
 		else if(this->isVisible())
 		{
-			ui_->imageView_source->setData(keypoints, cv::Mat(), &iplImage);
+			ui_->imageView_source->setData(keypoints, cv::Mat(), &iplImage, Settings::currentDetectorType(), Settings::currentDescriptorType());
 		}
 
 		if(this->isVisible())
@@ -600,5 +646,13 @@ void MainWindow::update(const cv::Mat & image)
 		}
 		lowestRefreshRate_ = 99;
 		refreshStartTime_.start();
+	}
+}
+
+void MainWindow::notifyParametersChanged()
+{
+	if(objects_.size())
+	{
+		this->statusBar()->showMessage(tr("A parameter has changed... \"Update objects\" may be required."));
 	}
 }

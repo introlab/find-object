@@ -35,15 +35,19 @@ public:
 	void setId(int id);
 	void setData(const std::vector<cv::KeyPoint> & keypoints,
 			const cv::Mat & descriptors,
-			const IplImage * image);
+			const IplImage * image,
+			const QString & detectorType,
+			const QString & descriptorType);
 	void resetKptsColor();
 	void setKptColor(int index, const QColor & color);
 	void setGraphicsViewMode(bool on);
 	void setAutoScale(bool autoScale);
 	void setSizedFeatures(bool on);
+	void setMirrorView(bool on);
 	void setAlpha(int alpha);
 	void setDeletable(bool deletable);
 	void addRect(QGraphicsRectItem * rect);
+	void clearRoiSelection() {mousePressedPos_ = mouseCurrentPos_ = QPoint();update();}
 
 	const std::vector<cv::KeyPoint> & keypoints() const {return keypoints_;}
 	const cv::Mat & descriptors() const {return descriptors_;}
@@ -53,6 +57,7 @@ public:
 	QColor defaultColor() const;
 	bool isImageShown() const;
 	bool isFeaturesShown() const;
+	bool isSizedFeatures() const;
 	bool isMirrorView() const;
 	//QGraphicsScene * scene() const;
 	std::vector<cv::KeyPoint> selectedKeypoints() const;
@@ -69,16 +74,21 @@ protected:
 	virtual void paintEvent(QPaintEvent *event);
 	virtual void contextMenuEvent(QContextMenuEvent * event);
 	virtual void resizeEvent(QResizeEvent* event);
+	virtual void mousePressEvent(QMouseEvent * event);
+	virtual void mouseMoveEvent(QMouseEvent * event);
+	virtual void mouseReleaseEvent(QMouseEvent * event);
 
 signals:
 	void removalTriggered(ObjWidget *);
 	void selectionChanged();
+	void roiChanged(const QRect &);
 
 private:
 	void setupGraphicsView();
 	void drawKeypoints(QPainter * painter = 0);
 	void setupUi();
 	void updateItemsShown();
+	void computeScaleOffsets(float & scale, float & offsetX, float & offsetY);
 
 private:
 	std::vector<cv::KeyPoint> keypoints_;
@@ -107,6 +117,10 @@ private:
 	QAction * _autoScale;
 	QAction * _sizedFeatures;
 	QAction * _setAlpha;
+
+	// selection stuff
+	QPoint mousePressedPos_;
+	QPoint mouseCurrentPos_;
 };
 
 

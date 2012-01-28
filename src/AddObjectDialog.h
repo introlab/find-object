@@ -20,7 +20,7 @@ class AddObjectDialog : public QDialog {
 	Q_OBJECT
 
 public:
-	AddObjectDialog(Camera * camera, QList<ObjWidget*> * objects, QWidget * parent = 0, Qt::WindowFlags f = 0);
+	AddObjectDialog(Camera * camera, QList<ObjWidget*> * objects, bool mirrorView, QWidget * parent = 0, Qt::WindowFlags f = 0);
 	virtual ~AddObjectDialog();
 
 private slots:
@@ -30,6 +30,8 @@ private slots:
 	void cancel();
 	void takePicture();
 	void updateNextButton();
+	void updateNextButton(const QRect &);
+	void changeSelectionMode();
 
 protected:
 	virtual void closeEvent(QCloseEvent* event);
@@ -45,6 +47,7 @@ private:
 
 	enum State{kTakePicture, kSelectFeatures, kVerifySelection, kClosing};
 	int state_;
+	QRect roi_;
 };
 
 #endif /* ADDOBJECTDIALOG_H_ */

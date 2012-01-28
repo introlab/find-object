@@ -47,6 +47,8 @@ private slots:
 	void addObject();
 	void removeObject(ObjWidget * object);
 	void update(const cv::Mat & image);
+	void updateObjects();
+	void notifyParametersChanged();
 
 signals:
 	void objectsFound(const QMap<int, QPair<QRect, QTransform> > &);
