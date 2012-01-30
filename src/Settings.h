@@ -56,6 +56,7 @@ class Settings
 	PARAMETER(Camera, imageWidth, int, 640);
 	PARAMETER(Camera, imageHeight, int, 480);
 	PARAMETER(Camera, imageRate, int, 2); // Hz
+	PARAMETER(Camera, videoFilePath, QString, "");
 
 	//List format : [Index:item0;item1;item3;...]
 	PARAMETER(Detector, Type, QString, "7:Dense;Fast;GoodFeaturesToTrack;Mser;Orb;Sift;Star;Surf");

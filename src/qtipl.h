@@ -8,6 +8,10 @@
 #include <QtGui/QImage>
 #include <opencv2/core/core.hpp>
 
+// IplImage to QImage
 QImage Ipl2QImage(const IplImage *newImage);
+
+// QImage to IplImage
+IplImage * QImage2Ipl(const QImage & image);
 
 #endif

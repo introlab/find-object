@@ -123,6 +123,36 @@ void ParametersToolBox::setupUi()
 	}
 }
 
+void ParametersToolBox::updateParameter(const QString & key)
+{
+	QWidget * widget = this->findChild<QWidget*>(key);
+	QString type = Settings::getParametersType().value(key);
+	if(type.compare("QString") == 0)
+	{
+		((QLineEdit*)widget)->setText(Settings::getParameter(key).toString());
+	}
+	else if(type.compare("int") == 0)
+	{
+		((QSpinBox*)widget)->setValue(Settings::getParameter(key).toInt());
+	}
+	else if(type.compare("uint") == 0)
+	{
+		((QSpinBox*)widget)->setValue(Settings::getParameter(key).toInt());
+	}
+	else if(type.compare("double") == 0)
+	{
+		((QDoubleSpinBox*)widget)->setValue(Settings::getParameter(key).toDouble());
+	}
+	else if(type.compare("float") == 0)
+	{
+		((QDoubleSpinBox*)widget)->setValue(Settings::getParameter(key).toDouble());
+	}
+	else if(type.compare("bool") == 0)
+	{
+		((QCheckBox*)widget)->setChecked(Settings::getParameter(key).toBool());
+	}
+}
+
 void ParametersToolBox::addParameter(QVBoxLayout * layout,
 		const QString & key,
 		const QVariant & value)
@@ -216,11 +246,11 @@ void ParametersToolBox::addParameter(QVBoxLayout * layout,
 
 	if(def>0)
 	{
-		widget->setMaximum(def*10);
+		widget->setMaximum(def*1000000);
 	}
 	else if(def<0)
 	{
-		widget->setMinimum(def*10);
+		widget->setMinimum(def*1000000);
 		widget->setMaximum(0);
 	}
 	widget->setValue(value);
@@ -253,6 +283,7 @@ void ParametersToolBox::changeParameter(const QString & value)
 	if(sender())
 	{
 		Settings::setParameter(sender()->objectName(), value);
+		emit parametersChanged();
 	}
 }
 void ParametersToolBox::changeParameter()

@@ -20,6 +20,7 @@ public:
 
 	void setupUi();
 	QWidget * getParameterWidget(const QString & key);
+	void updateParameter(const QString & key);
 
 private:
 	void addParameter(QVBoxLayout * layout, const QString & key, const QVariant & value);

@@ -71,6 +71,7 @@ MainWindow::MainWindow(Camera * camera, QWidget * parent) :
 	connect(ui_->pushButton_updateObjects, SIGNAL(clicked()), this, SLOT(updateObjects()));
 
 	ui_->actionStop_camera->setEnabled(false);
+	ui_->actionPause_camera->setEnabled(false);
 	ui_->actionSave_objects->setEnabled(false);
 
 	// Actions
@@ -79,11 +80,19 @@ MainWindow::MainWindow(Camera * camera, QWidget * parent) :
 	connect(ui_->actionLoad_scene_from_file, SIGNAL(triggered()), this, SLOT(loadSceneFromFile()));
 	connect(ui_->actionStart_camera, SIGNAL(triggered()), this, SLOT(startProcessing()));
 	connect(ui_->actionStop_camera, SIGNAL(triggered()), this, SLOT(stopProcessing()));
+	connect(ui_->actionPause_camera, SIGNAL(triggered()), this, SLOT(pauseProcessing()));
 	connect(ui_->actionExit, SIGNAL(triggered()), this, SLOT(close()));
 	connect(ui_->actionSave_objects, SIGNAL(triggered()), this, SLOT(saveObjects()));
 	connect(ui_->actionLoad_objects, SIGNAL(triggered()), this, SLOT(loadObjects()));
+	connect(ui_->actionSetup_camera_from_video_file, SIGNAL(triggered()), this, SLOT(setupCameraFromVideoFile()));
+	connect(ui_->actionSetup_camera_from_video_file_2, SIGNAL(triggered()), this, SLOT(setupCameraFromVideoFile()));
 	connect(ui_->actionAbout, SIGNAL(triggered()), aboutDialog_ , SLOT(exec()));
 	connect(ui_->actionRestore_all_default_settings, SIGNAL(triggered()), ui_->toolBox, SLOT(resetAllPages()));
+
+	ui_->actionSetup_camera_from_video_file->setCheckable(true);
+	ui_->actionSetup_camera_from_video_file_2->setCheckable(true);
+	ui_->actionSetup_camera_from_video_file->setChecked(!Settings::getCamera_videoFilePath().isEmpty());
+	ui_->actionSetup_camera_from_video_file_2->setChecked(!Settings::getCamera_videoFilePath().isEmpty());
 
 	if(Settings::getGeneral_autoStartCamera())
 	{
@@ -237,6 +246,21 @@ void MainWindow::loadSceneFromFile()
 	}
 }
 
+void MainWindow::setupCameraFromVideoFile()
+{
+	QString fileName = QFileDialog::getOpenFileName(this, tr("Setup camera from video file..."), Settings::workingDirectory(), tr("Video Files (*.avi *.m4v)"));
+	if(!fileName.isEmpty())
+	{
+		Settings::setCamera_videoFilePath(fileName);
+		ui_->toolBox->updateParameter(Settings::kCamera_videoFilePath());
+		if(camera_->isRunning())
+		{
+			this->stopProcessing();
+			this->startProcessing();
+		}
+	}
+}
+
 void MainWindow::showObject(ObjWidget * obj)
 {
 	if(obj)
@@ -257,6 +281,7 @@ void MainWindow::showObject(ObjWidget * obj)
 			id = obj->id()+1;
 			Settings::setGeneral_nextObjID(id);
 		}
+		ui_->toolBox->updateParameter(Settings::kGeneral_nextObjID());
 
 		QLabel * title = new QLabel(QString("%1 (%2)").arg(obj->id()).arg(QString::number(obj->keypoints().size())), this);
 		QLabel * detectorDescriptorType = new QLabel(QString("%1/%2").arg(obj->detectorType()).arg(obj->descriptorType()), this);
@@ -346,13 +371,27 @@ void MainWindow::updateData()
 	{
 		if(dim >= 0 && objects_.at(i)->descriptors().cols != dim)
 		{
-			QMessageBox::critical(this, tr("Error"), tr("Descriptors of the objects are not all the same size!\nObjects opened must have all the same size (and from the same descriptor extractor)."));
+			if(this->isVisible())
+			{
+				QMessageBox::critical(this, tr("Error"), tr("Descriptors of the objects are not all the same size!\nObjects opened must have all the same size (and from the same descriptor extractor)."));
+			}
+			else
+			{
+				printf("ERROR: Descriptors of the objects are not all the same size! Objects opened must have all the same size (and from the same descriptor extractor).");
+			}
 			return;
 		}
 		dim = objects_.at(i)->descriptors().cols;
 		if(type >= 0 && objects_.at(i)->descriptors().type() != type)
 		{
-			QMessageBox::critical(this, tr("Error"), tr("Descriptors of the objects are not all the same type!\nObjects opened must have been processed by the same descriptor extractor."));
+			if(this->isVisible())
+			{
+				QMessageBox::critical(this, tr("Error"), tr("Descriptors of the objects are not all the same type!\nObjects opened must have been processed by the same descriptor extractor."));
+			}
+			else
+			{
+				printf("ERROR: Descriptors of the objects are not all the same type! Objects opened must have been processed by the same descriptor extractor.");
+			}
 			return;
 		}
 		type = objects_.at(i)->descriptors().type();
@@ -383,6 +422,7 @@ void MainWindow::startProcessing()
 	{
 		connect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
 		ui_->actionStop_camera->setEnabled(true);
+		ui_->actionPause_camera->setEnabled(true);
 		ui_->actionStart_camera->setEnabled(false);
 		ui_->actionLoad_scene_from_file->setEnabled(false);
 		ui_->label_timeRefreshRate->setVisible(true);
@@ -391,7 +431,14 @@ void MainWindow::startProcessing()
 	else
 	{
 		this->statusBar()->clearMessage();
-		QMessageBox::critical(this, tr("Camera error"), tr("Camera initialization failed! (with device %1)").arg(Settings::getCamera_deviceId()));
+		if(this->isVisible())
+		{
+			QMessageBox::critical(this, tr("Camera error"), tr("Camera initialization failed! (with device %1)").arg(Settings::getCamera_deviceId()));
+		}
+		else
+		{
+			printf("ERROR: Camera initialization failed! (with device %d)", Settings::getCamera_deviceId());
+		}
 	}
 }
 
@@ -403,8 +450,24 @@ void MainWindow::stopProcessing()
 		camera_->stop();
 	}
 	ui_->actionStop_camera->setEnabled(false);
+	ui_->actionPause_camera->setEnabled(false);
 	ui_->actionStart_camera->setEnabled(true);
 	ui_->actionLoad_scene_from_file->setEnabled(true);
+}
+
+void MainWindow::pauseProcessing()
+{
+	ui_->actionStop_camera->setEnabled(true);
+	ui_->actionPause_camera->setEnabled(true);
+	ui_->actionStart_camera->setEnabled(false);
+	if(camera_->isRunning())
+	{
+		camera_->pause();
+	}
+	else
+	{
+		camera_->start();
+	}
 }
 
 void MainWindow::update(const cv::Mat & image)
@@ -707,4 +770,7 @@ void MainWindow::notifyParametersChanged()
 		this->update(image);
 		ui_->label_timeRefreshRate->setVisible(false);
 	}
+
+	ui_->actionSetup_camera_from_video_file->setChecked(!Settings::getCamera_videoFilePath().isEmpty());
+	ui_->actionSetup_camera_from_video_file_2->setChecked(!Settings::getCamera_videoFilePath().isEmpty());
 }

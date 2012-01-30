@@ -40,6 +40,7 @@ protected:
 public slots:
 	void startProcessing();
 	void stopProcessing();
+	void pauseProcessing();
 
 private slots:
 	void loadObjects();
@@ -47,6 +48,7 @@ private slots:
 	void addObject();
 	void addObjectsFromFiles();
 	void loadSceneFromFile();
+	void setupCameraFromVideoFile();
 	void removeObject(ObjWidget * object);
 	void update(const cv::Mat & image);
 	void updateObjects();

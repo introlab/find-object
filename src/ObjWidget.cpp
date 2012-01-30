@@ -403,6 +403,12 @@ void ObjWidget::load(QDataStream & streamPtr)
 	descriptors = cv::Mat(rows, cols, type, data.data()).clone();
 	streamPtr >> image_;
 	this->setData(kpts, descriptors, 0, detectorType, descriptorType);
+	if(iplImage_)
+	{
+		cvReleaseImage(&iplImage_);
+		iplImage_ = 0;
+	}
+	iplImage_ = QImage2Ipl(image_.toImage());
 	//this->setMinimumSize(image_.size());
 }
 

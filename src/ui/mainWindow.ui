@@ -153,7 +153,11 @@
     <addaction name="actionLoad_scene_from_file"/>
     <addaction name="separator"/>
     <addaction name="actionStart_camera"/>
+    <addaction name="actionPause_camera"/>
     <addaction name="actionStop_camera"/>
+    <addaction name="separator"/>
+    <addaction name="actionSetup_camera_from_video_file"/>
+    <addaction name="actionSetup_camera_from_video_file_2"/>
     <addaction name="separator"/>
     <addaction name="actionRestore_all_default_settings"/>
    </widget>
@@ -493,6 +497,21 @@
   <action name="actionLoad_scene_from_file">
    <property name="text">
     <string>Load scene from file...</string>
+   </property>
+  </action>
+  <action name="actionPause_camera">
+   <property name="text">
+    <string>Pause camera</string>
+   </property>
+  </action>
+  <action name="actionSetup_camera_from_video_file">
+   <property name="text">
+    <string>Setup camera from video file...</string>
+   </property>
+  </action>
+  <action name="actionSetup_camera_from_video_file_2">
+   <property name="text">
+    <string>Setup camera from video file...</string>
    </property>
   </action>
  </widget>

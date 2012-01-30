@@ -142,7 +142,7 @@ void AddObjectDialog::setState(int state)
 	else if(state == kSelectFeatures)
 	{
 		disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
-		camera_->stop();
+		camera_->pause();
 
 		ui_->pushButton_cancel->setEnabled(true);
 		ui_->pushButton_back->setEnabled(true);
@@ -169,7 +169,7 @@ void AddObjectDialog::setState(int state)
 	else if(state == kVerifySelection)
 	{
 		disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
-		camera_->stop();
+		camera_->pause();
 
 		ui_->pushButton_cancel->setEnabled(true);
 		ui_->pushButton_back->setEnabled(true);

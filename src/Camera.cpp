@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <opencv2/imgproc/imgproc_c.h>
 #include "Settings.h"
+#include <QtCore/QFile>
 
 Camera::Camera(QObject * parent) :
 	QObject(parent),
@@ -28,6 +29,11 @@ void Camera::stop()
 		cvReleaseCapture(&capture_);
 		capture_ = 0;
 	}
+}
+
+void Camera::pause()
+{
+	stopTimer();
 }
 
 void Camera::takeImage()
@@ -73,11 +79,23 @@ bool Camera::start()
 {
 	if(!capture_)
 	{
-		capture_ = cvCaptureFromCAM(Settings::getCamera_deviceId());
-		if(capture_)
+		QString videoFile = Settings::getCamera_videoFilePath();
+		if(QFile::exists(videoFile))
 		{
-			cvSetCaptureProperty(capture_, CV_CAP_PROP_FRAME_WIDTH, double(Settings::getCamera_imageWidth()));
-			cvSetCaptureProperty(capture_, CV_CAP_PROP_FRAME_HEIGHT, double(Settings::getCamera_imageHeight()));
+			capture_ = cvCaptureFromAVI(videoFile.toStdString().c_str());
+			if(!capture_)
+			{
+				printf("WARNING: Cannot open file \"%s\". If you want to disable loading automatically this video file, clear the Camera/videoFilePath parameter. By default, webcam will be used instead of the file.\n", videoFile.toStdString().c_str());
+			}
+		}
+		if(!capture_)
+		{
+			capture_ = cvCaptureFromCAM(Settings::getCamera_deviceId());
+			if(capture_ && Settings::getCamera_imageWidth() && Settings::getCamera_imageHeight())
+			{
+				cvSetCaptureProperty(capture_, CV_CAP_PROP_FRAME_WIDTH, double(Settings::getCamera_imageWidth()));
+				cvSetCaptureProperty(capture_, CV_CAP_PROP_FRAME_HEIGHT, double(Settings::getCamera_imageHeight()));
+			}
 		}
 	}
 	if(!capture_)

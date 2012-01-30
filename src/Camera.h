@@ -19,6 +19,8 @@ public:
 	virtual void stop();
 	virtual bool isRunning() {return cameraTimer_.isActive();}
 
+	void pause();
+
 signals:
 	void imageReceived(const cv::Mat & image);
 
