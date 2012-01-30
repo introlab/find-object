@@ -80,7 +80,7 @@ bool Camera::start()
 	if(!capture_)
 	{
 		QString videoFile = Settings::getCamera_videoFilePath();
-		if(QFile::exists(videoFile))
+		if(!videoFile.isEmpty())
 		{
 			capture_ = cvCaptureFromAVI(videoFile.toStdString().c_str());
 			if(!capture_)
