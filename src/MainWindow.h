@@ -45,6 +45,8 @@ private slots:
 	void loadObjects();
 	void saveObjects();
 	void addObject();
+	void addObjectsFromFiles();
+	void loadSceneFromFile();
 	void removeObject(ObjWidget * object);
 	void update(const cv::Mat & image);
 	void updateObjects();

@@ -75,6 +75,8 @@ MainWindow::MainWindow(Camera * camera, QWidget * parent) :
 
 	// Actions
 	connect(ui_->actionAdd_object, SIGNAL(triggered()), this, SLOT(addObject()));
+	connect(ui_->actionAdd_objects_from_files, SIGNAL(triggered()), this, SLOT(addObjectsFromFiles()));
+	connect(ui_->actionLoad_scene_from_file, SIGNAL(triggered()), this, SLOT(loadSceneFromFile()));
 	connect(ui_->actionStart_camera, SIGNAL(triggered()), this, SLOT(startProcessing()));
 	connect(ui_->actionStop_camera, SIGNAL(triggered()), this, SLOT(stopProcessing()));
 	connect(ui_->actionExit, SIGNAL(triggered()), this, SLOT(close()));
@@ -83,7 +85,11 @@ MainWindow::MainWindow(Camera * camera, QWidget * parent) :
 	connect(ui_->actionAbout, SIGNAL(triggered()), aboutDialog_ , SLOT(exec()));
 	connect(ui_->actionRestore_all_default_settings, SIGNAL(triggered()), ui_->toolBox, SLOT(resetAllPages()));
 
-	QTimer::singleShot(10, this, SLOT(startProcessing()));
+	if(Settings::getGeneral_autoStartCamera())
+	{
+		// Set 1 msec to see state on the status bar.
+		QTimer::singleShot(1, this, SLOT(startProcessing()));
+	}
 }
 
 MainWindow::~MainWindow()
@@ -196,6 +202,41 @@ void MainWindow::addObject()
 	this->startProcessing();
 }
 
+void MainWindow::addObjectsFromFiles()
+{
+	QStringList fileNames = QFileDialog::getOpenFileNames(this, tr("Add objects..."), Settings::workingDirectory(), tr("Image Files (*.png *.jpg *.bmp *.tiff)"));
+	if(fileNames.size())
+	{
+		for(int i=0; i<fileNames.size(); ++i)
+		{
+			IplImage * img = cvLoadImage(fileNames[i].toStdString().c_str(), CV_LOAD_IMAGE_GRAYSCALE);
+			if(img)
+			{
+				objects_.append(new ObjWidget(0, std::vector<cv::KeyPoint>(), cv::Mat(), img, "", ""));
+				this->showObject(objects_.last());
+				cvReleaseImage(&img);
+			}
+		}
+		updateObjects();
+	}
+}
+
+void MainWindow::loadSceneFromFile()
+{
+	QString fileName = QFileDialog::getOpenFileName(this, tr("Load scene..."), Settings::workingDirectory(), tr("Image Files (*.png *.jpg *.bmp *.tiff)"));
+	if(!fileName.isEmpty())
+	{
+		IplImage * img = cvLoadImage(fileName.toStdString().c_str());
+		if(img)
+		{
+			cv::Mat imageMat(img);
+			this->update(imageMat);
+			cvReleaseImage(&img);
+			ui_->label_timeRefreshRate->setVisible(false);
+		}
+	}
+}
+
 void MainWindow::showObject(ObjWidget * obj)
 {
 	if(obj)
@@ -278,6 +319,8 @@ void MainWindow::updateObjects()
 			detectorDescriptorType->setText(QString("%1/%2").arg(objects_.at(i)->detectorType()).arg(objects_.at(i)->descriptorType()));
 		}
 		updateData();
+		notifyParametersChanged(); // this will update the scene if camera is stopped
+
 	}
 	this->statusBar()->clearMessage();
 }
@@ -341,6 +384,8 @@ void MainWindow::startProcessing()
 		connect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
 		ui_->actionStop_camera->setEnabled(true);
 		ui_->actionStart_camera->setEnabled(false);
+		ui_->actionLoad_scene_from_file->setEnabled(false);
+		ui_->label_timeRefreshRate->setVisible(true);
 		this->statusBar()->showMessage(tr("Camera started."), 2000);
 	}
 	else
@@ -359,6 +404,7 @@ void MainWindow::stopProcessing()
 	}
 	ui_->actionStop_camera->setEnabled(false);
 	ui_->actionStart_camera->setEnabled(true);
+	ui_->actionLoad_scene_from_file->setEnabled(true);
 }
 
 void MainWindow::update(const cv::Mat & image)
@@ -654,5 +700,11 @@ void MainWindow::notifyParametersChanged()
 	if(objects_.size())
 	{
 		this->statusBar()->showMessage(tr("A parameter has changed... \"Update objects\" may be required."));
+	}
+	if(!camera_->isRunning() && ui_->imageView_source->iplImage())
+	{
+		cv::Mat image(ui_->imageView_source->iplImage(), true);
+		this->update(image);
+		ui_->label_timeRefreshRate->setVisible(false);
 	}
 }

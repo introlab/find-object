@@ -148,6 +148,10 @@
      <string>Edit</string>
     </property>
     <addaction name="actionAdd_object"/>
+    <addaction name="actionAdd_objects_from_files"/>
+    <addaction name="separator"/>
+    <addaction name="actionLoad_scene_from_file"/>
+    <addaction name="separator"/>
     <addaction name="actionStart_camera"/>
     <addaction name="actionStop_camera"/>
     <addaction name="separator"/>
@@ -479,6 +483,16 @@
   <action name="actionRestore_all_default_settings">
    <property name="text">
     <string>Restore all default settings</string>
+   </property>
+  </action>
+  <action name="actionAdd_objects_from_files">
+   <property name="text">
+    <string>Add objects from files...</string>
+   </property>
+  </action>
+  <action name="actionLoad_scene_from_file">
+   <property name="text">
+    <string>Load scene from file...</string>
    </property>
   </action>
  </widget>

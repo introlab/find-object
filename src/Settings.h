@@ -124,6 +124,7 @@ class Settings
 	PARAMETER(NearestNeighbor, minDistanceUsed, bool, false);
 	PARAMETER(NearestNeighbor, minDistance, float, 1.6f);
 
+	PARAMETER(General, autoStartCamera, bool, false);
 	PARAMETER(General, nextObjID, uint, 1);
 
 	PARAMETER(Homography, homographyComputed, bool, true);
