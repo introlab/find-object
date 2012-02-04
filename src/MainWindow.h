@@ -29,7 +29,7 @@ public:
 	MainWindow(Camera * camera = 0, QWidget * parent = 0);
 	virtual ~MainWindow();
 
-	void loadObjects(const QString & dirPath);
+	int loadObjects(const QString & dirPath);
 	void saveObjects(const QString & dirPath);
 
 	ParametersToolBox * parametersToolBox() const;

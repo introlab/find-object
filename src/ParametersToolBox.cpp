@@ -212,9 +212,13 @@ void ParametersToolBox::addParameter(QVBoxLayout * layout,
 		widget->setDecimals(3);
 	}
 
-	if(def>0.0)
+	if(def>=0.0)
 	{
 		widget->setMaximum(def*1000000.0);
+	}
+	else if(def==0.0)
+	{
+		widget->setMaximum(1000000.0);
 	}
 	else if(def<0.0)
 	{
@@ -237,6 +241,10 @@ void ParametersToolBox::addParameter(QVBoxLayout * layout,
 	if(def>0)
 	{
 		widget->setMaximum(def*1000000);
+	}
+	else if(def == 0)
+	{
+		widget->setMaximum(1000000);
 	}
 	else if(def<0)
 	{

@@ -151,8 +151,9 @@ ParametersToolBox * MainWindow::parametersToolBox() const
 	return ui_->toolBox;
 }
 
-void MainWindow::loadObjects(const QString & dirPath)
+int MainWindow::loadObjects(const QString & dirPath)
 {
+	int loadedObjects = 0;
 	QDir dir(dirPath);
 	if(dir.exists())
 	{
@@ -166,7 +167,9 @@ void MainWindow::loadObjects(const QString & dirPath)
 		{
 			this->updateObjects();
 		}
+		loadedObjects = list.size();
 	}
+	return loadedObjects;
 }
 
 void MainWindow::saveObjects(const QString & dirPath)

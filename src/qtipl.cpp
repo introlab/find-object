@@ -4,6 +4,7 @@
 
 #include "qtipl.h"
 #include <opencv2/core/core_c.h>
+#include <stdio.h>
 
 // TODO : support only from gray 8bits ?
 QImage Ipl2QImage(const IplImage *newImage)
