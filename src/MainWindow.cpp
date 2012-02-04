@@ -151,6 +151,11 @@ ParametersToolBox * MainWindow::parametersToolBox() const
 	return ui_->toolBox;
 }
 
+void MainWindow::setSourceImageText(const QString & text)
+{
+	ui_->imageView_source->setTextLabel(text);
+}
+
 int MainWindow::loadObjects(const QString & dirPath)
 {
 	int loadedObjects = 0;
