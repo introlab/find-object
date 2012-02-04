@@ -53,8 +53,8 @@ typedef unsigned int uint;
 class Settings
 {
 	PARAMETER(Camera, deviceId, int, 0);
-	PARAMETER(Camera, imageWidth, int, 640);
-	PARAMETER(Camera, imageHeight, int, 480);
+	PARAMETER(Camera, imageWidth, int, 0);
+	PARAMETER(Camera, imageHeight, int, 0);
 	PARAMETER(Camera, imageRate, int, 2); // Hz
 	PARAMETER(Camera, videoFilePath, QString, "");
 
@@ -127,6 +127,8 @@ class Settings
 
 	PARAMETER(General, autoStartCamera, bool, false);
 	PARAMETER(General, nextObjID, uint, 1);
+	PARAMETER(General, imageFormats, QString, "*.png *.jpg *.bmp *.tiff")
+	PARAMETER(General, videoFormats, QString, "*.avi *.m4v")
 
 	PARAMETER(Homography, homographyComputed, bool, true);
 	PARAMETER(Homography, ransacReprojThr, double, 1.0);

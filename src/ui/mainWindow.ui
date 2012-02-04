@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>871</width>
-    <height>533</height>
+    <width>1104</width>
+    <height>497</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -130,7 +130,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>871</width>
+     <width>1104</width>
      <height>22</height>
     </rect>
    </property>
@@ -147,7 +147,7 @@
     <property name="title">
      <string>Edit</string>
     </property>
-    <addaction name="actionAdd_object"/>
+    <addaction name="actionAdd_object_from_scene"/>
     <addaction name="actionAdd_objects_from_files"/>
     <addaction name="separator"/>
     <addaction name="actionLoad_scene_from_file"/>
@@ -156,8 +156,7 @@
     <addaction name="actionPause_camera"/>
     <addaction name="actionStop_camera"/>
     <addaction name="separator"/>
-    <addaction name="actionSetup_camera_from_video_file"/>
-    <addaction name="actionSetup_camera_from_video_file_2"/>
+    <addaction name="actionCamera_from_video_file"/>
     <addaction name="separator"/>
     <addaction name="actionRestore_all_default_settings"/>
     <addaction name="separator"/>
@@ -208,7 +207,7 @@
           <x>0</x>
           <y>0</y>
           <width>276</width>
-          <height>393</height>
+          <height>357</height>
          </rect>
         </property>
         <attribute name="label">
@@ -417,7 +416,7 @@
           <x>0</x>
           <y>0</y>
           <width>274</width>
-          <height>425</height>
+          <height>389</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_objects">
@@ -456,9 +455,9 @@
     <string>Exit</string>
    </property>
   </action>
-  <action name="actionAdd_object">
+  <action name="actionAdd_object_from_scene">
    <property name="text">
-    <string>Add object...</string>
+    <string>Add object from scene...</string>
    </property>
   </action>
   <action name="actionStart_camera">
@@ -506,14 +505,9 @@
     <string>Pause camera</string>
    </property>
   </action>
-  <action name="actionSetup_camera_from_video_file">
+  <action name="actionCamera_from_video_file">
    <property name="text">
-    <string>Setup camera from video file...</string>
-   </property>
-  </action>
-  <action name="actionSetup_camera_from_video_file_2">
-   <property name="text">
-    <string>Setup camera from video file...</string>
+    <string>Camera from video file...</string>
    </property>
   </action>
   <action name="actionRemove_all_objects">

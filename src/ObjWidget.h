@@ -16,6 +16,7 @@ class QGraphicsView;
 class QGraphicsScene;
 class QGraphicsRectItem;
 class QGraphicsItem;
+class QLabel;
 
 class ObjWidget : public QWidget
 {
@@ -38,6 +39,7 @@ public:
 			const IplImage * image,
 			const QString & detectorType,
 			const QString & descriptorType);
+	void setTextLabel(const QString & text);
 	void resetKptsColor();
 	void setKptColor(int index, const QColor & color);
 	void setGraphicsViewMode(bool on);
@@ -104,6 +106,7 @@ private:
 	QList<QGraphicsRectItem*> rectItems_;
 	bool graphicsViewInitialized_;
 	int alpha_;
+	QLabel * label_;
 
 	// menu stuff
 	QString _savedFileName;

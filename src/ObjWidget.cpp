@@ -21,6 +21,7 @@
 #include <QtGui/QGraphicsRectItem>
 #include <QtGui/QInputDialog>
 #include <QtGui/QPen>
+#include <QtGui/QLabel>
 
 #include <QtCore/QDir>
 
@@ -72,8 +73,12 @@ void ObjWidget::setupUi()
 	graphicsView_->setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
 	graphicsView_->setScene(new QGraphicsScene(graphicsView_));
 
+	label_ = new QLabel();
+	label_->setAlignment(Qt::AlignCenter);
+
 	this->setLayout(new QVBoxLayout(this));
 	this->layout()->addWidget(graphicsView_);
+	this->layout()->addWidget(label_);
 	this->layout()->setContentsMargins(0,0,0,0);
 
 	_menu = new QMenu(tr(""), this);
@@ -232,6 +237,11 @@ void ObjWidget::setAlpha(int alpha)
 	}
 }
 
+void ObjWidget::setTextLabel(const QString & text)
+{
+	label_->setText(text);
+}
+
 void ObjWidget::setData(const std::vector<cv::KeyPoint> & keypoints,
 		const cv::Mat & descriptors,
 		const IplImage * image,
@@ -247,6 +257,7 @@ void ObjWidget::setData(const std::vector<cv::KeyPoint> & keypoints,
 	graphicsViewInitialized_ = false;
 	detectorType_ = detectorType;
 	descriptorType_ = descriptorType;
+	mouseCurrentPos_ = mousePressedPos_; // this will reset roi selection
 	if(iplImage_)
 	{
 		cvReleaseImage(&iplImage_);
@@ -270,6 +281,7 @@ void ObjWidget::setData(const std::vector<cv::KeyPoint> & keypoints,
 	{
 		this->setupGraphicsView();
 	}
+	label_->setVisible(!image);
 }
 
 void ObjWidget::resetKptsColor()

@@ -66,6 +66,7 @@ MainWindow::MainWindow(Camera * camera, QWidget * parent) :
 	connect(ui_->toolBox, SIGNAL(parametersChanged()), this, SLOT(notifyParametersChanged()));
 
 	ui_->imageView_source->setGraphicsViewMode(false);
+	ui_->imageView_source->setTextLabel(tr("Press \"space\" to start camera..."));
 
 	//reset button
 	connect(ui_->pushButton_restoreDefaults, SIGNAL(clicked()), ui_->toolBox, SLOT(resetCurrentPage()));
@@ -77,7 +78,7 @@ MainWindow::MainWindow(Camera * camera, QWidget * parent) :
 	ui_->actionSave_objects->setEnabled(false);
 
 	// Actions
-	connect(ui_->actionAdd_object, SIGNAL(triggered()), this, SLOT(addObject()));
+	connect(ui_->actionAdd_object_from_scene, SIGNAL(triggered()), this, SLOT(addObjectFromScene()));
 	connect(ui_->actionAdd_objects_from_files, SIGNAL(triggered()), this, SLOT(addObjectsFromFiles()));
 	connect(ui_->actionLoad_scene_from_file, SIGNAL(triggered()), this, SLOT(loadSceneFromFile()));
 	connect(ui_->actionStart_camera, SIGNAL(triggered()), this, SLOT(startProcessing()));
@@ -86,16 +87,16 @@ MainWindow::MainWindow(Camera * camera, QWidget * parent) :
 	connect(ui_->actionExit, SIGNAL(triggered()), this, SLOT(close()));
 	connect(ui_->actionSave_objects, SIGNAL(triggered()), this, SLOT(saveObjects()));
 	connect(ui_->actionLoad_objects, SIGNAL(triggered()), this, SLOT(loadObjects()));
-	connect(ui_->actionSetup_camera_from_video_file, SIGNAL(triggered()), this, SLOT(setupCameraFromVideoFile()));
-	connect(ui_->actionSetup_camera_from_video_file_2, SIGNAL(triggered()), this, SLOT(setupCameraFromVideoFile()));
+	connect(ui_->actionCamera_from_video_file, SIGNAL(triggered()), this, SLOT(setupCameraFromVideoFile()));
 	connect(ui_->actionAbout, SIGNAL(triggered()), aboutDialog_ , SLOT(exec()));
 	connect(ui_->actionRestore_all_default_settings, SIGNAL(triggered()), ui_->toolBox, SLOT(resetAllPages()));
 	connect(ui_->actionRemove_all_objects, SIGNAL(triggered()), this, SLOT(removeAllObjects()));
 
-	ui_->actionSetup_camera_from_video_file->setCheckable(true);
-	ui_->actionSetup_camera_from_video_file_2->setCheckable(true);
-	ui_->actionSetup_camera_from_video_file->setChecked(!Settings::getCamera_videoFilePath().isEmpty());
-	ui_->actionSetup_camera_from_video_file_2->setChecked(!Settings::getCamera_videoFilePath().isEmpty());
+	ui_->actionStart_camera->setShortcut(Qt::Key_Space);
+	ui_->actionPause_camera->setShortcut(Qt::Key_Space);
+
+	ui_->actionCamera_from_video_file->setCheckable(true);
+	ui_->actionCamera_from_video_file->setChecked(!Settings::getCamera_videoFilePath().isEmpty());
 
 	if(Settings::getGeneral_autoStartCamera())
 	{
@@ -155,8 +156,7 @@ void MainWindow::loadObjects(const QString & dirPath)
 	QDir dir(dirPath);
 	if(dir.exists())
 	{
-		QStringList filters;
-		filters << "*.png"  << "*.jpg" << "*.bmp" << "*.tiff";
+		QStringList filters = Settings::getGeneral_imageFormats().split(' ');
 		QFileInfoList list = dir.entryInfoList(filters, QDir::Files, QDir::Name);
 		for(int i=0; i<list.size(); ++i)
 		{
@@ -207,34 +207,69 @@ void MainWindow::removeObject(ObjWidget * object)
 		objects_.removeOne(object);
 		object->deleteLater();
 		this->updateData();
+		if(!camera_->isRunning() && ui_->imageView_source->iplImage())
+		{
+			cv::Mat image(ui_->imageView_source->iplImage(), true);
+			this->update(image);
+		}
 	}
 }
 
 void MainWindow::removeAllObjects()
 {
-	QList<ObjWidget*> obj = objects_;
-	for(int i=0; i<obj.size(); ++i)
+	for(int i=0; i<objects_.size(); ++i)
 	{
-		removeObject(obj[i]);
+		delete objects_.at(i);
+	}
+	objects_.clear();
+	this->updateData();
+	if(!camera_->isRunning() && ui_->imageView_source->iplImage())
+	{
+		cv::Mat image(ui_->imageView_source->iplImage(), true);
+		this->update(image);
 	}
 }
 
-void MainWindow::addObject()
+void MainWindow::addObjectFromScene()
 {
 	disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
-	AddObjectDialog dialog(camera_, &objects_, ui_->imageView_source->isMirrorView(), this);
-	if(dialog.exec() == QDialog::Accepted)
+	AddObjectDialog * dialog;
+	bool resumeCamera = camera_->isRunning();
+	if(!ui_->actionStart_camera->isEnabled() || !ui_->imageView_source->iplImage())
 	{
-		showObject(objects_.last());
-		updateData();
-		objectsModified_ = true;
+		dialog = new AddObjectDialog(camera_, ui_->imageView_source->iplImage(), ui_->imageView_source->isMirrorView(), this);
 	}
-	this->startProcessing();
+	else
+	{
+		dialog = new AddObjectDialog(0, ui_->imageView_source->iplImage(), ui_->imageView_source->isMirrorView(), this);
+	}
+	if(dialog->exec() == QDialog::Accepted)
+	{
+		ObjWidget * obj = dialog->retrieveObject();
+		if(obj)
+		{
+			objects_.push_back(obj);
+			showObject(objects_.last());
+			updateData();
+			objectsModified_ = true;
+		}
+	}
+	if(resumeCamera || !ui_->imageView_source->iplImage())
+	{
+		this->startProcessing();
+	}
+	else
+	{
+		connect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
+		cv::Mat image(ui_->imageView_source->iplImage(), true);
+		this->update(image);
+	}
+	delete dialog;
 }
 
 void MainWindow::addObjectsFromFiles()
 {
-	QStringList fileNames = QFileDialog::getOpenFileNames(this, tr("Add objects..."), Settings::workingDirectory(), tr("Image Files (*.png *.jpg *.bmp *.tiff)"));
+	QStringList fileNames = QFileDialog::getOpenFileNames(this, tr("Add objects..."), Settings::workingDirectory(), tr("Image Files (%1)").arg(Settings::getGeneral_imageFormats()));
 	if(fileNames.size())
 	{
 		for(int i=0; i<fileNames.size(); ++i)
@@ -248,6 +283,7 @@ void MainWindow::addObjectsFromFiles()
 
 void MainWindow::addObjectFromFile(const QString & filePath)
 {
+	printf("Load file %s\n", filePath.toStdString().c_str());
 	if(!filePath.isNull())
 	{
 		IplImage * img = cvLoadImage(filePath.toStdString().c_str(), CV_LOAD_IMAGE_GRAYSCALE);
@@ -258,12 +294,10 @@ void MainWindow::addObjectFromFile(const QString & filePath)
 			QStringList list = file.fileName().split('.');
 			if(list.size())
 			{
-				printf("asdfddsa %s\n", list.front().toStdString().c_str());
 				bool ok = false;
 				id = list.front().toInt(&ok);
 				if(ok)
 				{
-					printf("id=%d\n", id);
 					for(int i=0; i<objects_.size(); ++i)
 					{
 						if(objects_.at(i)->id() == id)
@@ -295,7 +329,7 @@ void MainWindow::addObjectFromFile(const QString & filePath)
 
 void MainWindow::loadSceneFromFile()
 {
-	QString fileName = QFileDialog::getOpenFileName(this, tr("Load scene..."), Settings::workingDirectory(), tr("Image Files (*.png *.jpg *.bmp *.tiff)"));
+	QString fileName = QFileDialog::getOpenFileName(this, tr("Load scene..."), Settings::workingDirectory(), tr("Image Files (%1)").arg(Settings::getGeneral_imageFormats()));
 	if(!fileName.isEmpty())
 	{
 		IplImage * img = cvLoadImage(fileName.toStdString().c_str());
@@ -311,17 +345,26 @@ void MainWindow::loadSceneFromFile()
 
 void MainWindow::setupCameraFromVideoFile()
 {
-	QString fileName = QFileDialog::getOpenFileName(this, tr("Setup camera from video file..."), Settings::workingDirectory(), tr("Video Files (*.avi *.m4v)"));
-	if(!fileName.isEmpty())
+	if(!ui_->actionCamera_from_video_file->isChecked())
 	{
-		Settings::setCamera_videoFilePath(fileName);
+		Settings::setCamera_videoFilePath("");
 		ui_->toolBox->updateParameter(Settings::kCamera_videoFilePath());
-		if(camera_->isRunning())
+	}
+	else
+	{
+		QString fileName = QFileDialog::getOpenFileName(this, tr("Setup camera from video file..."), Settings::workingDirectory(), tr("Video Files (%1)").arg(Settings::getGeneral_videoFormats()));
+		if(!fileName.isEmpty())
 		{
-			this->stopProcessing();
-			this->startProcessing();
+			Settings::setCamera_videoFilePath(fileName);
+			ui_->toolBox->updateParameter(Settings::kCamera_videoFilePath());
+			if(camera_->isRunning())
+			{
+				this->stopProcessing();
+				this->startProcessing();
+			}
 		}
 	}
+	ui_->actionCamera_from_video_file->setChecked(!Settings::getCamera_videoFilePath().isEmpty());
 }
 
 void MainWindow::showObject(ObjWidget * obj)
@@ -405,8 +448,11 @@ void MainWindow::updateObjects()
 			detectorDescriptorType->setText(QString("%1/%2").arg(objects_.at(i)->detectorType()).arg(objects_.at(i)->descriptorType()));
 		}
 		updateData();
-		notifyParametersChanged(); // this will update the scene if camera is stopped
-
+	}
+	if(!camera_->isRunning() && ui_->imageView_source->iplImage())
+	{
+		cv::Mat image(ui_->imageView_source->iplImage(), true);
+		this->update(image);
 	}
 	this->statusBar()->clearMessage();
 }
@@ -478,7 +524,11 @@ void MainWindow::updateData()
 
 void MainWindow::startProcessing()
 {
-	this->statusBar()->showMessage(tr("Starting camera..."));
+	bool updateStatusMessage = this->statusBar()->currentMessage().isEmpty();
+	if(updateStatusMessage)
+	{
+		this->statusBar()->showMessage(tr("Starting camera..."));
+	}
 	if(camera_->start())
 	{
 		connect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
@@ -487,11 +537,17 @@ void MainWindow::startProcessing()
 		ui_->actionStart_camera->setEnabled(false);
 		ui_->actionLoad_scene_from_file->setEnabled(false);
 		ui_->label_timeRefreshRate->setVisible(true);
-		this->statusBar()->showMessage(tr("Camera started."), 2000);
+		if(updateStatusMessage)
+		{
+			this->statusBar()->showMessage(tr("Camera started."), 2000);
+		}
 	}
 	else
 	{
-		this->statusBar()->clearMessage();
+		if(updateStatusMessage)
+		{
+			this->statusBar()->clearMessage();
+		}
 		if(this->isVisible())
 		{
 			QMessageBox::critical(this, tr("Camera error"), tr("Camera initialization failed! (with device %1)").arg(Settings::getCamera_deviceId()));
@@ -628,7 +684,8 @@ void MainWindow::update(const cv::Mat & image)
 			float maxMatchedDistance = -1.0f;
 			for(int i=0; i<dataTree_.rows; ++i)
 			{
-				QColor color((Qt::GlobalColor)(j % 12 + 7 ));
+				int nColor = j % 11 + 7;
+				QColor color((Qt::GlobalColor)(nColor==Qt::yellow?Qt::gray:nColor));
 				bool matched = false;
 				// Check if this descriptor matches with those of the objects
 				if(Settings::getNearestNeighbor_nndrRatioUsed() &&
@@ -821,6 +878,7 @@ void MainWindow::update(const cv::Mat & image)
 
 void MainWindow::notifyParametersChanged()
 {
+	printf("Parameters changed...\n");
 	if(objects_.size())
 	{
 		this->statusBar()->showMessage(tr("A parameter has changed... \"Update objects\" may be required."));
@@ -832,6 +890,5 @@ void MainWindow::notifyParametersChanged()
 		ui_->label_timeRefreshRate->setVisible(false);
 	}
 
-	ui_->actionSetup_camera_from_video_file->setChecked(!Settings::getCamera_videoFilePath().isEmpty());
-	ui_->actionSetup_camera_from_video_file_2->setChecked(!Settings::getCamera_videoFilePath().isEmpty());
+	ui_->actionCamera_from_video_file->setChecked(!Settings::getCamera_videoFilePath().isEmpty());
 }

@@ -20,8 +20,11 @@ class AddObjectDialog : public QDialog {
 	Q_OBJECT
 
 public:
-	AddObjectDialog(Camera * camera, QList<ObjWidget*> * objects, bool mirrorView, QWidget * parent = 0, Qt::WindowFlags f = 0);
+	AddObjectDialog(Camera * camera, const IplImage * image, bool mirrorView, QWidget * parent = 0, Qt::WindowFlags f = 0);
 	virtual ~AddObjectDialog();
+
+	// ownership transferred to caller
+	ObjWidget * retrieveObject() {ObjWidget * obj = object_; object_=0; return obj;}
 
 private slots:
 	void update(const cv::Mat &);
@@ -42,7 +45,7 @@ private:
 private:
 	Ui_addObjectDialog * ui_;
 	Camera * camera_;
-	QList<ObjWidget*> * objects_;
+	ObjWidget * object_;
 	IplImage * cvImage_;
 
 	enum State{kTakePicture, kSelectFeatures, kVerifySelection, kClosing};

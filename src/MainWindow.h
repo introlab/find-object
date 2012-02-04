@@ -45,7 +45,7 @@ public slots:
 private slots:
 	void loadObjects();
 	bool saveObjects();
-	void addObject();
+	void addObjectFromScene();
 	void addObjectsFromFiles();
 	void loadSceneFromFile();
 	void setupCameraFromVideoFile();

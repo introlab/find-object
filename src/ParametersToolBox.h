@@ -39,6 +39,9 @@ private slots:
 	void changeParameter(const int & value);
 	void resetCurrentPage();
 	void resetAllPages();
+
+private:
+	void resetPage(int index);
 };
 
 #endif /* PARAMETERSTOOLBOX_H_ */

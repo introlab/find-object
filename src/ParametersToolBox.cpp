@@ -27,71 +27,61 @@ QWidget * ParametersToolBox::getParameterWidget(const QString & key)
 	return this->findChild<QWidget*>(key);
 }
 
-void ParametersToolBox::resetCurrentPage()
+void ParametersToolBox::resetPage(int index)
 {
-	const QObjectList & children = this->widget(this->currentIndex())->children();
+	const QObjectList & children = this->widget(index)->children();
 	for(int j=0; j<children.size();++j)
 	{
 		QString key = children.at(j)->objectName();
-		QVariant value = Settings::getDefaultParameters().value(key, QVariant());
-		if(value.isValid())
+		// ignore only the nextObjID setting, to avoid problem with saved objects
+		if(key.compare(Settings::kGeneral_nextObjID()) != 0)
 		{
-			if(qobject_cast<QComboBox*>(children.at(j)))
+			QVariant value = Settings::getDefaultParameters().value(key, QVariant());
+			if(value.isValid())
 			{
-				((QComboBox*)children.at(j))->setCurrentIndex(value.toString().split(':').first().toInt());
+				if(qobject_cast<QComboBox*>(children.at(j)))
+				{
+					((QComboBox*)children.at(j))->setCurrentIndex(value.toString().split(':').first().toInt());
+				}
+				else if(qobject_cast<QSpinBox*>(children.at(j)))
+				{
+					((QSpinBox*)children.at(j))->setValue(value.toInt());
+				}
+				else if(qobject_cast<QDoubleSpinBox*>(children.at(j)))
+				{
+					((QDoubleSpinBox*)children.at(j))->setValue(value.toDouble());
+				}
+				else if(qobject_cast<QCheckBox*>(children.at(j)))
+				{
+					((QCheckBox*)children.at(j))->setChecked(value.toBool());
+				}
+				else if(qobject_cast<QLineEdit*>(children.at(j)))
+				{
+					((QLineEdit*)children.at(j))->setText(value.toString());
+				}
+				Settings::setParameter(key, value);
 			}
-			else if(qobject_cast<QSpinBox*>(children.at(j)))
-			{
-				((QSpinBox*)children.at(j))->setValue(value.toInt());
-			}
-			else if(qobject_cast<QDoubleSpinBox*>(children.at(j)))
-			{
-				((QDoubleSpinBox*)children.at(j))->setValue(value.toDouble());
-			}
-			else if(qobject_cast<QCheckBox*>(children.at(j)))
-			{
-				((QCheckBox*)children.at(j))->setChecked(value.toBool());
-			}
-			Settings::setParameter(key, value);
 		}
 	}
 }
 
+void ParametersToolBox::resetCurrentPage()
+{
+	this->blockSignals(true);
+	this->resetPage(this->currentIndex());
+	this->blockSignals(false);
+	emit parametersChanged();
+}
+
 void ParametersToolBox::resetAllPages()
 {
+	this->blockSignals(true);
 	for(int i=0; i< this->count(); ++i)
 	{
-		const QObjectList & children = this->widget(i)->children();
-		for(int j=0; j<children.size();++j)
-		{
-			QString key = children.at(j)->objectName();
-			// ignore only the nextObjID setting, to avoid problem with saved objects
-			if(key.compare(Settings::kGeneral_nextObjID()) != 0)
-			{
-				QVariant value = Settings::getDefaultParameters().value(key, QVariant());
-				if(value.isValid())
-				{
-					if(qobject_cast<QComboBox*>(children.at(j)))
-					{
-						((QComboBox*)children.at(j))->setCurrentIndex(value.toString().split(':').first().toInt());
-					}
-					else if(qobject_cast<QSpinBox*>(children.at(j)))
-					{
-						((QSpinBox*)children.at(j))->setValue(value.toInt());
-					}
-					else if(qobject_cast<QDoubleSpinBox*>(children.at(j)))
-					{
-						((QDoubleSpinBox*)children.at(j))->setValue(value.toDouble());
-					}
-					else if(qobject_cast<QCheckBox*>(children.at(j)))
-					{
-						((QCheckBox*)children.at(j))->setChecked(value.toBool());
-					}
-					Settings::setParameter(key, value);
-				}
-			}
-		}
+		this->resetPage(i);
 	}
+	this->blockSignals(false);
+	emit parametersChanged();
 }
 
 void ParametersToolBox::setupUi()
@@ -202,7 +192,7 @@ void ParametersToolBox::addParameter(QVBoxLayout * layout,
 	{
 		QLineEdit * widget = new QLineEdit(value, this);
 		widget->setObjectName(key);
-		connect(widget, SIGNAL(textChanged(const QString &)), this, SLOT(changeParameter(const QString &)));
+		connect(widget, SIGNAL(editingFinished()), this, SLOT(changeParameter()));
 		addParameter(layout, key.split('/').last(), widget);
 	}
 }
@@ -292,6 +282,7 @@ void ParametersToolBox::changeParameter()
 	{
 		QDoubleSpinBox * doubleSpinBox = qobject_cast<QDoubleSpinBox*>(sender());
 		QSpinBox * spinBox = qobject_cast<QSpinBox*>(sender());
+		QLineEdit * lineEdit = qobject_cast<QLineEdit*>(sender());
 		if(doubleSpinBox)
 		{
 			Settings::setParameter(sender()->objectName(), doubleSpinBox->value());
@@ -299,6 +290,10 @@ void ParametersToolBox::changeParameter()
 		else if(spinBox)
 		{
 			Settings::setParameter(sender()->objectName(), spinBox->value());
+		}
+		else if(lineEdit)
+		{
+			Settings::setParameter(sender()->objectName(), lineEdit->text());
 		}
 		emit parametersChanged();
 	}

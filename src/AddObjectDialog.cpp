@@ -19,10 +19,10 @@
 #include <opencv2/imgproc/imgproc_c.h>
 #include <opencv2/highgui/highgui_c.h>
 
-AddObjectDialog::AddObjectDialog(Camera * camera, QList<ObjWidget*> * objects, bool mirrorView, QWidget * parent, Qt::WindowFlags f) :
+AddObjectDialog::AddObjectDialog(Camera * camera, const IplImage * image, bool mirrorView, QWidget * parent, Qt::WindowFlags f) :
 		QDialog(parent, f),
 		camera_(camera),
-		objects_(objects),
+		object_(0),
 		cvImage_(0)
 {
 	ui_ = new Ui_addObjectDialog();
@@ -38,7 +38,16 @@ AddObjectDialog::AddObjectDialog(Camera * camera, QList<ObjWidget*> * objects, b
 	connect(ui_->cameraView, SIGNAL(roiChanged(const QRect &)), this, SLOT(updateNextButton(const QRect &)));
 	ui_->cameraView->setMirrorView(mirrorView);
 
-	this->setState(kTakePicture);
+	if((camera_ && camera_->isRunning()) || !image)
+	{
+		this->setState(kTakePicture);
+	}
+	else if(image)
+	{
+		cv::Mat img(image);
+		update(img);
+		this->setState(kSelectFeatures);
+	}
 }
 
 AddObjectDialog::~AddObjectDialog()
@@ -47,12 +56,19 @@ AddObjectDialog::~AddObjectDialog()
 	{
 		cvReleaseImage(&cvImage_);
 	}
+	if(object_)
+	{
+		delete object_;
+	}
 	delete ui_;
 }
 
 void AddObjectDialog::closeEvent(QCloseEvent* event)
 {
-	disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
+	if(camera_)
+	{
+		disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
+	}
 	QDialog::closeEvent(event);
 }
 
@@ -141,11 +157,14 @@ void AddObjectDialog::setState(int state)
 	}
 	else if(state == kSelectFeatures)
 	{
-		disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
-		camera_->pause();
+		if(camera_)
+		{
+			disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
+			camera_->pause();
+		}
 
 		ui_->pushButton_cancel->setEnabled(true);
-		ui_->pushButton_back->setEnabled(true);
+		ui_->pushButton_back->setEnabled(camera_);
 		ui_->pushButton_next->setEnabled(false);
 		ui_->pushButton_takePicture->setEnabled(false);
 		ui_->pushButton_next->setText(tr("Next"));
@@ -168,8 +187,11 @@ void AddObjectDialog::setState(int state)
 	}
 	else if(state == kVerifySelection)
 	{
-		disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
-		camera_->pause();
+		if(camera_)
+		{
+			disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
+			camera_->pause();
+		}
 
 		ui_->pushButton_cancel->setEnabled(true);
 		ui_->pushButton_back->setEnabled(true);
@@ -262,7 +284,12 @@ void AddObjectDialog::setState(int state)
 				}
 			}
 
-			objects_->append(new ObjWidget(0, keypoints, descriptors, ui_->objectView->iplImage(), Settings::currentDetectorType(), Settings::currentDescriptorType()));
+			if(object_)
+			{
+				delete object_;
+				object_ = 0;
+			}
+			object_ = new ObjWidget(0, keypoints, descriptors, ui_->objectView->iplImage(), Settings::currentDetectorType(), Settings::currentDescriptorType());
 
 			this->accept();
 		}
