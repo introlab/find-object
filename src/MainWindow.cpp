@@ -28,12 +28,14 @@
 #include <QtGui/QSpinBox>
 #include <QtGui/QStatusBar>
 #include <QtGui/QProgressDialog>
+#include <QtGui/QCloseEvent>
 
 // Camera ownership transferred
 MainWindow::MainWindow(Camera * camera, QWidget * parent) :
 	QMainWindow(parent),
 	camera_(camera),
-	lowestRefreshRate_(99)
+	lowestRefreshRate_(99),
+	objectsModified_(false)
 {
 	ui_ = new Ui_mainWindow();
 	ui_->setupUi(this);
@@ -88,6 +90,7 @@ MainWindow::MainWindow(Camera * camera, QWidget * parent) :
 	connect(ui_->actionSetup_camera_from_video_file_2, SIGNAL(triggered()), this, SLOT(setupCameraFromVideoFile()));
 	connect(ui_->actionAbout, SIGNAL(triggered()), aboutDialog_ , SLOT(exec()));
 	connect(ui_->actionRestore_all_default_settings, SIGNAL(triggered()), ui_->toolBox, SLOT(resetAllPages()));
+	connect(ui_->actionRemove_all_objects, SIGNAL(triggered()), this, SLOT(removeAllObjects()));
 
 	ui_->actionSetup_camera_from_video_file->setCheckable(true);
 	ui_->actionSetup_camera_from_video_file_2->setCheckable(true);
@@ -113,8 +116,33 @@ MainWindow::~MainWindow()
 
 void MainWindow::closeEvent(QCloseEvent * event)
 {
-	Settings::saveSettings(Settings::iniDefaultPath(), this->saveGeometry());
-	QMainWindow::closeEvent(event);
+	bool quit = true;
+	this->stopProcessing();
+	if(objectsModified_ && this->isVisible() && objects_.size())
+	{
+		int ret = QMessageBox::question(this, tr("Save new objects"), tr("Do you want to save added objects?"), QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
+		switch(ret)
+		{
+		case QMessageBox::Yes:
+			quit = this->saveObjects();
+			break;
+		case QMessageBox::Cancel:
+			quit = false;
+			break;
+		case QMessageBox::No:
+		default:
+			break;
+		}
+	}
+	if(quit)
+	{
+		Settings::saveSettings(Settings::iniDefaultPath(), this->saveGeometry());
+		event->accept();
+	}
+	else
+	{
+		event->ignore();
+	}
 }
 
 ParametersToolBox * MainWindow::parametersToolBox() const
@@ -122,72 +150,54 @@ ParametersToolBox * MainWindow::parametersToolBox() const
 	return ui_->toolBox;
 }
 
-bool MainWindow::loadObjects(const QString & fileName)
+void MainWindow::loadObjects(const QString & dirPath)
 {
-	QFile file(fileName);
-	if(file.open(QIODevice::ReadOnly))
+	QDir dir(dirPath);
+	if(dir.exists())
 	{
-		QDataStream in(&file);
-		while(!in.atEnd())
+		QStringList filters;
+		filters << "*.png"  << "*.jpg" << "*.bmp" << "*.tiff";
+		QFileInfoList list = dir.entryInfoList(filters, QDir::Files, QDir::Name);
+		for(int i=0; i<list.size(); ++i)
 		{
-			ObjWidget * obj = new ObjWidget();
-			obj->load(in);
-			bool alreadyLoaded = false;
-			for(int i=0; i<objects_.size(); ++i)
-			{
-				if(objects_.at(i)->id() == obj->id())
-				{
-					alreadyLoaded = true;
-					break;
-				}
-			}
-			if(!alreadyLoaded)
-			{
-				objects_.append(obj);
-				showObject(obj);
-			}
-			else
-			{
-				delete obj;
-			}
+			this->addObjectFromFile(list.at(i).filePath());
 		}
-		file.close();
-		return true;
+		if(list.size())
+		{
+			this->updateObjects();
+		}
 	}
-	return false;
 }
 
-void MainWindow::saveObjects(const QString & fileName)
+void MainWindow::saveObjects(const QString & dirPath)
 {
-	QFile file(fileName);
-	file.open(QIODevice::WriteOnly);
-	QDataStream out(&file);
-	for(int i=0; i<objects_.size(); ++i)
+	QDir dir(dirPath);
+	if(dir.exists())
 	{
-		objects_.at(i)->save(out);
+		for(int i=0; i<objects_.size(); ++i)
+		{
+			objects_.at(i)->image().save(QString("%1/%2.bmp").arg(dirPath).arg(objects_.at(i)->id()));
+		}
 	}
-	file.close();
 }
 
 void MainWindow::loadObjects()
 {
-	QString fileName = QFileDialog::getOpenFileName(this, tr("Load objects..."), Settings::workingDirectory(), "*.obj");
-	if(!fileName.isEmpty())
+	QString dirPath = QFileDialog::getExistingDirectory(this, tr("Load objects..."), Settings::workingDirectory());
+	if(!dirPath.isEmpty())
 	{
-		loadObjects(fileName);
+		loadObjects(dirPath);
 	}
 }
-void MainWindow::saveObjects()
+bool MainWindow::saveObjects()
 {
-	QString fileName = QFileDialog::getSaveFileName(this, tr("Save objects..."), (Settings::workingDirectory() + "/") +Settings::currentDetectorType()+Settings::currentDescriptorType()+QString("%1.obj").arg(objects_.size()), "*.obj");
-	if(!fileName.isEmpty())
+	QString dirPath = QFileDialog::getExistingDirectory(this, tr("Save objects..."), Settings::workingDirectory());
+	if(!dirPath.isEmpty())
 	{
-		if(!fileName.endsWith(".obj"))
-		{
-			fileName.append(".obj");//default
-		}
-		saveObjects(fileName);
+		saveObjects(dirPath);
+		return true;
 	}
+	return false;
 }
 
 void MainWindow::removeObject(ObjWidget * object)
@@ -200,6 +210,15 @@ void MainWindow::removeObject(ObjWidget * object)
 	}
 }
 
+void MainWindow::removeAllObjects()
+{
+	QList<ObjWidget*> obj = objects_;
+	for(int i=0; i<obj.size(); ++i)
+	{
+		removeObject(obj[i]);
+	}
+}
+
 void MainWindow::addObject()
 {
 	disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
@@ -207,6 +226,8 @@ void MainWindow::addObject()
 	if(dialog.exec() == QDialog::Accepted)
 	{
 		showObject(objects_.last());
+		updateData();
+		objectsModified_ = true;
 	}
 	this->startProcessing();
 }
@@ -218,15 +239,57 @@ void MainWindow::addObjectsFromFiles()
 	{
 		for(int i=0; i<fileNames.size(); ++i)
 		{
-			IplImage * img = cvLoadImage(fileNames[i].toStdString().c_str(), CV_LOAD_IMAGE_GRAYSCALE);
-			if(img)
-			{
-				objects_.append(new ObjWidget(0, std::vector<cv::KeyPoint>(), cv::Mat(), img, "", ""));
-				this->showObject(objects_.last());
-				cvReleaseImage(&img);
-			}
+			this->addObjectFromFile(fileNames.at(i));
 		}
+		objectsModified_ = true;
 		updateObjects();
+	}
+}
+
+void MainWindow::addObjectFromFile(const QString & filePath)
+{
+	if(!filePath.isNull())
+	{
+		IplImage * img = cvLoadImage(filePath.toStdString().c_str(), CV_LOAD_IMAGE_GRAYSCALE);
+		if(img)
+		{
+			int id = 0;
+			QFileInfo file(filePath);
+			QStringList list = file.fileName().split('.');
+			if(list.size())
+			{
+				printf("asdfddsa %s\n", list.front().toStdString().c_str());
+				bool ok = false;
+				id = list.front().toInt(&ok);
+				if(ok)
+				{
+					printf("id=%d\n", id);
+					for(int i=0; i<objects_.size(); ++i)
+					{
+						if(objects_.at(i)->id() == id)
+						{
+							if(this->isVisible())
+							{
+								QMessageBox::warning(this, tr("Warning"), tr("Object %1 already added, a new ID will be generated.").arg(id));
+							}
+							else
+							{
+								printf("WARNING: Object %d already added, a new ID will be generated.", id);
+							}
+							id = 0;
+							break;
+						}
+					}
+				}
+				else
+				{
+					id = 0;
+				}
+			}
+			objects_.append(new ObjWidget(id, std::vector<cv::KeyPoint>(), cv::Mat(), img, "", ""));
+			this->showObject(objects_.last());
+			cvReleaseImage(&img);
+		}
 	}
 }
 
@@ -303,8 +366,6 @@ void MainWindow::showObject(ObjWidget * obj)
 		connect(obj, SIGNAL(destroyed(QObject *)), detectorDescriptorType, SLOT(deleteLater()));
 		connect(obj, SIGNAL(destroyed(QObject *)), vLayout, SLOT(deleteLater()));
 		ui_->verticalLayout_objects->insertLayout(ui_->verticalLayout_objects->count()-1, vLayout);
-
-		this->updateData();
 	}
 }
 

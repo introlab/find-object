@@ -160,6 +160,8 @@
     <addaction name="actionSetup_camera_from_video_file_2"/>
     <addaction name="separator"/>
     <addaction name="actionRestore_all_default_settings"/>
+    <addaction name="separator"/>
+    <addaction name="actionRemove_all_objects"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -387,7 +389,7 @@
    <property name="minimumSize">
     <size>
      <width>300</width>
-     <height>162</height>
+     <height>196</height>
     </size>
    </property>
    <property name="windowTitle">
@@ -512,6 +514,11 @@
   <action name="actionSetup_camera_from_video_file_2">
    <property name="text">
     <string>Setup camera from video file...</string>
+   </property>
+  </action>
+  <action name="actionRemove_all_objects">
+   <property name="text">
+    <string>Remove all objects</string>
    </property>
   </action>
  </widget>

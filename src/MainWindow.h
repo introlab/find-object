@@ -29,8 +29,8 @@ public:
 	MainWindow(Camera * camera = 0, QWidget * parent = 0);
 	virtual ~MainWindow();
 
-	bool loadObjects(const QString & fileName);
-	void saveObjects(const QString & fileName);
+	void loadObjects(const QString & dirPath);
+	void saveObjects(const QString & dirPath);
 
 	ParametersToolBox * parametersToolBox() const;
 
@@ -44,12 +44,13 @@ public slots:
 
 private slots:
 	void loadObjects();
-	void saveObjects();
+	bool saveObjects();
 	void addObject();
 	void addObjectsFromFiles();
 	void loadSceneFromFile();
 	void setupCameraFromVideoFile();
 	void removeObject(ObjWidget * object);
+	void removeAllObjects();
 	void update(const cv::Mat & image);
 	void updateObjects();
 	void notifyParametersChanged();
@@ -58,6 +59,7 @@ signals:
 	void objectsFound(const QMap<int, QPair<QRect, QTransform> > &);
 
 private:
+	void addObjectFromFile(const QString & filePath);
 	void showObject(ObjWidget * obj);
 	void updateData();
 
@@ -71,7 +73,7 @@ private:
 	QTime updateRate_;
 	QTime refreshStartTime_;
 	int lowestRefreshRate_;
-
+	bool objectsModified_;
 };
 
 #endif /* MainWindow_H_ */
