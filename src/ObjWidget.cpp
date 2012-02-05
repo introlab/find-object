@@ -142,7 +142,9 @@ void ObjWidget::setGraphicsViewMode(bool on)
 		{
 			for(int i=0; i<keypointItems_.size(); ++i)
 			{
-				keypointItems_[i]->setColor(kptColors_.at(i));
+				QColor color = kptColors_.at(i);
+				color.setAlpha(alpha_);
+				keypointItems_[i]->setColor(color);
 			}
 		}
 	}
@@ -309,9 +311,9 @@ void ObjWidget::setKptColor(int index, const QColor & color)
 	{
 		if(index < keypointItems_.size())
 		{
-			QColor color = color;
-			color.setAlpha(alpha_);
-			keypointItems_.at(index)->setColor(color);
+			QColor c = color;
+			c.setAlpha(alpha_);
+			keypointItems_.at(index)->setColor(c);
 		}
 	}
 }
