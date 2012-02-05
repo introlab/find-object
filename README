@@ -36,3 +36,4 @@ Windows :
  > cmake -G"MinGW Makefiles"  ..
  > make -j4
  > make package
+ > make package_source
