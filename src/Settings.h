@@ -126,6 +126,7 @@ class Settings
 	PARAMETER(NearestNeighbor, minDistance, float, 1.6f);
 
 	PARAMETER(General, autoStartCamera, bool, false);
+	PARAMETER(General, autoUpdateObjects, bool, false);
 	PARAMETER(General, nextObjID, uint, 1);
 	PARAMETER(General, imageFormats, QString, "*.png *.jpg *.bmp *.tiff")
 	PARAMETER(General, videoFormats, QString, "*.avi *.m4v")

@@ -887,7 +887,11 @@ void MainWindow::update(const cv::Mat & image)
 void MainWindow::notifyParametersChanged()
 {
 	printf("Parameters changed...\n");
-	if(objects_.size())
+	if(Settings::getGeneral_autoUpdateObjects())
+	{
+		this->updateObjects();
+	}
+	else if(objects_.size())
 	{
 		this->statusBar()->showMessage(tr("A parameter has changed... \"Update objects\" may be required."));
 	}
