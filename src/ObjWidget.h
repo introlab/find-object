@@ -109,17 +109,17 @@ private:
 	QLabel * label_;
 
 	// menu stuff
-	QString _savedFileName;
-	QMenu * _menu;
-	QAction * _showImage;
-	QAction * _showFeatures;
-	QAction * _saveImage;
-	QAction * _mirrorView;
-	QAction * _delete;
-	QAction * _graphicsViewMode;
-	QAction * _autoScale;
-	QAction * _sizedFeatures;
-	QAction * _setAlpha;
+	QString savedFileName_;
+	QMenu * menu_;
+	QAction * showImage_;
+	QAction * showFeatures_;
+	QAction * saveImage_;
+	QAction * mirrorView_;
+	QAction * delete_;
+	QAction * graphicsViewMode_;
+	QAction * autoScale_;
+	QAction * sizedFeatures_;
+	QAction * setAlpha_;
 
 	// selection stuff
 	QPoint mousePressedPos_;

@@ -92,6 +92,10 @@ MainWindow::MainWindow(Camera * camera, QWidget * parent) :
 	connect(ui_->actionRestore_all_default_settings, SIGNAL(triggered()), ui_->toolBox, SLOT(resetAllPages()));
 	connect(ui_->actionRemove_all_objects, SIGNAL(triggered()), this, SLOT(removeAllObjects()));
 
+	ui_->objects_area->addAction(ui_->actionAdd_object_from_scene);
+	ui_->objects_area->addAction(ui_->actionAdd_objects_from_files);
+	ui_->objects_area->setContextMenuPolicy(Qt::ActionsContextMenu);
+
 	ui_->actionStart_camera->setShortcut(Qt::Key_Space);
 	ui_->actionPause_camera->setShortcut(Qt::Key_Space);
 

@@ -81,33 +81,33 @@ void ObjWidget::setupUi()
 	this->layout()->addWidget(label_);
 	this->layout()->setContentsMargins(0,0,0,0);
 
-	_menu = new QMenu(tr(""), this);
-	_showImage = _menu->addAction(tr("Show image"));
-	_showImage->setCheckable(true);
-	_showImage->setChecked(true);
-	_showFeatures = _menu->addAction(tr("Show features"));
-	_showFeatures->setCheckable(true);
-	_showFeatures->setChecked(true);
-	_mirrorView = _menu->addAction(tr("Mirror view"));
-	_mirrorView->setCheckable(true);
-	_mirrorView->setChecked(false);
-	_graphicsViewMode = _menu->addAction(tr("Graphics view"));
-	_graphicsViewMode->setCheckable(true);
-	_graphicsViewMode->setChecked(false);
-	_autoScale = _menu->addAction(tr("Scale view"));
-	_autoScale->setCheckable(true);
-	_autoScale->setChecked(true);
-	_autoScale->setEnabled(false);
-	_sizedFeatures = _menu->addAction(tr("Sized features"));
-	_sizedFeatures->setCheckable(true);
-	_sizedFeatures->setChecked(false);
-	_menu->addSeparator();
-	_setAlpha = _menu->addAction(tr("Set alpha..."));
-	_menu->addSeparator();
-	_saveImage = _menu->addAction(tr("Save picture..."));
-	_menu->addSeparator();
-	_delete = _menu->addAction(tr("Delete"));
-	_delete->setEnabled(false);
+	menu_ = new QMenu(tr(""), this);
+	showImage_ = menu_->addAction(tr("Show image"));
+	showImage_->setCheckable(true);
+	showImage_->setChecked(true);
+	showFeatures_ = menu_->addAction(tr("Show features"));
+	showFeatures_->setCheckable(true);
+	showFeatures_->setChecked(true);
+	mirrorView_ = menu_->addAction(tr("Mirror view"));
+	mirrorView_->setCheckable(true);
+	mirrorView_->setChecked(false);
+	graphicsViewMode_ = menu_->addAction(tr("Graphics view"));
+	graphicsViewMode_->setCheckable(true);
+	graphicsViewMode_->setChecked(false);
+	autoScale_ = menu_->addAction(tr("Scale view"));
+	autoScale_->setCheckable(true);
+	autoScale_->setChecked(true);
+	autoScale_->setEnabled(false);
+	sizedFeatures_ = menu_->addAction(tr("Sized features"));
+	sizedFeatures_->setCheckable(true);
+	sizedFeatures_->setChecked(false);
+	menu_->addSeparator();
+	setAlpha_ = menu_->addAction(tr("Set alpha..."));
+	menu_->addSeparator();
+	saveImage_ = menu_->addAction(tr("Save picture..."));
+	menu_->addSeparator();
+	delete_ = menu_->addAction(tr("Delete"));
+	delete_->setEnabled(false);
 
 	this->setId(id_);
 
@@ -122,15 +122,15 @@ void ObjWidget::setId(int id)
 	id_=id;
 	if(id_)
 	{
-		_savedFileName = QString("object_%1.png").arg(id_);
+		savedFileName_ = QString("object_%1.png").arg(id_);
 	}
 }
 
 void ObjWidget::setGraphicsViewMode(bool on)
 {
-	_graphicsViewMode->setChecked(on);
+	graphicsViewMode_->setChecked(on);
 	graphicsView_->setVisible(on);
-	_autoScale->setEnabled(on);
+	autoScale_->setEnabled(on);
 	//update items' color
 	if(on)
 	{
@@ -148,7 +148,7 @@ void ObjWidget::setGraphicsViewMode(bool on)
 			}
 		}
 	}
-	if(_autoScale->isChecked())
+	if(autoScale_->isChecked())
 	{
 		graphicsView_->fitInView(graphicsView_->sceneRect(), Qt::KeepAspectRatio);
 	}
@@ -160,8 +160,8 @@ void ObjWidget::setGraphicsViewMode(bool on)
 
 void ObjWidget::setAutoScale(bool autoScale)
 {
-	_autoScale->setChecked(autoScale);
-	if(_graphicsViewMode)
+	autoScale_->setChecked(autoScale);
+	if(graphicsViewMode_)
 	{
 		if(autoScale)
 		{
@@ -176,7 +176,7 @@ void ObjWidget::setAutoScale(bool autoScale)
 
 void ObjWidget::setSizedFeatures(bool on)
 {
-	_sizedFeatures->setChecked(on);
+	sizedFeatures_->setChecked(on);
 	if(graphicsViewInitialized_)
 	{
 		for(unsigned int i=0; i<(unsigned int)keypointItems_.size() && i<keypoints_.size(); ++i)
@@ -190,7 +190,7 @@ void ObjWidget::setSizedFeatures(bool on)
 			keypointItems_.at(i)->setRect(keypoints_[i].pt.x-radius, keypoints_[i].pt.y-radius, radius*2, radius*2);
 		}
 	}
-	if(!_graphicsViewMode->isChecked())
+	if(!graphicsViewMode_->isChecked())
 	{
 		this->update();
 	}
@@ -198,13 +198,13 @@ void ObjWidget::setSizedFeatures(bool on)
 
 void ObjWidget::setMirrorView(bool on)
 {
-	_mirrorView->setChecked(on);
+	mirrorView_->setChecked(on);
 	graphicsView_->setTransform(QTransform().scale(this->isMirrorView()?-1.0:1.0, 1.0));
-	if(_graphicsViewMode->isChecked() && _autoScale->isChecked())
+	if(graphicsViewMode_->isChecked() && autoScale_->isChecked())
 	{
 		graphicsView_->fitInView(graphicsView_->sceneRect(), Qt::KeepAspectRatio);
 	}
-	else if(!_graphicsViewMode->isChecked())
+	else if(!graphicsViewMode_->isChecked())
 	{
 		this->update();
 	}
@@ -223,16 +223,17 @@ void ObjWidget::setAlpha(int alpha)
 				color.setAlpha(alpha_);
 				keypointItems_.at(i)->setColor(color);
 			}
-			for(int i=0; i<rectItems_.size(); ++i)
-			{
-				QPen pen = rectItems_.at(i)->pen();
-				QColor color = pen.color();
-				color.setAlpha(alpha_);
-				pen.setColor(color);
-				rectItems_.at(i)->setPen(pen);
-			}
 		}
-		if(!_graphicsViewMode->isChecked())
+		for(int i=0; i<rectItems_.size(); ++i)
+		{
+			QPen pen = rectItems_.at(i)->pen();
+			QColor color = pen.color();
+			color.setAlpha(alpha_);
+			pen.setColor(color);
+			rectItems_.at(i)->setPen(pen);
+		}
+
+		if(!graphicsViewMode_->isChecked())
 		{
 			this->update();
 		}
@@ -279,7 +280,7 @@ void ObjWidget::setData(const std::vector<cv::KeyPoint> & keypoints,
 		image_ = QPixmap::fromImage(Ipl2QImage(iplImage_));
 		//this->setMinimumSize(image_.size());
 	}
-	if(_graphicsViewMode->isChecked())
+	if(graphicsViewMode_->isChecked())
 	{
 		this->setupGraphicsView();
 	}
@@ -291,7 +292,7 @@ void ObjWidget::resetKptsColor()
 	for(int i=0; i<kptColors_.size(); ++i)
 	{
 		kptColors_[i] = defaultColor();
-		if(_graphicsViewMode->isChecked())
+		if(graphicsViewMode_->isChecked())
 		{
 			keypointItems_[i]->setColor(this->defaultColor());
 		}
@@ -307,7 +308,7 @@ void ObjWidget::setKptColor(int index, const QColor & color)
 		kptColors_[index] = color;
 	}
 
-	if(_graphicsViewMode->isChecked())
+	if(graphicsViewMode_->isChecked())
 	{
 		if(index < keypointItems_.size())
 		{
@@ -340,27 +341,27 @@ QList<QGraphicsItem*> ObjWidget::selectedItems() const
 
 bool ObjWidget::isImageShown() const
 {
-	return _showImage->isChecked();
+	return showImage_->isChecked();
 }
 
 bool ObjWidget::isFeaturesShown() const
 {
-	return _showFeatures->isChecked();
+	return showFeatures_->isChecked();
 }
 
 bool ObjWidget::isSizedFeatures() const
 {
-	return _sizedFeatures->isChecked();
+	return sizedFeatures_->isChecked();
 }
 
 bool ObjWidget::isMirrorView() const
 {
-	return _mirrorView->isChecked();
+	return mirrorView_->isChecked();
 }
 
 void ObjWidget::setDeletable(bool deletable)
 {
-	_delete->setEnabled(deletable);
+	delete_->setEnabled(deletable);
 }
 
 void ObjWidget::save(QDataStream & streamPtr) const
@@ -468,7 +469,7 @@ void ObjWidget::computeScaleOffsets(float & scale, float & offsetX, float & offs
 
 void ObjWidget::paintEvent(QPaintEvent *event)
 {
-	if(_graphicsViewMode->isChecked())
+	if(graphicsViewMode_->isChecked())
 	{
 		QWidget::paintEvent(event);
 	}
@@ -481,7 +482,7 @@ void ObjWidget::paintEvent(QPaintEvent *event)
 			this->computeScaleOffsets(ratio, offsetX, offsetY);
 			QPainter painter(this);
 
-			if(_mirrorView->isChecked())
+			if(mirrorView_->isChecked())
 			{
 				painter.translate(offsetX+image_.width()*ratio, offsetY);
 				painter.scale(-ratio, ratio);
@@ -492,12 +493,12 @@ void ObjWidget::paintEvent(QPaintEvent *event)
 				painter.scale(ratio, ratio);
 			}
 
-			if(_showImage->isChecked())
+			if(showImage_->isChecked())
 			{
 				painter.drawPixmap(QPoint(0,0), image_);
 			}
 
-			if(_showFeatures->isChecked())
+			if(showFeatures_->isChecked())
 			{
 				drawKeypoints(&painter);
 			}
@@ -519,7 +520,7 @@ void ObjWidget::paintEvent(QPaintEvent *event)
 				top = mousePressedPos_.y() < mouseCurrentPos_.y() ? mousePressedPos_.y():mouseCurrentPos_.y();
 				right = mousePressedPos_.x() > mouseCurrentPos_.x() ? mousePressedPos_.x():mouseCurrentPos_.x();
 				bottom = mousePressedPos_.y() > mouseCurrentPos_.y() ? mousePressedPos_.y():mouseCurrentPos_.y();
-				if(_mirrorView->isChecked())
+				if(mirrorView_->isChecked())
 				{
 					int l = left;
 					left = qAbs(right - image_.width());
@@ -540,7 +541,7 @@ void ObjWidget::paintEvent(QPaintEvent *event)
 void ObjWidget::resizeEvent(QResizeEvent* event)
 {
 	QWidget::resizeEvent(event);
-	if(_graphicsViewMode->isChecked() && _autoScale->isChecked())
+	if(graphicsViewMode_->isChecked() && autoScale_->isChecked())
 	{
 		graphicsView_->fitInView(graphicsView_->sceneRect(), Qt::KeepAspectRatio);
 	}
@@ -578,7 +579,7 @@ void ObjWidget::mouseReleaseEvent(QMouseEvent * event)
 		right = mousePressedPos_.x() > mouseCurrentPos_.x() ? mousePressedPos_.x():mouseCurrentPos_.x();
 		bottom = mousePressedPos_.y() > mouseCurrentPos_.y() ? mousePressedPos_.y():mouseCurrentPos_.y();
 
-		if(_mirrorView->isChecked())
+		if(mirrorView_->isChecked())
 		{
 			int l = left;
 			left = qAbs(right - image_.width());
@@ -592,28 +593,28 @@ void ObjWidget::mouseReleaseEvent(QMouseEvent * event)
 
 void ObjWidget::contextMenuEvent(QContextMenuEvent * event)
 {
-	QAction * action = _menu->exec(event->globalPos());
-	if(action == _saveImage)
+	QAction * action = menu_->exec(event->globalPos());
+	if(action == saveImage_)
 	{
 		QString text;
-		if(_savedFileName.isEmpty())
+		if(savedFileName_.isEmpty())
 		{
-			_savedFileName=Settings::workingDirectory()+"/figure.png";
+			savedFileName_=Settings::workingDirectory()+"/figure.png";
 		}
-		text = QFileDialog::getSaveFileName(this, tr("Save figure to ..."), _savedFileName, "*.png *.xpm *.jpg *.pdf");
+		text = QFileDialog::getSaveFileName(this, tr("Save figure to ..."), savedFileName_, "*.png *.xpm *.jpg *.pdf");
 		if(!text.isEmpty())
 		{
 			if(!text.endsWith(".png") && !text.endsWith(".xpm") && !text.endsWith(".jpg") && !text.endsWith(".pdf"))
 			{
 				text.append(".png");//default
 			}
-			_savedFileName = text;
+			savedFileName_ = text;
 			getSceneAsPixmap().save(text);
 		}
 	}
-	else if(action == _showFeatures || action == _showImage)
+	else if(action == showFeatures_ || action == showImage_)
 	{
-		if(_graphicsViewMode->isChecked())
+		if(graphicsViewMode_->isChecked())
 		{
 			this->updateItemsShown();
 		}
@@ -622,27 +623,27 @@ void ObjWidget::contextMenuEvent(QContextMenuEvent * event)
 			this->update();
 		}
 	}
-	else if(action == _mirrorView)
+	else if(action == mirrorView_)
 	{
-		this->setMirrorView(_mirrorView->isChecked());
+		this->setMirrorView(mirrorView_->isChecked());
 	}
-	else if(action == _delete)
+	else if(action == delete_)
 	{
 		emit removalTriggered(this);
 	}
-	else if(action == _graphicsViewMode)
+	else if(action == graphicsViewMode_)
 	{
-		this->setGraphicsViewMode(_graphicsViewMode->isChecked());
+		this->setGraphicsViewMode(graphicsViewMode_->isChecked());
 	}
-	else if(action == _autoScale)
+	else if(action == autoScale_)
 	{
-		this->setAutoScale(_autoScale->isChecked());
+		this->setAutoScale(autoScale_->isChecked());
 	}
-	else if(action == _sizedFeatures)
+	else if(action == sizedFeatures_)
 	{
-		this->setSizedFeatures(_sizedFeatures->isChecked());
+		this->setSizedFeatures(sizedFeatures_->isChecked());
 	}
-	else if(action == _setAlpha)
+	else if(action == setAlpha_)
 	{
 		bool ok;
 		int newAlpha = QInputDialog::getInt(this, tr("Set alpha"), tr("Alpha:"), alpha_, 0, 255, 5, &ok);
@@ -651,12 +652,11 @@ void ObjWidget::contextMenuEvent(QContextMenuEvent * event)
 			this->setAlpha(newAlpha);
 		}
 	}
-	QWidget::contextMenuEvent(event);
 }
 
 QPixmap ObjWidget::getSceneAsPixmap()
 {
-	if(_graphicsViewMode->isChecked())
+	if(graphicsViewMode_->isChecked())
 	{
 		QPixmap img(graphicsView_->sceneRect().width(), graphicsView_->sceneRect().height());
 		QPainter p(&img);
@@ -676,11 +676,11 @@ void ObjWidget::updateItemsShown()
 	{
 		if(qgraphicsitem_cast<KeypointItem*>(items.at(i)))
 		{
-			items.at(i)->setVisible(_showFeatures->isChecked());
+			items.at(i)->setVisible(showFeatures_->isChecked());
 		}
 		else if(qgraphicsitem_cast<QGraphicsPixmapItem*>(items.at(i)))
 		{
-			items.at(i)->setVisible(_showImage->isChecked());
+			items.at(i)->setVisible(showImage_->isChecked());
 		}
 	}
 }
@@ -695,13 +695,13 @@ void ObjWidget::drawKeypoints(QPainter * painter)
 	{
 		const cv::KeyPoint & r = *iter;
 		float size = 14;
-		if(r.size>14.0f && _sizedFeatures->isChecked())
+		if(r.size>14.0f && sizedFeatures_->isChecked())
 		{
 			size = r.size;
 		}
 		float radius = size*1.2f/9.0f*2.0f;
 		QColor color(kptColors_.at(i).red(), kptColors_.at(i).green(), kptColors_.at(i).blue(), alpha_);
-		if(_graphicsViewMode->isChecked())
+		if(graphicsViewMode_->isChecked())
 		{
 			QString info = QString( "ID = %1\n"
 									"Response = %2\n"
@@ -738,7 +738,7 @@ QColor ObjWidget::defaultColor() const
 std::vector<cv::KeyPoint> ObjWidget::selectedKeypoints() const
 {
 	std::vector<cv::KeyPoint> selected;
-	if(_graphicsViewMode->isChecked())
+	if(graphicsViewMode_->isChecked())
 	{
 		QList<QGraphicsItem*> items = graphicsView_->scene()->selectedItems();
 		for(int i=0; i<items.size(); ++i)
@@ -771,7 +771,7 @@ void ObjWidget::setupGraphicsView()
 				graphicsView_->scene()->addItem(rectItems_.at(i));
 			}
 
-			if(_autoScale->isChecked())
+			if(autoScale_->isChecked())
 			{
 				graphicsView_->fitInView(sceneRect, Qt::KeepAspectRatio);
 			}

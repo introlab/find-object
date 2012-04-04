@@ -17,7 +17,7 @@ public:
 	virtual ~KeypointItem();
 
 	void setColor(const QColor & color);
-	int id() const {return _id;}
+	int id() const {return id_;}
 
 protected:
 	virtual void hoverEnterEvent ( QGraphicsSceneHoverEvent * event );
@@ -30,10 +30,10 @@ private:
 	void hideDescription();
 
 private:
-	QString _info;
-	QGraphicsRectItem * _placeHolder;
-	int _width;
-	int _id;
+	QString info_;
+	QGraphicsRectItem * placeHolder_;
+	int width_;
+	int id_;
 };
 
 

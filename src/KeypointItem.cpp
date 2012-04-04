@@ -10,23 +10,23 @@
 
 KeypointItem::KeypointItem(int id, qreal x, qreal y, int r, const QString & info, const QColor & color, QGraphicsItem * parent) :
 	QGraphicsEllipseItem(x, y, r, r, parent),
-	_info(info),
-	_placeHolder(0),
-	_id(id)
+	info_(info),
+	placeHolder_(0),
+	id_(id)
 {
 	this->setPen(QPen(color));
 	this->setBrush(QBrush(color));
 	this->setAcceptsHoverEvents(true);
 	this->setFlag(QGraphicsItem::ItemIsFocusable, true);
 	this->setFlag(QGraphicsItem::ItemIsSelectable, true);
-	_width = pen().width();
+	width_ = pen().width();
 }
 
 KeypointItem::~KeypointItem()
 {
-	/*if(_placeHolder)
+	/*if(placeHolder_)
 	{
-		delete _placeHolder;
+		delete placeHolder_;
 	}*/
 }
 
@@ -34,9 +34,9 @@ void KeypointItem::setColor(const QColor & color)
 {
 	this->setPen(QPen(color));
 	this->setBrush(QBrush(color));
-	if(_placeHolder)
+	if(placeHolder_)
 	{
-		QList<QGraphicsItem *> items = _placeHolder->children();
+		QList<QGraphicsItem *> items = placeHolder_->children();
 		if(items.size())
 		{
 			((QGraphicsTextItem *)items.front())->setDefaultTextColor(this->pen().color().rgb());
@@ -46,33 +46,33 @@ void KeypointItem::setColor(const QColor & color)
 
 void KeypointItem::showDescription()
 {
-	if(!_placeHolder)
+	if(!placeHolder_)
 	{
-		_placeHolder = new QGraphicsRectItem();
-		_placeHolder->setVisible(false);
-		this->scene()->addItem(_placeHolder);
-		_placeHolder->setBrush(QBrush(QColor ( 0, 0, 0, 170 ))); // Black transparent background
-		QGraphicsTextItem * text = new QGraphicsTextItem(_placeHolder);
+		placeHolder_ = new QGraphicsRectItem();
+		placeHolder_->setVisible(false);
+		this->scene()->addItem(placeHolder_);
+		placeHolder_->setBrush(QBrush(QColor ( 0, 0, 0, 170 ))); // Black transparent background
+		QGraphicsTextItem * text = new QGraphicsTextItem(placeHolder_);
 		text->setDefaultTextColor(this->pen().color().rgb());
-		text->setPlainText(_info);
-		_placeHolder->setRect(text->boundingRect());
+		text->setPlainText(info_);
+		placeHolder_->setRect(text->boundingRect());
 	}
 
 
 	QPen pen = this->pen();
-	this->setPen(QPen(pen.color(), _width+2));
-	_placeHolder->setZValue(this->zValue()+1);
-	_placeHolder->setPos(this->mapToScene(0,0));
-	_placeHolder->setVisible(true);
+	this->setPen(QPen(pen.color(), width_+2));
+	placeHolder_->setZValue(this->zValue()+1);
+	placeHolder_->setPos(this->mapToScene(0,0));
+	placeHolder_->setVisible(true);
 }
 
 void KeypointItem::hideDescription()
 {
-	if(_placeHolder)
+	if(placeHolder_)
 	{
-		_placeHolder->setVisible(false);
+		placeHolder_->setVisible(false);
 	}
-	this->setPen(QPen(pen().color(), _width));
+	this->setPen(QPen(pen().color(), width_));
 }
 
 void KeypointItem::hoverEnterEvent ( QGraphicsSceneHoverEvent * event )
@@ -84,7 +84,7 @@ void KeypointItem::hoverEnterEvent ( QGraphicsSceneHoverEvent * event )
 	}
 	else
 	{
-		this->setPen(QPen(pen().color(), _width+2));
+		this->setPen(QPen(pen().color(), width_+2));
 	}
 	QGraphicsEllipseItem::hoverEnterEvent(event);
 }

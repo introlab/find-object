@@ -20,7 +20,7 @@ public:
 	virtual ~AboutDialog();
 
 private:
-	Ui_aboutDialog * _ui;
+	Ui_aboutDialog * ui_;
 };
 
 
