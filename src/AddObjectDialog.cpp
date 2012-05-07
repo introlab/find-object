@@ -7,7 +7,7 @@
 #include "ObjWidget.h"
 #include "KeypointItem.h"
 #include "Camera.h"
-#include "qtipl.h"
+#include "QtOpenCV.h"
 #include "Settings.h"
 
 #include <stdio.h>
@@ -16,14 +16,13 @@
 #include <QtGui/QGraphicsPixmapItem>
 #include <QtGui/QMessageBox>
 
-#include <opencv2/imgproc/imgproc_c.h>
-#include <opencv2/highgui/highgui_c.h>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
 
-AddObjectDialog::AddObjectDialog(Camera * camera, const IplImage * image, bool mirrorView, QWidget * parent, Qt::WindowFlags f) :
+AddObjectDialog::AddObjectDialog(Camera * camera, const cv::Mat & image, bool mirrorView, QWidget * parent, Qt::WindowFlags f) :
 		QDialog(parent, f),
 		camera_(camera),
-		object_(0),
-		cvImage_(0)
+		object_(0)
 {
 	ui_ = new Ui_addObjectDialog();
 	ui_->setupUi(this);
@@ -38,24 +37,19 @@ AddObjectDialog::AddObjectDialog(Camera * camera, const IplImage * image, bool m
 	connect(ui_->cameraView, SIGNAL(roiChanged(const QRect &)), this, SLOT(updateNextButton(const QRect &)));
 	ui_->cameraView->setMirrorView(mirrorView);
 
-	if((camera_ && camera_->isRunning()) || !image)
+	if((camera_ && camera_->isRunning()) || image.empty())
 	{
 		this->setState(kTakePicture);
 	}
-	else if(image)
+	else if(!image.empty())
 	{
-		cv::Mat img(image);
-		update(img);
+		update(image);
 		this->setState(kSelectFeatures);
 	}
 }
 
 AddObjectDialog::~AddObjectDialog()
 {
-	if(cvImage_)
-	{
-		cvReleaseImage(&cvImage_);
-	}
 	if(object_)
 	{
 		delete object_;
@@ -214,11 +208,11 @@ void AddObjectDialog::setState(int state)
 		std::vector<cv::KeyPoint> selectedKeypoints = ui_->cameraView->selectedKeypoints();
 
 		// Select keypoints
-		if(cvImage_ &&
+		if(!cvImage_.empty() &&
 				((ui_->comboBox_selection->currentIndex() == 1 && selectedKeypoints.size()) ||
 				 (ui_->comboBox_selection->currentIndex() == 0 && !roi_.isNull())))
 		{
-			CvRect roi;
+			cv::Rect roi;
 			if(ui_->comboBox_selection->currentIndex() == 1)
 			{
 				roi = computeROI(selectedKeypoints);
@@ -230,7 +224,7 @@ void AddObjectDialog::setState(int state)
 				roi.width = roi_.width();
 				roi.height = roi_.height();
 			}
-			cvSetImageROI(cvImage_, roi);
+			cv::Mat imgRoi(cvImage_, roi);
 
 			if(ui_->comboBox_selection->currentIndex() == 1)
 			{
@@ -248,13 +242,12 @@ void AddObjectDialog::setState(int state)
 				// Extract keypoints
 				selectedKeypoints.clear();
 				cv::FeatureDetector * detector = Settings::createFeaturesDetector();
-				detector->detect(cvImage_, selectedKeypoints);
+				detector->detect(imgRoi, selectedKeypoints);
 				delete detector;
 			}
-			ui_->objectView->setData(selectedKeypoints, cv::Mat(), cvImage_, Settings::currentDetectorType(), "");
+			ui_->objectView->setData(selectedKeypoints, cv::Mat(), imgRoi, Settings::currentDetectorType(), "");
 			ui_->objectView->setMinimumSize(roi.width, roi.height);
 			ui_->objectView->update();
-			cvResetImageROI(cvImage_);
 			ui_->pushButton_next->setEnabled(true);
 		}
 		else
@@ -275,7 +268,7 @@ void AddObjectDialog::setState(int state)
 			{
 				// Extract descriptors
 				cv::DescriptorExtractor * extractor = Settings::createDescriptorsExtractor();
-				extractor->compute(ui_->objectView->iplImage(), keypoints, descriptors);
+				extractor->compute(ui_->objectView->cvImage(), keypoints, descriptors);
 				delete extractor;
 
 				if(keypoints.size() != (unsigned int)descriptors.rows)
@@ -289,7 +282,7 @@ void AddObjectDialog::setState(int state)
 				delete object_;
 				object_ = 0;
 			}
-			object_ = new ObjWidget(0, keypoints, descriptors, ui_->objectView->iplImage(), Settings::currentDetectorType(), Settings::currentDescriptorType());
+			object_ = new ObjWidget(0, keypoints, descriptors, ui_->objectView->cvImage(), Settings::currentDetectorType(), Settings::currentDescriptorType());
 
 			this->accept();
 		}
@@ -298,22 +291,17 @@ void AddObjectDialog::setState(int state)
 
 void AddObjectDialog::update(const cv::Mat & image)
 {
-	if(cvImage_)
-	{
-		cvReleaseImage(&cvImage_);
-		cvImage_ = 0;
-	}
-	IplImage iplImage = image;
-	cvImage_ = cvCloneImage(& iplImage);
-	if(cvImage_)
+	cvImage_ = cv::Mat();
+	if(!image.empty())
 	{
 		// convert to grayscale
-		if(cvImage_->nChannels != 1 || cvImage_->depth != IPL_DEPTH_8U)
+		if(image.channels() != 1 || image.depth() != CV_8U)
 		{
-			IplImage * imageGrayScale = cvCreateImage(cvSize(cvImage_->width, cvImage_->height), IPL_DEPTH_8U, 1);
-			cvCvtColor(cvImage_, imageGrayScale, CV_BGR2GRAY);
-			cvReleaseImage(&cvImage_);
-			cvImage_ = imageGrayScale;
+			cv::cvtColor(image, cvImage_, CV_BGR2GRAY);
+		}
+		else
+		{
+			cvImage_ = image;
 		}
 
 		// Extract keypoints
@@ -327,9 +315,9 @@ void AddObjectDialog::update(const cv::Mat & image)
 	}
 }
 
-CvRect AddObjectDialog::computeROI(const std::vector<cv::KeyPoint> & kpts)
+cv::Rect AddObjectDialog::computeROI(const std::vector<cv::KeyPoint> & kpts)
 {
-	CvRect roi = cvRect(0,0,0,0);
+	cv::Rect roi(0,0,0,0);
 	int x1=0,x2=0,h1=0,h2=0;
 	for(unsigned int i=0; i<kpts.size(); ++i)
 	{

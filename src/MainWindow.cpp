@@ -5,7 +5,7 @@
 #include "MainWindow.h"
 #include "AddObjectDialog.h"
 #include "ui_mainWindow.h"
-#include "qtipl.h"
+#include "QtOpenCV.h"
 #include "KeypointItem.h"
 #include "ObjWidget.h"
 #include "Camera.h"
@@ -188,14 +188,14 @@ void MainWindow::saveObjects(const QString & dirPath)
 	{
 		for(int i=0; i<objects_.size(); ++i)
 		{
-			objects_.at(i)->image().save(QString("%1/%2.bmp").arg(dirPath).arg(objects_.at(i)->id()));
+			objects_.at(i)->pixmap().save(QString("%1/%2.bmp").arg(dirPath).arg(objects_.at(i)->id()));
 		}
 	}
 }
 
 void MainWindow::loadObjects()
 {
-	QString dirPath = QFileDialog::getExistingDirectory(this, tr("Load objects..."), Settings::workingDirectory());
+	QString dirPath = QFileDialog::getExistingDirectory(this, tr("Loading objects... Select a directory."), Settings::workingDirectory());
 	if(!dirPath.isEmpty())
 	{
 		loadObjects(dirPath);
@@ -203,7 +203,7 @@ void MainWindow::loadObjects()
 }
 bool MainWindow::saveObjects()
 {
-	QString dirPath = QFileDialog::getExistingDirectory(this, tr("Save objects..."), Settings::workingDirectory());
+	QString dirPath = QFileDialog::getExistingDirectory(this, tr("Saving objects... Select a directory."), Settings::workingDirectory());
 	if(!dirPath.isEmpty())
 	{
 		saveObjects(dirPath);
@@ -219,10 +219,9 @@ void MainWindow::removeObject(ObjWidget * object)
 		objects_.removeOne(object);
 		object->deleteLater();
 		this->updateData();
-		if(!camera_->isRunning() && ui_->imageView_source->iplImage())
+		if(!camera_->isRunning() && !ui_->imageView_source->cvImage().empty())
 		{
-			cv::Mat image(ui_->imageView_source->iplImage(), true);
-			this->update(image);
+			this->update(ui_->imageView_source->cvImage());
 		}
 	}
 }
@@ -235,10 +234,9 @@ void MainWindow::removeAllObjects()
 	}
 	objects_.clear();
 	this->updateData();
-	if(!camera_->isRunning() && ui_->imageView_source->iplImage())
+	if(!camera_->isRunning() && !ui_->imageView_source->cvImage().empty())
 	{
-		cv::Mat image(ui_->imageView_source->iplImage(), true);
-		this->update(image);
+		this->update(ui_->imageView_source->cvImage());
 	}
 }
 
@@ -247,13 +245,13 @@ void MainWindow::addObjectFromScene()
 	disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
 	AddObjectDialog * dialog;
 	bool resumeCamera = camera_->isRunning();
-	if(!ui_->actionStart_camera->isEnabled() || !ui_->imageView_source->iplImage())
+	if(!ui_->actionStart_camera->isEnabled() || ui_->imageView_source->cvImage().empty())
 	{
-		dialog = new AddObjectDialog(camera_, ui_->imageView_source->iplImage(), ui_->imageView_source->isMirrorView(), this);
+		dialog = new AddObjectDialog(camera_, cv::Mat(), ui_->imageView_source->isMirrorView(), this);
 	}
 	else
 	{
-		dialog = new AddObjectDialog(0, ui_->imageView_source->iplImage(), ui_->imageView_source->isMirrorView(), this);
+		dialog = new AddObjectDialog(0, ui_->imageView_source->cvImage(), ui_->imageView_source->isMirrorView(), this);
 	}
 	if(dialog->exec() == QDialog::Accepted)
 	{
@@ -266,15 +264,14 @@ void MainWindow::addObjectFromScene()
 			objectsModified_ = true;
 		}
 	}
-	if(resumeCamera || !ui_->imageView_source->iplImage())
+	if(resumeCamera || ui_->imageView_source->cvImage().empty())
 	{
 		this->startProcessing();
 	}
 	else
 	{
 		connect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
-		cv::Mat image(ui_->imageView_source->iplImage(), true);
-		this->update(image);
+		this->update(ui_->imageView_source->cvImage());
 	}
 	delete dialog;
 }
@@ -298,8 +295,8 @@ void MainWindow::addObjectFromFile(const QString & filePath)
 	printf("Load file %s\n", filePath.toStdString().c_str());
 	if(!filePath.isNull())
 	{
-		IplImage * img = cvLoadImage(filePath.toStdString().c_str(), CV_LOAD_IMAGE_GRAYSCALE);
-		if(img)
+		cv::Mat img = cv::imread(filePath.toStdString().c_str(), cv::IMREAD_GRAYSCALE);
+		if(!img.empty())
 		{
 			int id = 0;
 			QFileInfo file(filePath);
@@ -334,7 +331,6 @@ void MainWindow::addObjectFromFile(const QString & filePath)
 			}
 			objects_.append(new ObjWidget(id, std::vector<cv::KeyPoint>(), cv::Mat(), img, "", ""));
 			this->showObject(objects_.last());
-			cvReleaseImage(&img);
 		}
 	}
 }
@@ -344,12 +340,10 @@ void MainWindow::loadSceneFromFile()
 	QString fileName = QFileDialog::getOpenFileName(this, tr("Load scene..."), Settings::workingDirectory(), tr("Image Files (%1)").arg(Settings::getGeneral_imageFormats()));
 	if(!fileName.isEmpty())
 	{
-		IplImage * img = cvLoadImage(fileName.toStdString().c_str());
-		if(img)
+		cv::Mat img = cv::imread(fileName.toStdString().c_str());
+		if(!img.empty())
 		{
-			cv::Mat imageMat(img);
-			this->update(imageMat);
-			cvReleaseImage(&img);
+			this->update(img);
 			ui_->label_timeRefreshRate->setVisible(false);
 		}
 	}
@@ -387,7 +381,7 @@ void MainWindow::showObject(ObjWidget * obj)
 		obj->setMirrorView(ui_->imageView_source->isMirrorView());
 		QList<ObjWidget*> objs = ui_->objects_area->findChildren<ObjWidget*>();
 		QVBoxLayout * vLayout = new QVBoxLayout();
-		obj->setMinimumSize(obj->image().width(), obj->image().height());
+		obj->setMinimumSize(obj->pixmap().width(), obj->pixmap().height());
 		int id = Settings::getGeneral_nextObjID();
 		if(obj->id() == 0)
 		{
@@ -430,7 +424,7 @@ void MainWindow::updateObjects()
 	{
 		for(int i=0; i<objects_.size(); ++i)
 		{
-			IplImage * img = cvCloneImage(objects_.at(i)->iplImage());
+			const cv::Mat & img = objects_.at(i)->cvImage();
 			cv::FeatureDetector * detector = Settings::createFeaturesDetector();
 			std::vector<cv::KeyPoint> keypoints;
 			detector->detect(img, keypoints);
@@ -461,10 +455,9 @@ void MainWindow::updateObjects()
 		}
 		updateData();
 	}
-	if(!camera_->isRunning() && ui_->imageView_source->iplImage())
+	if(!camera_->isRunning() && !ui_->imageView_source->cvImage().empty())
 	{
-		cv::Mat image(ui_->imageView_source->iplImage(), true);
-		this->update(image);
+		this->update(ui_->imageView_source->cvImage());
 	}
 	this->statusBar()->clearMessage();
 }
@@ -799,7 +792,7 @@ void MainWindow::update(const cv::Mat & image)
 									H.at<double>(0,2), H.at<double>(1,2), H.at<double>(2,2));
 
 								// find center of object
-								QRect rect = objects_.at(j)->image().rect();
+								QRect rect = objects_.at(j)->pixmap().rect();
 								objectsDetected.insert(objects_.at(j)->id(), QPair<QRect, QTransform>(rect, hTransform));
 								// Example getting the center of the object in the scene using the homography
 								//QPoint pos(rect.width()/2, rect.height()/2);
@@ -899,10 +892,9 @@ void MainWindow::notifyParametersChanged()
 	{
 		this->statusBar()->showMessage(tr("A parameter has changed... \"Update objects\" may be required."));
 	}
-	if(!camera_->isRunning() && ui_->imageView_source->iplImage())
+	if(!camera_->isRunning() && !ui_->imageView_source->cvImage().empty())
 	{
-		cv::Mat image(ui_->imageView_source->iplImage(), true);
-		this->update(image);
+		this->update(ui_->imageView_source->cvImage());
 		ui_->label_timeRefreshRate->setVisible(false);
 	}
 

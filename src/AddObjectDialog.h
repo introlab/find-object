@@ -8,7 +8,7 @@
 #include <QtGui/QDialog>
 #include <QtCore/QTimer>
 #include <opencv2/features2d/features2d.hpp>
-#include <opencv2/core/core_c.h>
+#include <opencv2/core/core.hpp>
 
 class Ui_addObjectDialog;
 class ObjWidget;
@@ -20,7 +20,7 @@ class AddObjectDialog : public QDialog {
 	Q_OBJECT
 
 public:
-	AddObjectDialog(Camera * camera, const IplImage * image, bool mirrorView, QWidget * parent = 0, Qt::WindowFlags f = 0);
+	AddObjectDialog(Camera * camera, const cv::Mat & image, bool mirrorView, QWidget * parent = 0, Qt::WindowFlags f = 0);
 	virtual ~AddObjectDialog();
 
 	// ownership transferred to caller
@@ -41,12 +41,12 @@ protected:
 
 private:
 	void setState(int state);
-	CvRect computeROI(const std::vector<cv::KeyPoint> & kpts);
+	cv::Rect computeROI(const std::vector<cv::KeyPoint> & kpts);
 private:
 	Ui_addObjectDialog * ui_;
 	Camera * camera_;
 	ObjWidget * object_;
-	IplImage * cvImage_;
+	cv::Mat cvImage_;
 
 	enum State{kTakePicture, kSelectFeatures, kVerifySelection, kClosing};
 	int state_;

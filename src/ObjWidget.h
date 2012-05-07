@@ -27,7 +27,7 @@ public:
 	ObjWidget(int id,
 			const std::vector<cv::KeyPoint> & keypoints,
 			const cv::Mat & descriptors,
-			const IplImage * image,
+			const cv::Mat & image,
 			const QString & detectorType = "NA",
 			const QString & descriptorType = "NA",
 			QWidget * parent = 0);
@@ -36,7 +36,7 @@ public:
 	void setId(int id);
 	void setData(const std::vector<cv::KeyPoint> & keypoints,
 			const cv::Mat & descriptors,
-			const IplImage * image,
+			const cv::Mat & image,
 			const QString & detectorType,
 			const QString & descriptorType);
 	void setTextLabel(const QString & text);
@@ -53,8 +53,8 @@ public:
 
 	const std::vector<cv::KeyPoint> & keypoints() const {return keypoints_;}
 	const cv::Mat & descriptors() const {return descriptors_;}
-	const QPixmap & image() const {return image_;}
-	const IplImage * iplImage() const {return iplImage_;}
+	const QPixmap & pixmap() const {return pixmap_;}
+	const cv::Mat & cvImage() const {return cvImage_;}
 	int id() const {return id_;}
 	QColor defaultColor() const;
 	bool isImageShown() const;
@@ -95,8 +95,8 @@ private:
 private:
 	std::vector<cv::KeyPoint> keypoints_;
 	cv::Mat descriptors_;
-	QPixmap image_;
-	IplImage * iplImage_;
+	QPixmap pixmap_;
+	cv::Mat cvImage_;
 	QList<KeypointItem*> keypointItems_;
 	QGraphicsView * graphicsView_;
 	int id_;

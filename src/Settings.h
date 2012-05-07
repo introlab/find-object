@@ -59,66 +59,65 @@ class Settings
 	PARAMETER(Camera, videoFilePath, QString, "");
 
 	//List format : [Index:item0;item1;item3;...]
-	PARAMETER(Detector, Type, QString, "7:Dense;Fast;GoodFeaturesToTrack;Mser;Orb;Sift;Star;Surf");
-	PARAMETER(Descriptor, Type, QString, "3:Brief;Orb;Sift;Surf");
+	PARAMETER(Detector, Type, QString, "7:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF");
+	PARAMETER(Descriptor, Type, QString, "3:Brief;ORB;SIFT;SURF");
 
 	PARAMETER(Brief, bytes, int, 32);
 
-	PARAMETER(Dense, initFeatureScale, float, cv::DenseFeatureDetector::Params().initFeatureScale);
-	PARAMETER(Dense, featureScaleLevels, int, cv::DenseFeatureDetector::Params().featureScaleLevels);
-	PARAMETER(Dense, featureScaleMul, float, cv::DenseFeatureDetector::Params().featureScaleMul);
-	PARAMETER(Dense, initXyStep, int, cv::DenseFeatureDetector::Params().initXyStep);
-	PARAMETER(Dense, initImgBound, int, cv::DenseFeatureDetector::Params().initImgBound);
-	PARAMETER(Dense, varyXyStepWithScale, bool, cv::DenseFeatureDetector::Params().varyXyStepWithScale);
-	PARAMETER(Dense, varyImgBoundWithScale, bool, cv::DenseFeatureDetector::Params().varyImgBoundWithScale);
+	PARAMETER(Dense, initFeatureScale, float, 1.f);
+	PARAMETER(Dense, featureScaleLevels, int, 1);
+	PARAMETER(Dense, featureScaleMul, float, 0.1f);
+	PARAMETER(Dense, initXyStep, int, 6);
+	PARAMETER(Dense, initImgBound, int, 0);
+	PARAMETER(Dense, varyXyStepWithScale, bool, true);
+	PARAMETER(Dense, varyImgBoundWithScale, bool, false);
 
-	PARAMETER(Fast, threshold, int, 20);
+	PARAMETER(Fast, threshold, int, 10);
 	PARAMETER(Fast, nonmaxSuppression, bool, true);
 
-	PARAMETER(GoodFeaturesToTrack, maxCorners, int, cv::GoodFeaturesToTrackDetector::Params().maxCorners);
-	PARAMETER(GoodFeaturesToTrack, qualityLevel, double, cv::GoodFeaturesToTrackDetector::Params().qualityLevel);
-	PARAMETER(GoodFeaturesToTrack, minDistance, double, cv::GoodFeaturesToTrackDetector::Params().minDistance);
-	PARAMETER(GoodFeaturesToTrack, blockSize, int, cv::GoodFeaturesToTrackDetector::Params().blockSize);
-	PARAMETER(GoodFeaturesToTrack, useHarrisDetector, bool, cv::GoodFeaturesToTrackDetector::Params().useHarrisDetector);
-	PARAMETER(GoodFeaturesToTrack, k, double, cv::GoodFeaturesToTrackDetector::Params().k);
+	PARAMETER(GFTT, maxCorners, int, 1000);
+	PARAMETER(GFTT, qualityLevel, double, 0.01);
+	PARAMETER(GFTT, minDistance, double, 1);
+	PARAMETER(GFTT, blockSize, int, 3);
+	PARAMETER(GFTT, useHarrisDetector, bool, false);
+	PARAMETER(GFTT, k, double, 0.04);
 
-	PARAMETER(Orb, nFeatures, uint, 700);
-	PARAMETER(Orb, scaleFactor, float, cv::ORB::CommonParams().scale_factor_);
-	PARAMETER(Orb, nLevels, uint, cv::ORB::CommonParams().n_levels_);
-	PARAMETER(Orb, firstLevel, uint, cv::ORB::CommonParams().first_level_);
-	PARAMETER(Orb, edgeThreshold, uint, cv::ORB::CommonParams().edge_threshold_);
+	PARAMETER(ORB, nFeatures, int, 500);
+	PARAMETER(ORB, scaleFactor, float,  1.2f);
+	PARAMETER(ORB, nLevels, int, 8);
+	PARAMETER(ORB, edgeThreshold, int, 31);
+	PARAMETER(ORB, firstLevel, int, 0);
+	PARAMETER(ORB, WTA_K, int, 2);
+	PARAMETER(ORB, scoreType, int, 0);
+	PARAMETER(ORB, patchSize, int, 31);
 
-	PARAMETER(Mser, delta, int, cvMSERParams().delta);
-	PARAMETER(Mser, minArea, int, cvMSERParams().minArea);
-	PARAMETER(Mser, maxArea, int, cvMSERParams().maxArea);
-	PARAMETER(Mser, maxVariation, float, cvMSERParams().maxVariation);
-	PARAMETER(Mser, minDiversity, float, cvMSERParams().minDiversity);
-	PARAMETER(Mser, maxEvolution, int, cvMSERParams().maxEvolution);
-	PARAMETER(Mser, areaThreshold, double, cvMSERParams().areaThreshold);
-	PARAMETER(Mser, minMargin, double, cvMSERParams().minMargin);
-	PARAMETER(Mser, edgeBlurSize, int, cvMSERParams().edgeBlurSize);
+	PARAMETER(MSER, delta, int, 5);
+	PARAMETER(MSER, minArea, int, 60);
+	PARAMETER(MSER, maxArea, int, 14400);
+	PARAMETER(MSER, maxVariation, double, 0.25);
+	PARAMETER(MSER, minDiversity, double, 0.2);
+	PARAMETER(MSER, maxEvolution, int, 200);
+	PARAMETER(MSER, areaThreshold, double, 1.01);
+	PARAMETER(MSER, minMargin, double, 0.003);
+	PARAMETER(MSER, edgeBlurSize, int, 5);
 
-	PARAMETER(Sift, threshold, double, cv::SIFT::DetectorParams::GET_DEFAULT_THRESHOLD());
-	PARAMETER(Sift, edgeThreshold, double, cv::SIFT::DetectorParams::GET_DEFAULT_EDGE_THRESHOLD());
-	PARAMETER(Sift, nOctaves, int, cv::SIFT::CommonParams::DEFAULT_NOCTAVES);
-	PARAMETER(Sift, nOctaveLayers, int, cv::SIFT::CommonParams::DEFAULT_NOCTAVE_LAYERS);
-	PARAMETER(Sift, firstOctave, int, cv::SIFT::CommonParams::DEFAULT_FIRST_OCTAVE);
-	PARAMETER(Sift, angleMode, int, cv::SIFT::CommonParams::FIRST_ANGLE);
-	PARAMETER(Sift, magnification, double, cv::SIFT::DescriptorParams::GET_DEFAULT_MAGNIFICATION());
-	PARAMETER(Sift, isNormalize, bool, cv::SIFT::DescriptorParams::DEFAULT_IS_NORMALIZE);
-	PARAMETER(Sift, recalculateAngles, bool, true);
+	PARAMETER(SIFT, nfeatures, int, 0);
+	PARAMETER(SIFT, nOctaveLayers, int, 3);
+	PARAMETER(SIFT, contrastThreshold, double, 0.04);
+	PARAMETER(SIFT, edgeThreshold, double, 10);
+	PARAMETER(SIFT, sigma, double, 1.6);
 
-	PARAMETER(Star, maxSize, int, cvStarDetectorParams().maxSize);
-	PARAMETER(Star, responseThreshold, int, cvStarDetectorParams().responseThreshold);
-	PARAMETER(Star, lineThresholdProjected, int, cvStarDetectorParams().lineThresholdProjected);
-	PARAMETER(Star, lineThresholdBinarized, int, cvStarDetectorParams().lineThresholdBinarized);
-	PARAMETER(Star, suppressNonmaxSize, int, cvStarDetectorParams().suppressNonmaxSize);
+	PARAMETER(Star, maxSize, int, 45);
+	PARAMETER(Star, responseThreshold, int, 30);
+	PARAMETER(Star, lineThresholdProjected, int, 10);
+	PARAMETER(Star, lineThresholdBinarized, int, 8);
+	PARAMETER(Star, suppressNonmaxSize, int, 5);
 
-	PARAMETER(Surf, hessianThreshold, double, 600.0);
-	PARAMETER(Surf, octaves, int, 3);
-	PARAMETER(Surf, octaveLayers, int, 4);
-	PARAMETER(Surf, upright, bool, false);
-	PARAMETER(Surf, extended, bool, false);
+	PARAMETER(SURF, hessianThreshold, double, 600.0);
+	PARAMETER(SURF, nOctaves, int, 4);
+	PARAMETER(SURF, nOctaveLayers, int, 2);
+	PARAMETER(SURF, extended, bool, true);
+	PARAMETER(SURF, upright, bool, false);
 
 	PARAMETER(NearestNeighbor, nndrRatioUsed, bool, true);
 	PARAMETER(NearestNeighbor, nndrRatio, float, 0.8f);
@@ -126,7 +125,7 @@ class Settings
 	PARAMETER(NearestNeighbor, minDistance, float, 1.6f);
 
 	PARAMETER(General, autoStartCamera, bool, false);
-	PARAMETER(General, autoUpdateObjects, bool, false);
+	PARAMETER(General, autoUpdateObjects, bool, true);
 	PARAMETER(General, nextObjID, uint, 1);
 	PARAMETER(General, imageFormats, QString, "*.png *.jpg *.bmp *.tiff")
 	PARAMETER(General, videoFormats, QString, "*.avi *.m4v")

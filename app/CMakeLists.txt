@@ -36,7 +36,7 @@ SET(SRC_FILES
 	../src/MainWindow.cpp
 	../src/AddObjectDialog.cpp
 	../src/KeypointItem.cpp
-	../src/qtipl.cpp
+	../src/QtOpenCV.cpp
 	../src/Camera.cpp
 	../src/ParametersToolBox.cpp
 	../src/Settings.cpp

@@ -16,10 +16,12 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/features2d/features2d.hpp>
+#include <opencv2/nonfree/features2d.hpp>
 #include <opencv2/calib3d/calib3d.hpp> // for homography
 
 // From this project (see src folder)
 #include "ObjWidget.h"
+#include "QtOpenCV.h"
 
 void showUsage()
 {
@@ -44,10 +46,10 @@ int main(int argc, char * argv[])
 	ObjWidget sceneWidget;
 
 	//Load as grayscale
-	IplImage * objectImg = cvLoadImage(argv[1], CV_LOAD_IMAGE_GRAYSCALE);
-	IplImage * sceneImg = cvLoadImage(argv[2], CV_LOAD_IMAGE_GRAYSCALE);
+	cv::Mat objectImg = cv::imread(argv[1], cv::IMREAD_GRAYSCALE);
+	cv::Mat sceneImg = cv::imread(argv[2], cv::IMREAD_GRAYSCALE);
 
-	if(objectImg && sceneImg)
+	if(!objectImg.empty() && !sceneImg.empty())
 	{
 		std::vector<cv::KeyPoint> objectKeypoints;
 		std::vector<cv::KeyPoint> sceneKeypoints;
@@ -58,13 +60,15 @@ int main(int argc, char * argv[])
 		// EXTRACT KEYPOINTS
 		////////////////////////////
 		// The detector can be any of (see OpenCV features2d.hpp):
-		// cv::FeatureDetector * detector = new cv::OrbFeatureDetector();
+		// cv::FeatureDetector * detector = new cv::DenseFeatureDetector();
 		// cv::FeatureDetector * detector = new cv::FastFeatureDetector();
-		// cv::FeatureDetector * detector = new cv::MserFeatureDetector();
-		// cv::FeatureDetector * detector = new cv::SiftFeatureDetector();
-		// cv::FeatureDetector * detector = new cv::SurfFeatureDetector();
+		// cv::FeatureDetector * detector = new cv::GFTTDetector();
+		// cv::FeatureDetector * detector = new cv::MSER();
+		// cv::FeatureDetector * detector = new cv::ORB();
+		// cv::FeatureDetector * detector = new cv::SIFT();
 		// cv::FeatureDetector * detector = new cv::StarFeatureDetector();
-		cv::FeatureDetector * detector = new cv::SurfFeatureDetector();
+		// cv::FeatureDetector * detector = new cv::SURF();
+		cv::FeatureDetector * detector = new cv::SURF(600.0);
 		detector->detect(objectImg, objectKeypoints);
 		printf("Object: %d keypoints detected in %d ms\n", (int)objectKeypoints.size(), time.restart());
 		detector->detect(sceneImg, sceneKeypoints);
@@ -75,10 +79,10 @@ int main(int argc, char * argv[])
 		////////////////////////////
 		// The extractor can be any of (see OpenCV features2d.hpp):
 		// cv::DescriptorExtractor * extractor = new cv::BriefDescriptorExtractor();
-		// cv::DescriptorExtractor * extractor = new cv::OrbDescriptorExtractor();
-		// cv::DescriptorExtractor * extractor = new cv::SiftDescriptorExtractor();
-		// cv::DescriptorExtractor * extractor = new cv::SurfDescriptorExtractor();
-		cv::DescriptorExtractor * extractor = new cv::SurfDescriptorExtractor();
+		// cv::DescriptorExtractor * extractor = new cv::ORB();
+		// cv::DescriptorExtractor * extractor = new cv::SIFT();
+		// cv::DescriptorExtractor * extractor = new cv::SURF();
+		cv::DescriptorExtractor * extractor = new cv::SURF(600.0);
 		extractor->compute(objectImg, objectKeypoints, objectDescriptors);
 		printf("Object: %d descriptors extracted in %d ms\n", objectDescriptors.rows, time.restart());
 		extractor->compute(sceneImg, sceneKeypoints, sceneDescriptors);
@@ -187,7 +191,7 @@ int main(int argc, char * argv[])
 			}
 			QPen rectPen(color);
 			rectPen.setWidth(4);
-			QGraphicsRectItem * rectItem = new QGraphicsRectItem(objWidget.image().rect());
+			QGraphicsRectItem * rectItem = new QGraphicsRectItem(objWidget.pixmap().rect());
 			rectItem->setPen(rectPen);
 			rectItem->setTransform(hTransform);
 			sceneWidget.addRect(rectItem);
@@ -201,54 +205,44 @@ int main(int argc, char * argv[])
 		// Wait for gui
 		objWidget.setGraphicsViewMode(false);
 		objWidget.setWindowTitle("Object");
-		if(objWidget.image().width() <= 800)
+		if(objWidget.pixmap().width() <= 800)
 		{
-			objWidget.setGeometry(0, 0, objWidget.image().width(), objWidget.image().height());
+			objWidget.setMinimumSize(objWidget.pixmap().width(), objWidget.pixmap().height());
 		}
 		else
 		{
-			objWidget.setGeometry(0, 0, 800, 600);
+			objWidget.setMinimumSize(800, 600);
 			objWidget.setAutoScale(false);
 		}
-		objWidget.show();
+
 		sceneWidget.setGraphicsViewMode(false);
 		sceneWidget.setWindowTitle("Scene");
-		if(sceneWidget.image().width() <= 800)
+		if(sceneWidget.pixmap().width() <= 800)
 		{
-			sceneWidget.setGeometry(0, 0, sceneWidget.image().width(), sceneWidget.image().height());
+			sceneWidget.setMinimumSize(sceneWidget.pixmap().width(), sceneWidget.pixmap().height());
 		}
 		else
 		{
-			sceneWidget.setGeometry(0, 0, 800, 600);
+			sceneWidget.setMinimumSize(800, 600);
 			sceneWidget.setAutoScale(false);
 		}
+
 		sceneWidget.show();
+		objWidget.show();
+
 		int r = app.exec();
 		printf("Closing...\n");
+
 		////////////////////////////
 		//Cleanup
 		////////////////////////////
 		delete detector;
 		delete extractor;
 
-		if(objectImg) {
-			cvReleaseImage(&objectImg);
-		}
-		if(sceneImg) {
-			cvReleaseImage(&sceneImg);
-		}
-
 		return r;
 	}
 	else
 	{
-		if(objectImg) {
-			cvReleaseImage(&objectImg);
-		}
-		if(sceneImg) {
-			cvReleaseImage(&sceneImg);
-		}
-
 		printf("Images are not valid!\n");
 		showUsage();
 	}

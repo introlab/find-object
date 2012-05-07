@@ -4,7 +4,7 @@
 
 #include "ObjWidget.h"
 #include "KeypointItem.h"
-#include "qtipl.h"
+#include "QtOpenCV.h"
 #include "Settings.h"
 
 #include <opencv2/highgui/highgui.hpp>
@@ -29,41 +29,35 @@
 
 ObjWidget::ObjWidget(QWidget * parent) :
 	QWidget(parent),
-	iplImage_(0),
 	graphicsView_(0),
 	id_(0),
 	detectorType_("NA"),
 	descriptorType_("NA"),
 	graphicsViewInitialized_(false),
-	alpha_(50)
+	alpha_(100)
 {
 	setupUi();
 }
 ObjWidget::ObjWidget(int id,
 		const std::vector<cv::KeyPoint> & keypoints,
 		const cv::Mat & descriptors,
-		const IplImage * iplImage,
+		const cv::Mat & image,
 		const QString & detectorType,
 		const QString & descriptorType,
 		QWidget * parent) :
 	QWidget(parent),
-	iplImage_(0),
 	graphicsView_(0),
 	id_(id),
 	detectorType_("NA"),
 	descriptorType_("NA"),
 	graphicsViewInitialized_(false),
-	alpha_(50)
+	alpha_(100)
 {
 	setupUi();
-	this->setData(keypoints, descriptors, iplImage, detectorType, descriptorType);
+	this->setData(keypoints, descriptors, image, detectorType, descriptorType);
 }
 ObjWidget::~ObjWidget()
 {
-	if(iplImage_)
-	{
-		cvReleaseImage(&iplImage_);
-	}
 }
 
 void ObjWidget::setupUi()
@@ -247,7 +241,7 @@ void ObjWidget::setTextLabel(const QString & text)
 
 void ObjWidget::setData(const std::vector<cv::KeyPoint> & keypoints,
 		const cv::Mat & descriptors,
-		const IplImage * image,
+		const cv::Mat & image,
 		const QString & detectorType,
 		const QString & descriptorType)
 {
@@ -261,30 +255,16 @@ void ObjWidget::setData(const std::vector<cv::KeyPoint> & keypoints,
 	detectorType_ = detectorType;
 	descriptorType_ = descriptorType;
 	mouseCurrentPos_ = mousePressedPos_; // this will reset roi selection
-	if(iplImage_)
-	{
-		cvReleaseImage(&iplImage_);
-		iplImage_ = 0;
-	}
-	if(image)
-	{
-		/* create destination image
-		   Note that cvGetSize will return the width and the height of ROI */
-		iplImage_ = cvCreateImage(cvGetSize(image),
-				image->depth,
-				image->nChannels);
 
-		/* copy subimage */
-		cvCopy(image, iplImage_, NULL);
+	cvImage_ = image.clone();
+	pixmap_ = QPixmap::fromImage(cvtCvMat2QImage(cvImage_));
+	//this->setMinimumSize(image_.size());
 
-		image_ = QPixmap::fromImage(Ipl2QImage(iplImage_));
-		//this->setMinimumSize(image_.size());
-	}
 	if(graphicsViewMode_->isChecked())
 	{
 		this->setupGraphicsView();
 	}
-	label_->setVisible(!image);
+	label_->setVisible(image.empty());
 }
 
 void ObjWidget::resetKptsColor()
@@ -385,7 +365,7 @@ void ObjWidget::save(QDataStream & streamPtr) const
 			descriptors_.type() <<
 			dataSize;
 	streamPtr << QByteArray((char*)descriptors_.data, dataSize);
-	streamPtr << image_;
+	streamPtr << pixmap_;
 }
 
 void ObjWidget::load(QDataStream & streamPtr)
@@ -416,14 +396,9 @@ void ObjWidget::load(QDataStream & streamPtr)
 	QByteArray data;
 	streamPtr >> data;
 	descriptors = cv::Mat(rows, cols, type, data.data()).clone();
-	streamPtr >> image_;
-	this->setData(kpts, descriptors, 0, detectorType, descriptorType);
-	if(iplImage_)
-	{
-		cvReleaseImage(&iplImage_);
-		iplImage_ = 0;
-	}
-	iplImage_ = QImage2Ipl(image_.toImage());
+	streamPtr >> pixmap_;
+	this->setData(kpts, descriptors, cv::Mat(), detectorType, descriptorType);
+	cvImage_ = cvtQImage2CvMat(pixmap_.toImage());
 	//this->setMinimumSize(image_.size());
 }
 
@@ -433,10 +408,10 @@ void ObjWidget::computeScaleOffsets(float & scale, float & offsetX, float & offs
 	offsetX = 0.0f;
 	offsetY = 0.0f;
 
-	if(!image_.isNull())
+	if(!pixmap_.isNull())
 	{
-		float w = image_.width();
-		float h = image_.height();
+		float w = pixmap_.width();
+		float h = pixmap_.height();
 		float widthRatio = float(this->rect().width()) / w;
 		float heightRatio = float(this->rect().height()) / h;
 
@@ -475,7 +450,7 @@ void ObjWidget::paintEvent(QPaintEvent *event)
 	}
 	else
 	{
-		if(!image_.isNull())
+		if(!pixmap_.isNull())
 		{
 			//Scale
 			float ratio, offsetX, offsetY;
@@ -484,7 +459,7 @@ void ObjWidget::paintEvent(QPaintEvent *event)
 
 			if(mirrorView_->isChecked())
 			{
-				painter.translate(offsetX+image_.width()*ratio, offsetY);
+				painter.translate(offsetX+pixmap_.width()*ratio, offsetY);
 				painter.scale(-ratio, ratio);
 			}
 			else
@@ -495,7 +470,7 @@ void ObjWidget::paintEvent(QPaintEvent *event)
 
 			if(showImage_->isChecked())
 			{
-				painter.drawPixmap(QPoint(0,0), image_);
+				painter.drawPixmap(QPoint(0,0), pixmap_);
 			}
 
 			if(showFeatures_->isChecked())
@@ -523,15 +498,15 @@ void ObjWidget::paintEvent(QPaintEvent *event)
 				if(mirrorView_->isChecked())
 				{
 					int l = left;
-					left = qAbs(right - image_.width());
-					right = qAbs(l - image_.width());
+					left = qAbs(right - pixmap_.width());
+					right = qAbs(l - pixmap_.width());
 				}
 				painter.setPen(Qt::NoPen);
 				painter.setBrush(QBrush(QColor(0,0,0,100)));
-				painter.drawRect(0, 0, image_.width(), top-1);
+				painter.drawRect(0, 0, pixmap_.width(), top-1);
 				painter.drawRect(0, top, left, bottom-top);
-				painter.drawRect(right, top, image_.width()-right, bottom-top);
-				painter.drawRect(0, bottom, image_.width(), image_.height()-bottom);
+				painter.drawRect(right, top, pixmap_.width()-right, bottom-top);
+				painter.drawRect(0, bottom, pixmap_.width(), pixmap_.height()-bottom);
 				painter.restore();
 			}
 		}
@@ -570,7 +545,7 @@ void ObjWidget::mouseMoveEvent(QMouseEvent * event)
 
 void ObjWidget::mouseReleaseEvent(QMouseEvent * event)
 {
-	if(!image_.isNull())
+	if(!pixmap_.isNull())
 	{
 		int left,top,bottom,right;
 
@@ -582,8 +557,8 @@ void ObjWidget::mouseReleaseEvent(QMouseEvent * event)
 		if(mirrorView_->isChecked())
 		{
 			int l = left;
-			left = qAbs(right - image_.width());
-			right = qAbs(l - image_.width());
+			left = qAbs(right - pixmap_.width());
+			right = qAbs(l - pixmap_.width());
 		}
 
 		emit roiChanged(QRect(left, top, right-left, bottom-top));
@@ -754,15 +729,15 @@ std::vector<cv::KeyPoint> ObjWidget::selectedKeypoints() const
 
 void ObjWidget::setupGraphicsView()
 {
-	if(!image_.isNull())
+	if(!pixmap_.isNull())
 	{
-		graphicsView_->scene()->setSceneRect(image_.rect());
+		graphicsView_->scene()->setSceneRect(pixmap_.rect());
 		QList<KeypointItem*> items;
-		if(image_.width() > 0 && image_.height() > 0)
+		if(pixmap_.width() > 0 && pixmap_.height() > 0)
 		{
 			QRectF sceneRect = graphicsView_->sceneRect();
 
-			QGraphicsPixmapItem * pixmapItem = graphicsView_->scene()->addPixmap(image_);
+			QGraphicsPixmapItem * pixmapItem = graphicsView_->scene()->addPixmap(pixmap_);
 			pixmapItem->setVisible(this->isImageShown());
 			this->drawKeypoints();
 

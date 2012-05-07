@@ -11,7 +11,7 @@ SET(SRC_FILES
     main.cpp
     ../src/ObjWidget.cpp
     ../src/KeypointItem.cpp
-    ../src/qtipl.cpp
+    ../src/QtOpenCV.cpp
     ../src/Settings.cpp
     ../src/Camera.cpp
     ${moc_srcs} 

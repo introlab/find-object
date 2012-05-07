@@ -8,6 +8,7 @@
 #include <QtCore/QStringList>
 #include <QtCore/QDir>
 #include <stdio.h>
+#include <opencv2/nonfree/features2d.hpp>
 
 ParametersMap Settings::defaultParameters_;
 ParametersMap Settings::parameters_;
@@ -108,15 +109,14 @@ cv::FeatureDetector * Settings::createFeaturesDetector()
 				case 0:
 					if(strategies.at(index).compare("Dense") == 0)
 					{
-						cv::DenseFeatureDetector::Params params;
-						params.initFeatureScale = getDense_initFeatureScale();
-						params.featureScaleLevels = getDense_featureScaleLevels();
-						params.featureScaleMul = getDense_featureScaleMul();
-						params.initXyStep = getDense_initXyStep();
-						params.initImgBound = getDense_initImgBound();
-						params.varyXyStepWithScale = getDense_varyXyStepWithScale();
-						params.varyImgBoundWithScale = getDense_varyImgBoundWithScale();
-						detector = new cv::DenseFeatureDetector(params);
+						detector = new cv::DenseFeatureDetector(
+								getDense_initFeatureScale(),
+								getDense_featureScaleLevels(),
+								getDense_featureScaleMul(),
+								getDense_initXyStep(),
+								getDense_initImgBound(),
+								getDense_varyXyStepWithScale(),
+								getDense_varyImgBoundWithScale());
 					}
 					break;
 				case 1:
@@ -128,83 +128,77 @@ cv::FeatureDetector * Settings::createFeaturesDetector()
 					}
 					break;
 				case 2:
-					if(strategies.at(index).compare("GoodFeaturesToTrack") == 0)
+					if(strategies.at(index).compare("GFTT") == 0)
 					{
-						cv::GoodFeaturesToTrackDetector::Params params;
-						params.maxCorners = getGoodFeaturesToTrack_maxCorners();
-						params.qualityLevel = getGoodFeaturesToTrack_qualityLevel();
-						params.minDistance = getGoodFeaturesToTrack_minDistance();
-						params.blockSize = getGoodFeaturesToTrack_blockSize();
-						params.useHarrisDetector = getGoodFeaturesToTrack_useHarrisDetector();
-						params.k = getGoodFeaturesToTrack_k();
-						detector = new cv::GoodFeaturesToTrackDetector(params);
+						detector = new cv::GFTTDetector(
+								getGFTT_maxCorners(),
+								getGFTT_qualityLevel(),
+								getGFTT_minDistance(),
+								getGFTT_blockSize(),
+								getGFTT_useHarrisDetector(),
+								getGFTT_k());
 					}
 					break;
 				case 3:
-					if(strategies.at(index).compare("Mser") == 0)
+					if(strategies.at(index).compare("MSER") == 0)
 					{
-						CvMSERParams params = cvMSERParams();
-						params.delta = getMser_delta();
-						params.maxArea = getMser_maxArea();
-						params.minArea = getMser_minArea();
-						params.maxVariation = getMser_maxVariation();
-						params.minDiversity = getMser_minDiversity();
-						params.maxEvolution = getMser_maxEvolution();
-						params.areaThreshold = getMser_areaThreshold();
-						params.minMargin = getMser_minMargin();
-						params.edgeBlurSize = getMser_edgeBlurSize();
-						detector = new cv::MserFeatureDetector(params);
+						detector = new cv::MSER(
+								getMSER_delta(),
+								getMSER_minArea(),
+								getMSER_maxArea(),
+								getMSER_maxVariation(),
+								getMSER_minDiversity(),
+								getMSER_maxEvolution(),
+								getMSER_areaThreshold(),
+								getMSER_minMargin(),
+								getMSER_edgeBlurSize());
 					}
 					break;
 				case 4:
-					if(strategies.at(index).compare("Orb") == 0)
+					if(strategies.at(index).compare("ORB") == 0)
 					{
-						cv::ORB::CommonParams params;
-						params.scale_factor_ = getOrb_scaleFactor();
-						params.n_levels_ = getOrb_nLevels();
-						params.first_level_ = getOrb_firstLevel();
-						params.edge_threshold_ = getOrb_edgeThreshold();
-						detector = new cv::OrbFeatureDetector(
-								getOrb_nFeatures(),
-								params);
+						detector = new cv::ORB(
+								getORB_nFeatures(),
+								getORB_scaleFactor(),
+								getORB_nLevels(),
+								getORB_edgeThreshold(),
+								getORB_firstLevel(),
+								getORB_WTA_K(),
+								getORB_scoreType(),
+								getORB_patchSize());
 					}
 					break;
 				case 5:
-					if(strategies.at(index).compare("Sift") == 0)
+					if(strategies.at(index).compare("SIFT") == 0)
 					{
-						cv::SIFT::DetectorParams detectorParams;
-						detectorParams.edgeThreshold = getSift_edgeThreshold();
-						detectorParams.threshold = getSift_threshold();
-						cv::SIFT::CommonParams commonParams;
-						commonParams.angleMode = getSift_angleMode();
-						commonParams.firstOctave = getSift_firstOctave();
-						commonParams.nOctaveLayers = getSift_nOctaveLayers();
-						commonParams.nOctaves = getSift_nOctaves();
-						detector = new cv::SiftFeatureDetector(
-								detectorParams,
-								commonParams);
+						detector = new cv::SIFT(
+								getSIFT_nfeatures(),
+								getSIFT_nOctaveLayers(),
+								getSIFT_contrastThreshold(),
+								getSIFT_edgeThreshold(),
+								getSIFT_sigma());
 					}
 					break;
 				case 6:
 					if(strategies.at(index).compare("Star") == 0)
 					{
-						CvStarDetectorParams params = cvStarDetectorParams();
-						params.lineThresholdBinarized = getStar_lineThresholdBinarized();
-						params.lineThresholdProjected = getStar_lineThresholdProjected();
-						params.maxSize = getStar_maxSize();
-						params.responseThreshold = getStar_responseThreshold();
-						params.suppressNonmaxSize = getStar_suppressNonmaxSize();
-						detector = new cv::StarFeatureDetector(params);
+						detector = new cv::StarFeatureDetector(
+								getStar_maxSize(),
+								getStar_responseThreshold(),
+								getStar_lineThresholdProjected(),
+								getStar_lineThresholdBinarized(),
+								getStar_suppressNonmaxSize());
 					}
 					break;
 				case 7:
-					if(strategies.at(index).compare("Surf") == 0)
+					if(strategies.at(index).compare("SURF") == 0)
 					{
-						detector = new cv::SurfFeatureDetector(
-								getSurf_hessianThreshold(),
-								getSurf_octaves(),
-								getSurf_octaveLayers(),
-								getSurf_upright());
+						detector = new cv::SURF(
+								getSURF_hessianThreshold(),
+								getSURF_nOctaves(),
+								getSURF_nOctaveLayers(),
+								getSURF_extended(),
+								getSURF_upright());
 					}
 					break;
 				default:
@@ -240,41 +234,39 @@ cv::DescriptorExtractor * Settings::createDescriptorsExtractor()
 					}
 					break;
 				case 1:
-					if(strategies.at(index).compare("Orb") == 0)
+					if(strategies.at(index).compare("ORB") == 0)
 					{
-						cv::ORB::CommonParams params;
-						params.scale_factor_ = getOrb_scaleFactor();
-						params.n_levels_ = getOrb_nLevels();
-						params.first_level_ = getOrb_firstLevel();
-						params.edge_threshold_ = getOrb_edgeThreshold();
-						extractor = new cv::OrbDescriptorExtractor(params);
+						extractor = new cv::ORB(
+								getORB_nFeatures(),
+								getORB_scaleFactor(),
+								getORB_nLevels(),
+								getORB_edgeThreshold(),
+								getORB_firstLevel(),
+								getORB_WTA_K(),
+								getORB_scoreType(),
+								getORB_patchSize());
 					}
 					break;
 				case 2:
-					if(strategies.at(index).compare("Sift") == 0)
+					if(strategies.at(index).compare("SIFT") == 0)
 					{
-						cv::SIFT::DescriptorParams descriptorParams;
-						descriptorParams.isNormalize = getSift_isNormalize();
-						descriptorParams.magnification = getSift_magnification();
-						descriptorParams.recalculateAngles = getSift_recalculateAngles();
-						cv::SIFT::CommonParams commonParams;
-						commonParams.angleMode = getSift_angleMode();
-						commonParams.firstOctave = getSift_firstOctave();
-						commonParams.nOctaveLayers = getSift_nOctaveLayers();
-						commonParams.nOctaves = getSift_nOctaves();
-						extractor = new cv::SiftDescriptorExtractor(
-								descriptorParams,
-								commonParams);
+						extractor = new cv::SIFT(
+								getSIFT_nfeatures(),
+								getSIFT_nOctaveLayers(),
+								getSIFT_contrastThreshold(),
+								getSIFT_edgeThreshold(),
+								getSIFT_sigma());
 					}
 					break;
 				case 3:
-					if(strategies.at(index).compare("Surf") == 0)
+					if(strategies.at(index).compare("SURF") == 0)
 					{
-						extractor = new cv::SurfDescriptorExtractor(
-								getSurf_octaves(),
-								getSurf_octaveLayers(),
-								getSurf_extended(),
-								getSurf_upright());
+						extractor = new cv::SURF(
+								getSURF_hessianThreshold(),
+								getSURF_nOctaves(),
+								getSURF_nOctaveLayers(),
+								getSURF_extended(),
+								getSURF_upright());
 					}
 					break;
 				default:
