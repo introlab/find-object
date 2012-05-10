@@ -4,8 +4,8 @@
 +---------------------------------------------------
 Requirements :
 -Cmake (tested on 2.8.2)
--Qt4 (tested on 4.7)
--OpenCV (tested on 2.3.1)
+-Qt4 (tested on 4.8)
+-OpenCV (tested on 2.4.0)
 -MinGW (only on Windows)
 
 Ubuntu / Mac OS X
