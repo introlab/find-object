@@ -38,19 +38,20 @@ int main(int argc, char * argv[])
 		showUsage();
 	}
 	QTime time;
-	time.start();
 
 	// GUI stuff
 	QApplication app(argc, argv);
 	ObjWidget objWidget;
 	ObjWidget sceneWidget;
 
+	time.start();
 	//Load as grayscale
 	cv::Mat objectImg = cv::imread(argv[1], cv::IMREAD_GRAYSCALE);
 	cv::Mat sceneImg = cv::imread(argv[2], cv::IMREAD_GRAYSCALE);
 
 	if(!objectImg.empty() && !sceneImg.empty())
 	{
+		printf("Loading images: %d ms\n", time.restart());
 		std::vector<cv::KeyPoint> objectKeypoints;
 		std::vector<cv::KeyPoint> sceneKeypoints;
 		cv::Mat objectDescriptors;
