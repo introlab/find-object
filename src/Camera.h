@@ -35,7 +35,7 @@ protected:
 	void stopTimer();
 
 private:
-	CvCapture * capture_;
+	cv::VideoCapture capture_;
 	QTimer cameraTimer_;
 };
 

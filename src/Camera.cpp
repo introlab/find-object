@@ -4,13 +4,12 @@
 
 #include "Camera.h"
 #include <stdio.h>
-#include <opencv2/imgproc/imgproc_c.h>
+#include <opencv2/imgproc/imgproc.hpp>
 #include "Settings.h"
 #include <QtCore/QFile>
 
 Camera::Camera(QObject * parent) :
-	QObject(parent),
-	capture_(0)
+	QObject(parent)
 {
 	qRegisterMetaType<cv::Mat>("cv::Mat");
 	connect(&cameraTimer_, SIGNAL(timeout()), this, SLOT(takeImage()));
@@ -24,11 +23,7 @@ Camera::~Camera()
 void Camera::stop()
 {
 	stopTimer();
-	if(capture_)
-	{
-		cvReleaseCapture(&capture_);
-		capture_ = 0;
-	}
+	capture_.release();
 }
 
 void Camera::pause()
@@ -38,69 +33,61 @@ void Camera::pause()
 
 void Camera::takeImage()
 {
-	if(capture_)
+	if(capture_.isOpened())
 	{
-		IplImage * img = 0;
-		if(cvGrabFrame(capture_)) // capture a frame
+		cv::Mat img;
+		capture_.read(img);// capture a frame
+		if(img.empty())
 		{
-			img = cvRetrieveFrame(capture_); // retrieve the captured frame
+			printf("Camera: Could not grab a frame, the end of the feed may be reached...\n");
 		}
 		else
 		{
-			printf("CameraVideo: Could not grab a frame, the end of the feed may be reached...\n");
-		}
-
-		//resize
-		if(img &&
-			Settings::getCamera_imageWidth() &&
-			Settings::getCamera_imageHeight() &&
-			Settings::getCamera_imageWidth() != img->width &&
-			Settings::getCamera_imageHeight() != img->height)
-		{
-			// declare a destination IplImage object with correct size, depth and channels
-			cv::Mat headerImg = img;
-			cv::Mat imgMat(Settings::getCamera_imageHeight(),
-						   Settings::getCamera_imageWidth(),
-						   headerImg.type());
-
-			//use cvResize to resize source to a destination image (linear interpolation)
-			IplImage resampledImg = imgMat;
-			cvResize(img, &resampledImg);
-			emit imageReceived(imgMat);
-		}
-		else
-		{
-			emit imageReceived(cv::Mat(img, true));
+			//resize
+			if( Settings::getCamera_imageWidth() &&
+				Settings::getCamera_imageHeight() &&
+				Settings::getCamera_imageWidth() != img.cols &&
+				Settings::getCamera_imageHeight() != img.rows)
+			{
+				cv::Mat resampled;
+				cv::resize(img, resampled, cv::Size(Settings::getCamera_imageWidth(), Settings::getCamera_imageHeight()));
+				emit imageReceived(resampled);
+			}
+			else
+			{
+				emit imageReceived(img.clone()); // clone required
+			}
 		}
 	}
 }
 
 bool Camera::start()
 {
-	if(!capture_)
+	if(!capture_.isOpened())
 	{
 		QString videoFile = Settings::getCamera_videoFilePath();
 		if(!videoFile.isEmpty())
 		{
-			capture_ = cvCaptureFromAVI(videoFile.toStdString().c_str());
-			if(!capture_)
+			capture_.open(videoFile.toStdString().c_str());
+			if(!capture_.isOpened())
 			{
 				printf("WARNING: Cannot open file \"%s\". If you want to disable loading automatically this video file, clear the Camera/videoFilePath parameter. By default, webcam will be used instead of the file.\n", videoFile.toStdString().c_str());
 			}
 		}
-		if(!capture_)
+		if(!capture_.isOpened())
 		{
-			capture_ = cvCaptureFromCAM(Settings::getCamera_deviceId());
-			if(capture_ && Settings::getCamera_imageWidth() && Settings::getCamera_imageHeight())
+			//set camera device
+			capture_.open(Settings::getCamera_deviceId());
+			if(Settings::getCamera_imageWidth() && Settings::getCamera_imageHeight())
 			{
-				cvSetCaptureProperty(capture_, CV_CAP_PROP_FRAME_WIDTH, double(Settings::getCamera_imageWidth()));
-				cvSetCaptureProperty(capture_, CV_CAP_PROP_FRAME_HEIGHT, double(Settings::getCamera_imageHeight()));
+				capture_.set(CV_CAP_PROP_FRAME_WIDTH, double(Settings::getCamera_imageWidth()));
+				capture_.set(CV_CAP_PROP_FRAME_HEIGHT, double(Settings::getCamera_imageHeight()));
 			}
 		}
 	}
-	if(!capture_)
+	if(!capture_.isOpened())
 	{
-		printf("Failed to create a capture object!\n");
+		printf("Failed to open a capture object!\n");
 		return false;
 	}
 

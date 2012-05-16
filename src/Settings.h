@@ -53,8 +53,8 @@ typedef unsigned int uint;
 class Settings
 {
 	PARAMETER(Camera, deviceId, int, 0);
-	PARAMETER(Camera, imageWidth, int, 0);
-	PARAMETER(Camera, imageHeight, int, 0);
+	PARAMETER(Camera, imageWidth, int, 640);
+	PARAMETER(Camera, imageHeight, int, 480);
 	PARAMETER(Camera, imageRate, int, 2); // Hz
 	PARAMETER(Camera, videoFilePath, QString, "");
 
