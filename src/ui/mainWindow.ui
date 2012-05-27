@@ -13,6 +13,10 @@
   <property name="windowTitle">
    <string>Find-Object</string>
   </property>
+  <property name="windowIcon">
+   <iconset resource="../resources.qrc">
+    <normaloff>:/images/resources/Find-Object.png</normaloff>:/images/resources/Find-Object.png</iconset>
+  </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QHBoxLayout" name="horizontalLayout" stretch="2">
     <property name="spacing">
@@ -131,7 +135,7 @@
      <x>0</x>
      <y>0</y>
      <width>1104</width>
-     <height>22</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -206,8 +210,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>276</width>
-          <height>357</height>
+          <width>282</width>
+          <height>365</height>
          </rect>
         </property>
         <attribute name="label">
@@ -415,8 +419,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>274</width>
-          <height>389</height>
+          <width>280</width>
+          <height>394</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_objects">
@@ -530,6 +534,8 @@
    <container>1</container>
   </customwidget>
  </customwidgets>
- <resources/>
+ <resources>
+  <include location="../resources.qrc"/>
+ </resources>
  <connections/>
 </ui>
