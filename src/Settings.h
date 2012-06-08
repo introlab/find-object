@@ -128,7 +128,7 @@ class Settings
 	PARAMETER(General, autoUpdateObjects, bool, true);
 	PARAMETER(General, nextObjID, uint, 1);
 	PARAMETER(General, imageFormats, QString, "*.png *.jpg *.bmp *.tiff")
-	PARAMETER(General, videoFormats, QString, "*.avi *.m4v")
+	PARAMETER(General, videoFormats, QString, "*.avi *.m4v *.mp4")
 
 	PARAMETER(Homography, homographyComputed, bool, true);
 	PARAMETER(Homography, ransacReprojThr, double, 1.0);
