@@ -33,6 +33,8 @@
 #include <QtGui/QCloseEvent>
 #include <QtGui/QCheckBox>
 
+#include "utilite/UDirectory.h"
+
 // Camera ownership transferred
 MainWindow::MainWindow(Camera * camera, QWidget * parent) :
 	QMainWindow(parent),
@@ -61,6 +63,7 @@ MainWindow::MainWindow(Camera * camera, QWidget * parent) :
 
 	ui_->dockWidget_parameters->setVisible(false);
 	ui_->dockWidget_plot->setVisible(false);
+	ui_->widget_controls->setVisible(false);
 
 	QByteArray geometry;
 	QByteArray state;
@@ -69,7 +72,7 @@ MainWindow::MainWindow(Camera * camera, QWidget * parent) :
 	this->restoreState(state);
 
 	ui_->toolBox->setupUi();
-	connect((QSpinBox*)ui_->toolBox->getParameterWidget(Settings::kCamera_4imageRate()),
+	connect((QDoubleSpinBox*)ui_->toolBox->getParameterWidget(Settings::kCamera_4imageRate()),
 			SIGNAL(editingFinished()),
 			camera_,
 			SLOT(updateImageRate()));
@@ -85,6 +88,12 @@ MainWindow::MainWindow(Camera * camera, QWidget * parent) :
 				SIGNAL(stateChanged(int)),
 				this,
 				SLOT(updateMirrorView()));
+
+	ui_->widget_controls->setVisible(Settings::getGeneral_controlsShown());
+	connect((QCheckBox*)ui_->toolBox->getParameterWidget(Settings::kGeneral_controlsShown()),
+				SIGNAL(stateChanged(int)),
+				this,
+				SLOT(showHideControls()));
 
 	//buttons
 	connect(ui_->pushButton_restoreDefaults, SIGNAL(clicked()), ui_->toolBox, SLOT(resetCurrentPage()));
@@ -106,9 +115,20 @@ MainWindow::MainWindow(Camera * camera, QWidget * parent) :
 	connect(ui_->actionSave_objects, SIGNAL(triggered()), this, SLOT(saveObjects()));
 	connect(ui_->actionLoad_objects, SIGNAL(triggered()), this, SLOT(loadObjects()));
 	connect(ui_->actionCamera_from_video_file, SIGNAL(triggered()), this, SLOT(setupCameraFromVideoFile()));
+	connect(ui_->actionCamera_from_directory_of_images, SIGNAL(triggered()), this, SLOT(setupCameraFromImagesDirectory()));
 	connect(ui_->actionAbout, SIGNAL(triggered()), aboutDialog_ , SLOT(exec()));
 	connect(ui_->actionRestore_all_default_settings, SIGNAL(triggered()), ui_->toolBox, SLOT(resetAllPages()));
 	connect(ui_->actionRemove_all_objects, SIGNAL(triggered()), this, SLOT(removeAllObjects()));
+
+	connect(ui_->pushButton_play, SIGNAL(clicked()), this, SLOT(startProcessing()));
+	connect(ui_->pushButton_stop, SIGNAL(clicked()), this, SLOT(stopProcessing()));
+	connect(ui_->pushButton_pause, SIGNAL(clicked()), this, SLOT(pauseProcessing()));
+	connect(ui_->horizontalSlider_frames, SIGNAL(valueChanged(int)), this, SLOT(moveCameraFrame(int)));
+	connect(ui_->horizontalSlider_frames, SIGNAL(valueChanged(int)), ui_->label_frame, SLOT(setNum(int)));
+	ui_->pushButton_play->setVisible(true);
+	ui_->pushButton_pause->setVisible(false);
+	ui_->pushButton_stop->setEnabled(true);
+	ui_->horizontalSlider_frames->setEnabled(false);
 
 	ui_->objects_area->addAction(ui_->actionAdd_object_from_scene);
 	ui_->objects_area->addAction(ui_->actionAdd_objects_from_files);
@@ -117,8 +137,8 @@ MainWindow::MainWindow(Camera * camera, QWidget * parent) :
 	ui_->actionStart_camera->setShortcut(Qt::Key_Space);
 	ui_->actionPause_camera->setShortcut(Qt::Key_Space);
 
-	ui_->actionCamera_from_video_file->setCheckable(true);
-	ui_->actionCamera_from_video_file->setChecked(!Settings::getCamera_5videoFilePath().isEmpty());
+	ui_->actionCamera_from_video_file->setChecked(!Settings::getCamera_5mediaPath().isEmpty() && !UDirectory::exists(Settings::getCamera_5mediaPath().toStdString()));
+	ui_->actionCamera_from_directory_of_images->setChecked(!Settings::getCamera_5mediaPath().isEmpty() && UDirectory::exists(Settings::getCamera_5mediaPath().toStdString()));
 
 	if(Settings::getGeneral_autoStartCamera())
 	{
@@ -294,6 +314,11 @@ void MainWindow::updateMirrorView()
 	}
 }
 
+void MainWindow::showHideControls()
+{
+	ui_->widget_controls->setVisible(Settings::getGeneral_controlsShown());
+}
+
 void MainWindow::addObjectFromScene()
 {
 	disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
@@ -407,24 +432,54 @@ void MainWindow::setupCameraFromVideoFile()
 {
 	if(!ui_->actionCamera_from_video_file->isChecked())
 	{
-		Settings::setCamera_5videoFilePath("");
-		ui_->toolBox->updateParameter(Settings::kCamera_5videoFilePath());
+		Settings::setCamera_5mediaPath("");
+		ui_->toolBox->updateParameter(Settings::kCamera_5mediaPath());
 	}
 	else
 	{
 		QString fileName = QFileDialog::getOpenFileName(this, tr("Setup camera from video file..."), Settings::workingDirectory(), tr("Video Files (%1)").arg(Settings::getGeneral_videoFormats()));
 		if(!fileName.isEmpty())
 		{
-			Settings::setCamera_5videoFilePath(fileName);
-			ui_->toolBox->updateParameter(Settings::kCamera_5videoFilePath());
+			Settings::setCamera_5mediaPath(fileName);
+			ui_->toolBox->updateParameter(Settings::kCamera_5mediaPath());
 			if(camera_->isRunning())
 			{
 				this->stopProcessing();
 				this->startProcessing();
 			}
+			Settings::setGeneral_controlsShown(true);
+			ui_->toolBox->updateParameter(Settings::kGeneral_controlsShown());
 		}
 	}
-	ui_->actionCamera_from_video_file->setChecked(!Settings::getCamera_5videoFilePath().isEmpty());
+	ui_->actionCamera_from_video_file->setChecked(!Settings::getCamera_5mediaPath().isEmpty());
+	ui_->actionCamera_from_directory_of_images->setChecked(false);
+}
+
+void MainWindow::setupCameraFromImagesDirectory()
+{
+	if(!ui_->actionCamera_from_directory_of_images->isChecked())
+	{
+		Settings::setCamera_5mediaPath("");
+		ui_->toolBox->updateParameter(Settings::kCamera_5mediaPath());
+	}
+	else
+	{
+		QString directory = QFileDialog::getExistingDirectory(this, tr("Setup camera from directory of images..."), Settings::workingDirectory());
+		if(!directory.isEmpty())
+		{
+			Settings::setCamera_5mediaPath(directory);
+			ui_->toolBox->updateParameter(Settings::kCamera_5mediaPath());
+			if(camera_->isRunning())
+			{
+				this->stopProcessing();
+				this->startProcessing();
+			}
+			Settings::setGeneral_controlsShown(true);
+			ui_->toolBox->updateParameter(Settings::kGeneral_controlsShown());
+		}
+	}
+	ui_->actionCamera_from_directory_of_images->setChecked(!Settings::getCamera_5mediaPath().isEmpty());
+	ui_->actionCamera_from_video_file->setChecked(false);
 }
 
 void MainWindow::showObject(ObjWidget * obj)
@@ -543,33 +598,36 @@ void MainWindow::updateData()
 	// Get the total size and verify descriptors
 	for(int i=0; i<objects_.size(); ++i)
 	{
-		if(dim >= 0 && objects_.at(i)->descriptors().cols != dim)
+		if(!objects_.at(i)->descriptors().empty())
 		{
-			if(this->isVisible())
+			if(dim >= 0 && objects_.at(i)->descriptors().cols != dim)
 			{
-				QMessageBox::critical(this, tr("Error"), tr("Descriptors of the objects are not all the same size!\nObjects opened must have all the same size (and from the same descriptor extractor)."));
+				if(this->isVisible())
+				{
+					QMessageBox::critical(this, tr("Error"), tr("Descriptors of the objects are not all the same size!\nObjects opened must have all the same size (and from the same descriptor extractor)."));
+				}
+				else
+				{
+					printf("ERROR: Descriptors of the objects are not all the same size! Objects opened must have all the same size (and from the same descriptor extractor).\n");
+				}
+				return;
 			}
-			else
+			dim = objects_.at(i)->descriptors().cols;
+			if(type >= 0 && objects_.at(i)->descriptors().type() != type)
 			{
-				printf("ERROR: Descriptors of the objects are not all the same size! Objects opened must have all the same size (and from the same descriptor extractor).\n");
+				if(this->isVisible())
+				{
+					QMessageBox::critical(this, tr("Error"), tr("Descriptors of the objects are not all the same type!\nObjects opened must have been processed by the same descriptor extractor."));
+				}
+				else
+				{
+					printf("ERROR: Descriptors of the objects are not all the same type! Objects opened must have been processed by the same descriptor extractor.\n");
+				}
+				return;
 			}
-			return;
+			type = objects_.at(i)->descriptors().type();
+			count += objects_.at(i)->descriptors().rows;
 		}
-		dim = objects_.at(i)->descriptors().cols;
-		if(type >= 0 && objects_.at(i)->descriptors().type() != type)
-		{
-			if(this->isVisible())
-			{
-				QMessageBox::critical(this, tr("Error"), tr("Descriptors of the objects are not all the same type!\nObjects opened must have been processed by the same descriptor extractor."));
-			}
-			else
-			{
-				printf("ERROR: Descriptors of the objects are not all the same type! Objects opened must have been processed by the same descriptor extractor.\n");
-			}
-			return;
-		}
-		type = objects_.at(i)->descriptors().type();
-		count += objects_.at(i)->descriptors().rows;
 	}
 
 	// Copy data
@@ -619,6 +677,19 @@ void MainWindow::startProcessing()
 		ui_->actionStart_camera->setEnabled(false);
 		ui_->actionLoad_scene_from_file->setEnabled(false);
 		ui_->label_timeRefreshRate->setVisible(true);
+
+		//update control bar
+		ui_->pushButton_play->setVisible(false);
+		ui_->pushButton_pause->setVisible(true);
+		ui_->pushButton_stop->setEnabled(true);
+		int totalFrames = camera_->getTotalFrames();
+		if(totalFrames)
+		{
+			ui_->label_frame->setVisible(true);
+			ui_->horizontalSlider_frames->setEnabled(true);
+			ui_->horizontalSlider_frames->setMaximum(totalFrames-1);
+		}
+
 		if(updateStatusMessage)
 		{
 			this->statusBar()->showMessage(tr("Camera started."), 2000);
@@ -652,6 +723,12 @@ void MainWindow::stopProcessing()
 	ui_->actionPause_camera->setEnabled(false);
 	ui_->actionStart_camera->setEnabled(true);
 	ui_->actionLoad_scene_from_file->setEnabled(true);
+	ui_->pushButton_play->setVisible(true);
+	ui_->pushButton_pause->setVisible(false);
+	ui_->pushButton_stop->setEnabled(false);
+	ui_->horizontalSlider_frames->setEnabled(false);
+	ui_->horizontalSlider_frames->setValue(0);
+	ui_->label_frame->setVisible(false);
 }
 
 void MainWindow::pauseProcessing()
@@ -661,17 +738,34 @@ void MainWindow::pauseProcessing()
 	ui_->actionStart_camera->setEnabled(false);
 	if(camera_->isRunning())
 	{
+		ui_->pushButton_play->setVisible(true);
+		ui_->pushButton_pause->setVisible(false);
 		camera_->pause();
 	}
 	else
 	{
+		ui_->pushButton_play->setVisible(false);
+		ui_->pushButton_pause->setVisible(true);
 		camera_->start();
+	}
+}
+
+void MainWindow::moveCameraFrame(int frame)
+{
+	if(ui_->horizontalSlider_frames->isEnabled())
+	{
+		camera_->moveToFrame(frame);
+		if(!camera_->isRunning())
+		{
+			camera_->takeImage();
+		}
 	}
 }
 
 void MainWindow::update(const cv::Mat & image)
 {
-	updateRate_.start();
+	QTime totalTime;
+	totalTime.start();
 	// reset objects color
 	for(int i=0; i<objects_.size(); ++i)
 	{
@@ -990,9 +1084,17 @@ void MainWindow::update(const cv::Mat & image)
 	}
 	ui_->label_detectorDescriptorType->setText(QString("%1/%2").arg(Settings::currentDetectorType()).arg(Settings::currentDescriptorType()));
 
-	int ms = updateRate_.restart();
-	ui_->label_timeTotal->setNum(ms);
-	int refreshRate = qRound(1000.0f/float(ms));
+	//update slider
+	if(ui_->horizontalSlider_frames->isEnabled())
+	{
+		ui_->horizontalSlider_frames->blockSignals(true);
+		ui_->horizontalSlider_frames->setValue(camera_->getCurrentFrameIndex()-1);
+		ui_->label_frame->setNum(camera_->getCurrentFrameIndex()-1);
+		ui_->horizontalSlider_frames->blockSignals(false);
+	}
+
+	ui_->label_timeTotal->setNum(totalTime.elapsed());
+	int refreshRate = qRound(1000.0f/float(updateRate_.restart()));
 	if(refreshRate > 0 && refreshRate < lowestRefreshRate_)
 	{
 		lowestRefreshRate_ = refreshRate;
@@ -1000,7 +1102,7 @@ void MainWindow::update(const cv::Mat & image)
 	// Refresh the label only after each 1000 ms
 	if(refreshStartTime_.elapsed() > 1000)
 	{
-		if(Settings::getCamera_4imageRate()>0)
+		if(Settings::getCamera_4imageRate()>0.0)
 		{
 			ui_->label_timeRefreshRate->setText(QString("(%1 Hz - %2 Hz)").arg(QString::number(Settings::getCamera_4imageRate())).arg(QString::number(lowestRefreshRate_)));
 		}
@@ -1030,5 +1132,7 @@ void MainWindow::notifyParametersChanged()
 		ui_->label_timeRefreshRate->setVisible(false);
 	}
 
-	ui_->actionCamera_from_video_file->setChecked(!Settings::getCamera_5videoFilePath().isEmpty());
+	ui_->actionCamera_from_video_file->setChecked(!Settings::getCamera_5mediaPath().isEmpty() && !UDirectory::exists(Settings::getCamera_5mediaPath().toStdString()));
+	ui_->actionCamera_from_directory_of_images->setChecked(!Settings::getCamera_5mediaPath().isEmpty() && UDirectory::exists(Settings::getCamera_5mediaPath().toStdString()));
+
 }

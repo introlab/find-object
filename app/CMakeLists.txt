@@ -45,6 +45,8 @@ SET(SRC_FILES
 	../src/ObjWidget.cpp
 	../src/AboutDialog.cpp
 	../src/utilite/UPlot.cpp
+	../src/utilite/UDirectory.cpp
+	../src/utilite/UFile.cpp
 	../src/rtabmap/PdfPlot.cpp
 	${moc_srcs} 
 	${moc_uis} 

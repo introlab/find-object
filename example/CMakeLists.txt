@@ -14,6 +14,8 @@ SET(SRC_FILES
     ../src/QtOpenCV.cpp
     ../src/Settings.cpp
     ../src/Camera.cpp
+    ../src/utilite/UDirectory.cpp
+    ../src/utilite/UFile.cpp
     ${moc_srcs} 
 )
 

@@ -18,7 +18,7 @@
     <normaloff>:/images/resources/Find-Object.png</normaloff>:/images/resources/Find-Object.png</iconset>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QHBoxLayout" name="horizontalLayout" stretch="2">
+   <layout class="QVBoxLayout" name="verticalLayout" stretch="0,1,0">
     <property name="spacing">
      <number>0</number>
     </property>
@@ -26,101 +26,169 @@
      <number>0</number>
     </property>
     <item>
-     <layout class="QVBoxLayout" name="verticalLayout" stretch="0,1">
-      <property name="spacing">
-       <number>0</number>
-      </property>
+     <layout class="QHBoxLayout" name="horizontalLayout_2">
       <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="0,0,0,0,0,0,0">
-        <item>
-         <widget class="QLabel" name="label_5">
-          <property name="font">
-           <font>
-            <weight>75</weight>
-            <bold>true</bold>
-           </font>
-          </property>
-          <property name="text">
-           <string>Camera</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="label_timeRefreshRate">
-          <property name="text">
-           <string> (0 Hz - 0 Hz)</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <spacer name="horizontalSpacer_2">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>40</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-        <item>
-         <widget class="QLabel" name="label_detectorDescriptorType">
-          <property name="text">
-           <string/>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <spacer name="horizontalSpacer">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>40</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-        <item>
-         <widget class="QLabel" name="label_nfeatures">
-          <property name="text">
-           <string>0</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="label_15">
-          <property name="text">
-           <string> features</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
+       <widget class="QLabel" name="label_5">
+        <property name="font">
+         <font>
+          <weight>75</weight>
+          <bold>true</bold>
+         </font>
+        </property>
+        <property name="text">
+         <string>Camera</string>
+        </property>
+       </widget>
       </item>
       <item>
-       <widget class="QFrame" name="frame">
-        <property name="frameShape">
-         <enum>QFrame::StyledPanel</enum>
+       <widget class="QLabel" name="label_timeRefreshRate">
+        <property name="text">
+         <string> (0 Hz - 0 Hz)</string>
         </property>
-        <property name="frameShadow">
-         <enum>QFrame::Raised</enum>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer_2">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
         </property>
-        <layout class="QVBoxLayout" name="verticalLayout_3">
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_detectorDescriptorType">
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_nfeatures">
+        <property name="text">
+         <string>0</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_15">
+        <property name="text">
+         <string> features</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <widget class="ObjWidget" name="imageView_source" native="true"/>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <item>
+       <widget class="QWidget" name="widget_controls" native="true">
+        <layout class="QHBoxLayout" name="horizontalLayout_4">
          <property name="spacing">
-          <number>0</number>
+          <number>-1</number>
          </property>
          <property name="margin">
           <number>0</number>
          </property>
          <item>
-          <widget class="ObjWidget" name="imageView_source" native="true"/>
+          <widget class="QPushButton" name="pushButton_play">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>24</width>
+             <height>24</height>
+            </size>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset resource="../resources.qrc">
+             <normaloff>:/images/resources/TheWorkingGroup_video_play.ico</normaloff>:/images/resources/TheWorkingGroup_video_play.ico</iconset>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButton_pause">
+           <property name="maximumSize">
+            <size>
+             <width>24</width>
+             <height>24</height>
+            </size>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset resource="../resources.qrc">
+             <normaloff>:/images/resources/TheWorkingGroup_video_pause.ico</normaloff>:/images/resources/TheWorkingGroup_video_pause.ico</iconset>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButton_stop">
+           <property name="maximumSize">
+            <size>
+             <width>24</width>
+             <height>24</height>
+            </size>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset resource="../resources.qrc">
+             <normaloff>:/images/resources/TheWorkingGroup_video_stop.ico</normaloff>:/images/resources/TheWorkingGroup_video_stop.ico</iconset>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QSlider" name="horizontalSlider_frames">
+           <property name="focusPolicy">
+            <enum>Qt::ClickFocus</enum>
+           </property>
+           <property name="minimum">
+            <number>0</number>
+           </property>
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="label_frame">
+           <property name="text">
+            <string>0</string>
+           </property>
+          </widget>
          </item>
         </layout>
        </widget>
@@ -160,6 +228,7 @@
     <addaction name="actionPause_camera"/>
     <addaction name="actionStop_camera"/>
     <addaction name="separator"/>
+    <addaction name="actionCamera_from_directory_of_images"/>
     <addaction name="actionCamera_from_video_file"/>
     <addaction name="separator"/>
     <addaction name="actionRestore_all_default_settings"/>
@@ -444,7 +513,7 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>265</width>
+          <width>222</width>
           <height>557</height>
          </rect>
         </property>
@@ -492,6 +561,9 @@
            <height>0</height>
           </size>
          </property>
+         <property name="focusPolicy">
+          <enum>Qt::ClickFocus</enum>
+         </property>
          <property name="maximum">
           <number>100</number>
          </property>
@@ -535,6 +607,9 @@
    </property>
   </action>
   <action name="actionAdd_object_from_scene">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>Add object from scene...</string>
    </property>
@@ -585,6 +660,9 @@
    </property>
   </action>
   <action name="actionCamera_from_video_file">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>Camera from video file...</string>
    </property>
@@ -592,6 +670,14 @@
   <action name="actionRemove_all_objects">
    <property name="text">
     <string>Remove all objects</string>
+   </property>
+  </action>
+  <action name="actionCamera_from_directory_of_images">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Camera from directory of images...</string>
    </property>
   </action>
  </widget>

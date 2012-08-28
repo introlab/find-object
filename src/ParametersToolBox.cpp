@@ -104,6 +104,8 @@ void ParametersToolBox::setupUi()
 			currentItem->setObjectName(group);
 			QVBoxLayout * layout = new QVBoxLayout(currentItem);
 			currentItem->setLayout(layout);
+			layout->setContentsMargins(0,0,0,0);
+			layout->setSpacing(0);
 			layout->addSpacerItem(new QSpacerItem(0,0, QSizePolicy::Minimum, QSizePolicy::Expanding));
 
 			addParameter(layout, iter.key(), iter.value());

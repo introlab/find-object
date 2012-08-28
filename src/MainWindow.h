@@ -57,13 +57,16 @@ private slots:
 	void addObjectsFromFiles();
 	void loadSceneFromFile();
 	void setupCameraFromVideoFile();
+	void setupCameraFromImagesDirectory();
 	void removeObject(ObjWidget * object);
 	void removeAllObjects();
 	void updateObjectsSize();
 	void updateMirrorView();
+	void showHideControls();
 	void update(const cv::Mat & image);
 	void updateObjects();
 	void notifyParametersChanged();
+	void moveCameraFrame(int frame);
 
 signals:
 	void objectsFound(const QMap<int, QPair<QRect, QTransform> > &);

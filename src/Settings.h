@@ -55,8 +55,8 @@ class Settings
 	PARAMETER(Camera, 1deviceId, int, 0);
 	PARAMETER(Camera, 2imageWidth, int, 640);
 	PARAMETER(Camera, 3imageHeight, int, 480);
-	PARAMETER(Camera, 4imageRate, int, 2); // Hz
-	PARAMETER(Camera, 5videoFilePath, QString, "");
+	PARAMETER(Camera, 4imageRate, double, 2.0); // Hz
+	PARAMETER(Camera, 5mediaPath, QString, "");
 
 	//List format : [Index:item0;item1;item3;...]
 	PARAMETER(Detector_Descriptor, 1Detector, QString, "7:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF");
@@ -155,6 +155,7 @@ class Settings
 	PARAMETER(General, videoFormats, QString, "*.avi *.m4v *.mp4");
 	PARAMETER(General, mirrorView, bool, true);
 	PARAMETER(General, invertedSearch, bool, false);
+	PARAMETER(General, controlsShown, bool, false);
 
 	PARAMETER(Homography, homographyComputed, bool, true);
 	PARAMETER(Homography, ransacReprojThr, double, 1.0);
