@@ -541,6 +541,8 @@ void MainWindow::updateObjects()
 	{
 		for(int i=0; i<objects_.size(); ++i)
 		{
+			QTime time;
+			time.start();
 			const cv::Mat & img = objects_.at(i)->cvImage();
 			cv::FeatureDetector * detector = Settings::createFeaturesDetector();
 			std::vector<cv::KeyPoint> keypoints;
@@ -562,6 +564,7 @@ void MainWindow::updateObjects()
 			{
 				printf("WARNING: no features detected in object %d !?!\n", objects_.at(i)->id());
 			}
+			printf("%d descriptors extracted from object %d (in %d ms)\n", descriptors.rows, objects_.at(i)->id(), time.elapsed());
 			objects_.at(i)->setData(keypoints, descriptors, img, Settings::currentDetectorType(), Settings::currentDescriptorType());
 
 			//update object labels
@@ -658,6 +661,7 @@ void MainWindow::updateData()
 			flannIndex_.build(objectsDescriptors_, *params, Settings::getFlannDistanceType());
 			delete params;
 			ui_->label_timeIndexing->setNum(time.restart());
+			ui_->label_vocabularySize->setNum(objectsDescriptors_.rows);
 		}
 	}
 }
@@ -839,6 +843,7 @@ void MainWindow::update(const cv::Mat & image)
 				flannIndex_.build(descriptors, *params, Settings::getFlannDistanceType());
 				delete params;
 				ui_->label_timeIndexing->setNum(time.restart());
+				ui_->label_vocabularySize->setNum(objectsDescriptors_.rows);
 			}
 
 			// DO NEAREST NEIGHBOR
