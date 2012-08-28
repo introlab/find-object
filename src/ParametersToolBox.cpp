@@ -11,6 +11,7 @@
 #include <QtGui/QGroupBox>
 #include <QtGui/QCheckBox>
 #include <QtGui/QVBoxLayout>
+#include <QtGui/QMessageBox>
 #include <stdio.h>
 
 ParametersToolBox::ParametersToolBox(QWidget *parent) :
@@ -86,6 +87,7 @@ void ParametersToolBox::resetAllPages()
 
 void ParametersToolBox::setupUi()
 {
+	this->removeItem(0); // remove dummy page used in .ui
 	QWidget * currentItem = 0;
 	const ParametersMap & parameters = Settings::getParameters();
 	for(ParametersMap::const_iterator iter=parameters.constBegin();
@@ -119,7 +121,17 @@ void ParametersToolBox::updateParameter(const QString & key)
 	QString type = Settings::getParametersType().value(key);
 	if(type.compare("QString") == 0)
 	{
-		((QLineEdit*)widget)->setText(Settings::getParameter(key).toString());
+		QString value = Settings::getParameter(key).toString();
+		if(value.contains(';'))
+		{
+			// It's a list, just change the index
+			QStringList splitted = value.split(':');
+			((QComboBox*)widget)->setCurrentIndex(splitted.first().toInt());
+		}
+		else
+		{
+			((QLineEdit*)widget)->setText(value);
+		}
 	}
 	else if(type.compare("int") == 0)
 	{
@@ -272,7 +284,12 @@ void ParametersToolBox::addParameter(QVBoxLayout * layout, const QString & name,
 {
 	QHBoxLayout * hLayout = new QHBoxLayout();
 	layout->insertLayout(layout->count()-1, hLayout);
-	hLayout->addWidget(new QLabel(name, this));
+	QString tmp = name;
+	if(tmp.at(0).isDigit())
+	{
+		tmp.remove(0,1);
+	}
+	hLayout->addWidget(new QLabel(tmp, this));
 	hLayout->addWidget(widget);
 }
 
@@ -314,6 +331,50 @@ void ParametersToolBox::changeParameter(const int & value)
 		QCheckBox * checkBox = qobject_cast<QCheckBox*>(sender());
 		if(comboBox)
 		{
+			if(comboBox->objectName().compare(Settings::kDetector_Descriptor_2Descriptor()) == 0 ||
+			   comboBox->objectName().compare(Settings::kNearestNeighbor_1Strategy()) == 0)
+			{
+				//verify binary issue
+				QComboBox * descriptorBox = (QComboBox*)this->getParameterWidget(Settings::kDetector_Descriptor_2Descriptor());
+				QComboBox * nnBox = (QComboBox*)this->getParameterWidget(Settings::kNearestNeighbor_1Strategy());
+				bool isBinaryDescriptor = descriptorBox->currentText().compare("ORB") == 0 || descriptorBox->currentText().compare("Brief") == 0;
+				if(isBinaryDescriptor && nnBox->currentText().compare("Lsh") != 0)
+				{
+					QMessageBox::warning(this,
+							tr("Error"),
+							tr("Current selected descriptor type (\"%1\") is binary while nearest neighbor strategy is not (\"%2\").\n"
+							   "Falling back to \"Lsh\" nearest neighbor strategy (by default).")
+							   .arg(descriptorBox->currentText())
+							   .arg(nnBox->currentText()));
+					QString tmp = Settings::getNearestNeighbor_1Strategy();
+					*tmp.begin() = '5'; // set index
+					Settings::setNearestNeighbor_1Strategy(tmp);
+					this->updateParameter(Settings::kNearestNeighbor_1Strategy());
+					if(sender() == nnBox)
+					{
+						return;
+					}
+
+				}
+				else if(!isBinaryDescriptor && nnBox->currentText().compare("Lsh") == 0)
+				{
+					QMessageBox::warning(this,
+							tr("Error"),
+							tr("Current selected descriptor type (\"%1\") is not binary while nearest neighbor strategy is (\"%2\").\n"
+							   "Falling back to \"KDTree\" nearest neighbor strategy (by default).")
+							   .arg(descriptorBox->currentText())
+							   .arg(nnBox->currentText()));
+					QString tmp = Settings::getNearestNeighbor_1Strategy();
+					*tmp.begin() = '1'; // set index
+					Settings::setNearestNeighbor_1Strategy(tmp);
+					this->updateParameter(Settings::kNearestNeighbor_1Strategy());
+					if(sender() == nnBox)
+					{
+						return;
+					}
+				}
+			}
+
 			QStringList items;
 			for(int i=0; i<comboBox->count(); ++i)
 			{

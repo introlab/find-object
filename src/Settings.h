@@ -52,83 +52,109 @@ typedef unsigned int uint;
 
 class Settings
 {
-	PARAMETER(Camera, deviceId, int, 0);
-	PARAMETER(Camera, imageWidth, int, 640);
-	PARAMETER(Camera, imageHeight, int, 480);
-	PARAMETER(Camera, imageRate, int, 2); // Hz
-	PARAMETER(Camera, videoFilePath, QString, "");
+	PARAMETER(Camera, 1deviceId, int, 0);
+	PARAMETER(Camera, 2imageWidth, int, 640);
+	PARAMETER(Camera, 3imageHeight, int, 480);
+	PARAMETER(Camera, 4imageRate, int, 2); // Hz
+	PARAMETER(Camera, 5videoFilePath, QString, "");
 
 	//List format : [Index:item0;item1;item3;...]
-	PARAMETER(Detector, Type, QString, "7:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF");
-	PARAMETER(Descriptor, Type, QString, "3:Brief;ORB;SIFT;SURF");
+	PARAMETER(Detector_Descriptor, 1Detector, QString, "7:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF");
+	PARAMETER(Detector_Descriptor, 2Descriptor, QString, "3:Brief;ORB;SIFT;SURF");
 
-	PARAMETER(Brief, bytes, int, 32);
+	PARAMETER(Detector_Descriptor, Brief_bytes, int, 32);
 
-	PARAMETER(Dense, initFeatureScale, float, 1.f);
-	PARAMETER(Dense, featureScaleLevels, int, 1);
-	PARAMETER(Dense, featureScaleMul, float, 0.1f);
-	PARAMETER(Dense, initXyStep, int, 6);
-	PARAMETER(Dense, initImgBound, int, 0);
-	PARAMETER(Dense, varyXyStepWithScale, bool, true);
-	PARAMETER(Dense, varyImgBoundWithScale, bool, false);
+	PARAMETER(Detector_Descriptor, Dense_initFeatureScale, float, 1.f);
+	PARAMETER(Detector_Descriptor, Dense_featureScaleLevels, int, 1);
+	PARAMETER(Detector_Descriptor, Dense_featureScaleMul, float, 0.1f);
+	PARAMETER(Detector_Descriptor, Dense_initXyStep, int, 6);
+	PARAMETER(Detector_Descriptor, Dense_initImgBound, int, 0);
+	PARAMETER(Detector_Descriptor, Dense_varyXyStepWithScale, bool, true);
+	PARAMETER(Detector_Descriptor, Dense_varyImgBoundWithScale, bool, false);
 
-	PARAMETER(Fast, threshold, int, 10);
-	PARAMETER(Fast, nonmaxSuppression, bool, true);
+	PARAMETER(Detector_Descriptor, Fast_threshold, int, 10);
+	PARAMETER(Detector_Descriptor, Fast_nonmaxSuppression, bool, true);
 
-	PARAMETER(GFTT, maxCorners, int, 1000);
-	PARAMETER(GFTT, qualityLevel, double, 0.01);
-	PARAMETER(GFTT, minDistance, double, 1);
-	PARAMETER(GFTT, blockSize, int, 3);
-	PARAMETER(GFTT, useHarrisDetector, bool, false);
-	PARAMETER(GFTT, k, double, 0.04);
+	PARAMETER(Detector_Descriptor, GFTT_maxCorners, int, 1000);
+	PARAMETER(Detector_Descriptor, GFTT_qualityLevel, double, 0.01);
+	PARAMETER(Detector_Descriptor, GFTT_minDistance, double, 1);
+	PARAMETER(Detector_Descriptor, GFTT_blockSize, int, 3);
+	PARAMETER(Detector_Descriptor, GFTT_useHarrisDetector, bool, false);
+	PARAMETER(Detector_Descriptor, GFTT_k, double, 0.04);
 
-	PARAMETER(ORB, nFeatures, int, 500);
-	PARAMETER(ORB, scaleFactor, float,  1.2f);
-	PARAMETER(ORB, nLevels, int, 8);
-	PARAMETER(ORB, edgeThreshold, int, 31);
-	PARAMETER(ORB, firstLevel, int, 0);
-	PARAMETER(ORB, WTA_K, int, 2);
-	PARAMETER(ORB, scoreType, int, 0);
-	PARAMETER(ORB, patchSize, int, 31);
+	PARAMETER(Detector_Descriptor, ORB_nFeatures, int, 500);
+	PARAMETER(Detector_Descriptor, ORB_scaleFactor, float,  1.2f);
+	PARAMETER(Detector_Descriptor, ORB_nLevels, int, 8);
+	PARAMETER(Detector_Descriptor, ORB_edgeThreshold, int, 31);
+	PARAMETER(Detector_Descriptor, ORB_firstLevel, int, 0);
+	PARAMETER(Detector_Descriptor, ORB_WTA_K, int, 2);
+	PARAMETER(Detector_Descriptor, ORB_scoreType, int, 0);
+	PARAMETER(Detector_Descriptor, ORB_patchSize, int, 31);
 
-	PARAMETER(MSER, delta, int, 5);
-	PARAMETER(MSER, minArea, int, 60);
-	PARAMETER(MSER, maxArea, int, 14400);
-	PARAMETER(MSER, maxVariation, double, 0.25);
-	PARAMETER(MSER, minDiversity, double, 0.2);
-	PARAMETER(MSER, maxEvolution, int, 200);
-	PARAMETER(MSER, areaThreshold, double, 1.01);
-	PARAMETER(MSER, minMargin, double, 0.003);
-	PARAMETER(MSER, edgeBlurSize, int, 5);
+	PARAMETER(Detector_Descriptor, MSER_delta, int, 5);
+	PARAMETER(Detector_Descriptor, MSER_minArea, int, 60);
+	PARAMETER(Detector_Descriptor, MSER_maxArea, int, 14400);
+	PARAMETER(Detector_Descriptor, MSER_maxVariation, double, 0.25);
+	PARAMETER(Detector_Descriptor, MSER_minDiversity, double, 0.2);
+	PARAMETER(Detector_Descriptor, MSER_maxEvolution, int, 200);
+	PARAMETER(Detector_Descriptor, MSER_areaThreshold, double, 1.01);
+	PARAMETER(Detector_Descriptor, MSER_minMargin, double, 0.003);
+	PARAMETER(Detector_Descriptor, MSER_edgeBlurSize, int, 5);
 
-	PARAMETER(SIFT, nfeatures, int, 0);
-	PARAMETER(SIFT, nOctaveLayers, int, 3);
-	PARAMETER(SIFT, contrastThreshold, double, 0.04);
-	PARAMETER(SIFT, edgeThreshold, double, 10);
-	PARAMETER(SIFT, sigma, double, 1.6);
+	PARAMETER(Detector_Descriptor, SIFT_nfeatures, int, 0);
+	PARAMETER(Detector_Descriptor, SIFT_nOctaveLayers, int, 3);
+	PARAMETER(Detector_Descriptor, SIFT_contrastThreshold, double, 0.04);
+	PARAMETER(Detector_Descriptor, SIFT_edgeThreshold, double, 10);
+	PARAMETER(Detector_Descriptor, SIFT_sigma, double, 1.6);
 
-	PARAMETER(Star, maxSize, int, 45);
-	PARAMETER(Star, responseThreshold, int, 30);
-	PARAMETER(Star, lineThresholdProjected, int, 10);
-	PARAMETER(Star, lineThresholdBinarized, int, 8);
-	PARAMETER(Star, suppressNonmaxSize, int, 5);
+	PARAMETER(Detector_Descriptor, Star_maxSize, int, 45);
+	PARAMETER(Detector_Descriptor, Star_responseThreshold, int, 30);
+	PARAMETER(Detector_Descriptor, Star_lineThresholdProjected, int, 10);
+	PARAMETER(Detector_Descriptor, Star_lineThresholdBinarized, int, 8);
+	PARAMETER(Detector_Descriptor, Star_suppressNonmaxSize, int, 5);
 
-	PARAMETER(SURF, hessianThreshold, double, 600.0);
-	PARAMETER(SURF, nOctaves, int, 4);
-	PARAMETER(SURF, nOctaveLayers, int, 2);
-	PARAMETER(SURF, extended, bool, true);
-	PARAMETER(SURF, upright, bool, false);
+	PARAMETER(Detector_Descriptor, SURF_hessianThreshold, double, 600.0);
+	PARAMETER(Detector_Descriptor, SURF_nOctaves, int, 4);
+	PARAMETER(Detector_Descriptor, SURF_nOctaveLayers, int, 2);
+	PARAMETER(Detector_Descriptor, SURF_extended, bool, true);
+	PARAMETER(Detector_Descriptor, SURF_upright, bool, false);
 
-	PARAMETER(NearestNeighbor, nndrRatioUsed, bool, true);
-	PARAMETER(NearestNeighbor, nndrRatio, float, 0.8f);
-	PARAMETER(NearestNeighbor, minDistanceUsed, bool, false);
-	PARAMETER(NearestNeighbor, minDistance, float, 1.6f);
+	PARAMETER(NearestNeighbor, 1Strategy, QString, "1:Linear;KDTree;KMeans;Composite;Autotuned;Lsh");
+	PARAMETER(NearestNeighbor, 2Distance_type, QString, "0:EUCLIDEAN_L2;MANHATTAN_L1;MINKOWSKI;MAX;HIST_INTERSECT;HELLINGER;CHI_SQUARE_CS;KULLBACK_LEIBLER_KL");
+	PARAMETER(NearestNeighbor, 3nndrRatioUsed, bool, true);
+	PARAMETER(NearestNeighbor, 4nndrRatio, float, 0.8f);
+	PARAMETER(NearestNeighbor, 5minDistanceUsed, bool, false);
+	PARAMETER(NearestNeighbor, 6minDistance, float, 1.6f);
+
+	PARAMETER(NearestNeighbor, KDTree_trees, int, 4);
+
+	PARAMETER(NearestNeighbor, Composite_trees, int, 4);
+	PARAMETER(NearestNeighbor, Composite_branching, int, 32);
+	PARAMETER(NearestNeighbor, Composite_iterations, int, 11);
+	PARAMETER(NearestNeighbor, Composite_centers_init, QString, "0:RANDOM;GONZALES;KMEANSPP");
+	PARAMETER(NearestNeighbor, Composite_cb_index, double, 0.2);
+
+	PARAMETER(NearestNeighbor, Autotuned_target_precision, double, 0.8);
+	PARAMETER(NearestNeighbor, Autotuned_build_weight, double, 0.01);
+	PARAMETER(NearestNeighbor, Autotuned_memory_weight, double, 0);
+	PARAMETER(NearestNeighbor, Autotuned_sample_fraction, double, 0.1);
+
+	PARAMETER(NearestNeighbor, KMeans_branching, int, 32);
+	PARAMETER(NearestNeighbor, KMeans_iterations, int, 11);
+	PARAMETER(NearestNeighbor, KMeans_centers_init, QString, "0:RANDOM;GONZALES;KMEANSPP");
+	PARAMETER(NearestNeighbor, KMeans_cb_index, double, 0.2);
+
+	PARAMETER(NearestNeighbor, Lsh_table_number, int, 20);
+	PARAMETER(NearestNeighbor, Lsh_key_size, int, 10);
+	PARAMETER(NearestNeighbor, Lsh_multi_probe_level, int, 2);
 
 	PARAMETER(General, autoStartCamera, bool, false);
 	PARAMETER(General, autoUpdateObjects, bool, true);
 	PARAMETER(General, nextObjID, uint, 1);
-	PARAMETER(General, imageFormats, QString, "*.png *.jpg *.bmp *.tiff")
-	PARAMETER(General, videoFormats, QString, "*.avi *.m4v *.mp4")
+	PARAMETER(General, imageFormats, QString, "*.png *.jpg *.bmp *.tiff *.ppm");
+	PARAMETER(General, videoFormats, QString, "*.avi *.m4v *.mp4");
+	PARAMETER(General, mirrorView, bool, true);
+	PARAMETER(General, invertedSearch, bool, false);
 
 	PARAMETER(Homography, homographyComputed, bool, true);
 	PARAMETER(Homography, ransacReprojThr, double, 1.0);
@@ -141,8 +167,8 @@ public:
 	static QString iniDefaultPath();
 	static QString iniDefaultFileName() {return "config.ini";}
 
-	static void loadSettings(const QString & fileName = QString(), QByteArray * windowGeometry = 0);
-	static void saveSettings(const QString & fileName = QString(), const QByteArray & windowGeometry = QByteArray());
+	static void loadSettings(const QString & fileName = QString(), QByteArray * windowGeometry = 0, QByteArray * windowState = 0);
+	static void saveSettings(const QString & fileName = QString(), const QByteArray & windowGeometry = QByteArray(), const QByteArray & windowState = QByteArray());
 
 	static const ParametersMap & getDefaultParameters() {return defaultParameters_;}
 	static const ParametersMap & getParameters() {return parameters_;}
@@ -156,6 +182,11 @@ public:
 
 	static QString currentDescriptorType();
 	static QString currentDetectorType();
+	static QString currentNearestNeighborType();
+
+	static cv::flann::IndexParams * createFlannIndexParams();
+	static cvflann::flann_distance_t getFlannDistanceType();
+	static cv::flann::SearchParams getFlannSearchParams();
 
 private:
 	Settings(){}

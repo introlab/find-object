@@ -287,6 +287,10 @@ void ObjWidget::setKptColor(int index, const QColor & color)
 	{
 		kptColors_[index] = color;
 	}
+	else
+	{
+		printf("PROBLEM index =%d > size=%d\n", index, kptColors_.size());
+	}
 
 	if(graphicsViewMode_->isChecked())
 	{
@@ -342,6 +346,32 @@ bool ObjWidget::isMirrorView() const
 void ObjWidget::setDeletable(bool deletable)
 {
 	delete_->setEnabled(deletable);
+}
+
+void ObjWidget::setImageShown(bool shown)
+{
+	showImage_->setChecked(shown);
+	if(graphicsViewMode_->isChecked())
+	{
+		this->updateItemsShown();
+	}
+	else
+	{
+		this->update();
+	}
+}
+
+void ObjWidget::setFeaturesShown(bool shown)
+{
+	showFeatures_->setChecked(shown);
+	if(graphicsViewMode_->isChecked())
+	{
+		this->updateItemsShown();
+	}
+	else
+	{
+		this->update();
+	}
 }
 
 void ObjWidget::save(QDataStream & streamPtr) const

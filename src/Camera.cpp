@@ -44,13 +44,13 @@ void Camera::takeImage()
 		else
 		{
 			//resize
-			if( Settings::getCamera_imageWidth() &&
-				Settings::getCamera_imageHeight() &&
-				Settings::getCamera_imageWidth() != img.cols &&
-				Settings::getCamera_imageHeight() != img.rows)
+			if( Settings::getCamera_2imageWidth() &&
+				Settings::getCamera_3imageHeight() &&
+				Settings::getCamera_2imageWidth() != img.cols &&
+				Settings::getCamera_3imageHeight() != img.rows)
 			{
 				cv::Mat resampled;
-				cv::resize(img, resampled, cv::Size(Settings::getCamera_imageWidth(), Settings::getCamera_imageHeight()));
+				cv::resize(img, resampled, cv::Size(Settings::getCamera_2imageWidth(), Settings::getCamera_3imageHeight()));
 				emit imageReceived(resampled);
 			}
 			else
@@ -65,7 +65,7 @@ bool Camera::start()
 {
 	if(!capture_.isOpened())
 	{
-		QString videoFile = Settings::getCamera_videoFilePath();
+		QString videoFile = Settings::getCamera_5videoFilePath();
 		if(!videoFile.isEmpty())
 		{
 			capture_.open(videoFile.toStdString().c_str());
@@ -77,11 +77,11 @@ bool Camera::start()
 		if(!capture_.isOpened())
 		{
 			//set camera device
-			capture_.open(Settings::getCamera_deviceId());
-			if(Settings::getCamera_imageWidth() && Settings::getCamera_imageHeight())
+			capture_.open(Settings::getCamera_1deviceId());
+			if(Settings::getCamera_2imageWidth() && Settings::getCamera_3imageHeight())
 			{
-				capture_.set(CV_CAP_PROP_FRAME_WIDTH, double(Settings::getCamera_imageWidth()));
-				capture_.set(CV_CAP_PROP_FRAME_HEIGHT, double(Settings::getCamera_imageHeight()));
+				capture_.set(CV_CAP_PROP_FRAME_WIDTH, double(Settings::getCamera_2imageWidth()));
+				capture_.set(CV_CAP_PROP_FRAME_HEIGHT, double(Settings::getCamera_3imageHeight()));
 			}
 		}
 	}
@@ -108,9 +108,9 @@ void Camera::stopTimer()
 
 void Camera::updateImageRate()
 {
-	if(Settings::getCamera_imageRate())
+	if(Settings::getCamera_4imageRate())
 	{
-		cameraTimer_.setInterval(1000/Settings::getCamera_imageRate());
+		cameraTimer_.setInterval(1000/Settings::getCamera_4imageRate());
 	}
 	else
 	{

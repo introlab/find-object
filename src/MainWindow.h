@@ -9,6 +9,8 @@
 #include <QtCore/QSet>
 #include <QtCore/QTimer>
 #include <QtCore/QTime>
+#include <QtCore/QMap>
+#include <QtCore/QByteArray>
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/features2d/features2d.hpp>
@@ -20,6 +22,11 @@ class Camera;
 class ParametersToolBox;
 class QLabel;
 class AboutDialog;
+
+namespace rtabmap
+{
+class PdfPlotCurve;
+}
 
 class MainWindow : public QMainWindow
 {
@@ -52,6 +59,8 @@ private slots:
 	void setupCameraFromVideoFile();
 	void removeObject(ObjWidget * object);
 	void removeAllObjects();
+	void updateObjectsSize();
+	void updateMirrorView();
 	void update(const cv::Mat & image);
 	void updateObjects();
 	void notifyParametersChanged();
@@ -63,18 +72,22 @@ private:
 	void addObjectFromFile(const QString & filePath);
 	void showObject(ObjWidget * obj);
 	void updateData();
+	void updateObjectSize(ObjWidget * obj);
 
 private:
 	Ui_mainWindow * ui_;
 	Camera * camera_;
+	rtabmap::PdfPlotCurve * likelihoodCurve_;
 	AboutDialog * aboutDialog_;
 	QList<ObjWidget*> objects_;
-	cv::Mat dataTree_;
-	QList<int> dataRange_;
+	cv::Mat objectsDescriptors_;
+	cv::flann::Index flannIndex_;
+	QMap<int, int> dataRange_; // <last id of object's descriptor, id>
 	QTime updateRate_;
 	QTime refreshStartTime_;
 	int lowestRefreshRate_;
 	bool objectsModified_;
+	QMap<int, QByteArray> imagesMap_;
 };
 
 #endif /* MainWindow_H_ */

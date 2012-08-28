@@ -91,6 +91,37 @@ void AddObjectDialog::updateNextButton()
 void AddObjectDialog::updateNextButton(const QRect & rect)
 {
 	roi_ = rect;
+	if(roi_.isValid() && ui_->cameraView->cvImage().cols)
+	{
+		//clip roi
+		if( roi_.x() >= ui_->cameraView->cvImage().cols ||
+			roi_.x()+roi_.width() <= 0 ||
+			roi_.y() >= ui_->cameraView->cvImage().rows ||
+			roi_.y()+roi_.height() <= 0)
+		{
+			//Not valid...
+			roi_ = QRect();
+		}
+		else
+		{
+			if(roi_.x() < 0)
+			{
+				roi_.setX(0);
+			}
+			if(roi_.x() + roi_.width() > ui_->cameraView->cvImage().cols)
+			{
+				roi_.setWidth(ui_->cameraView->cvImage().cols - roi_.x());
+			}
+			if(roi_.y() < 0)
+			{
+				roi_.setY(0);
+			}
+			if(roi_.y() + roi_.height() > ui_->cameraView->cvImage().rows)
+			{
+				roi_.setHeight(ui_->cameraView->cvImage().rows - roi_.y());
+			}
+		}
+	}
 	if(state_ == kSelectFeatures)
 	{
 		if(ui_->comboBox_selection->currentIndex() == 1)

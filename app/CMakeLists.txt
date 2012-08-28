@@ -8,6 +8,8 @@ SET(headers_ui
 	../src/Camera.h
 	../src/ParametersToolBox.h
 	../src/AboutDialog.h
+	../src/utilite/UPlot.h
+	../src/rtabmap/PdfPlot.h
 )
 
 SET(uis
@@ -42,6 +44,8 @@ SET(SRC_FILES
 	../src/Settings.cpp
 	../src/ObjWidget.cpp
 	../src/AboutDialog.cpp
+	../src/utilite/UPlot.cpp
+	../src/rtabmap/PdfPlot.cpp
 	${moc_srcs} 
 	${moc_uis} 
 	${srcs_qrc}

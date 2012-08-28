@@ -12,6 +12,7 @@
 #include "Settings.h"
 #include "ParametersToolBox.h"
 #include "AboutDialog.h"
+#include "rtabmap/PdfPlot.h"
 
 #include <iostream>
 #include <stdio.h>
@@ -20,6 +21,7 @@
 
 #include <QtCore/QTextStream>
 #include <QtCore/QFile>
+#include <QtCore/QBuffer>
 
 #include <QtGui/QFileDialog>
 #include <QtGui/QMessageBox>
@@ -29,11 +31,13 @@
 #include <QtGui/QStatusBar>
 #include <QtGui/QProgressDialog>
 #include <QtGui/QCloseEvent>
+#include <QtGui/QCheckBox>
 
 // Camera ownership transferred
 MainWindow::MainWindow(Camera * camera, QWidget * parent) :
 	QMainWindow(parent),
 	camera_(camera),
+	likelihoodCurve_(0),
 	lowestRefreshRate_(99),
 	objectsModified_(false)
 {
@@ -41,6 +45,10 @@ MainWindow::MainWindow(Camera * camera, QWidget * parent) :
 	ui_->setupUi(this);
 	aboutDialog_ = new AboutDialog(this);
 	this->setStatusBar(new QStatusBar());
+
+	likelihoodCurve_ = new rtabmap::PdfPlotCurve("Likelihood", &imagesMap_);
+	ui_->likelihoodPlot->addCurve(likelihoodCurve_); // ownership transfered
+	ui_->likelihoodPlot->setGraphicsView(true);
 
 	if(!camera_)
 	{
@@ -51,27 +59,37 @@ MainWindow::MainWindow(Camera * camera, QWidget * parent) :
 		camera_->setParent(this);
 	}
 
+	ui_->dockWidget_parameters->setVisible(false);
+	ui_->dockWidget_plot->setVisible(false);
+
 	QByteArray geometry;
-	Settings::loadSettings(Settings::iniDefaultPath(), &geometry);
+	QByteArray state;
+	Settings::loadSettings(Settings::iniDefaultPath(), &geometry, &state);
 	this->restoreGeometry(geometry);
+	this->restoreState(state);
 
 	ui_->toolBox->setupUi();
-	connect((QSpinBox*)ui_->toolBox->getParameterWidget(Settings::kCamera_imageRate()),
+	connect((QSpinBox*)ui_->toolBox->getParameterWidget(Settings::kCamera_4imageRate()),
 			SIGNAL(editingFinished()),
 			camera_,
 			SLOT(updateImageRate()));
-	ui_->dockWidget_parameters->hide();
 	ui_->menuView->addAction(ui_->dockWidget_parameters->toggleViewAction());
 	ui_->menuView->addAction(ui_->dockWidget_objects->toggleViewAction());
+	ui_->menuView->addAction(ui_->dockWidget_plot->toggleViewAction());
 	connect(ui_->toolBox, SIGNAL(parametersChanged()), this, SLOT(notifyParametersChanged()));
 
 	ui_->imageView_source->setGraphicsViewMode(false);
 	ui_->imageView_source->setTextLabel(tr("Press \"space\" to start camera..."));
+	ui_->imageView_source->setMirrorView(Settings::getGeneral_mirrorView());
+	connect((QCheckBox*)ui_->toolBox->getParameterWidget(Settings::kGeneral_mirrorView()),
+				SIGNAL(stateChanged(int)),
+				this,
+				SLOT(updateMirrorView()));
 
-	//reset button
+	//buttons
 	connect(ui_->pushButton_restoreDefaults, SIGNAL(clicked()), ui_->toolBox, SLOT(resetCurrentPage()));
-	// udpate objects button
 	connect(ui_->pushButton_updateObjects, SIGNAL(clicked()), this, SLOT(updateObjects()));
+	connect(ui_->horizontalSlider_objectsSize, SIGNAL(valueChanged(int)), this, SLOT(updateObjectsSize()));
 
 	ui_->actionStop_camera->setEnabled(false);
 	ui_->actionPause_camera->setEnabled(false);
@@ -100,7 +118,7 @@ MainWindow::MainWindow(Camera * camera, QWidget * parent) :
 	ui_->actionPause_camera->setShortcut(Qt::Key_Space);
 
 	ui_->actionCamera_from_video_file->setCheckable(true);
-	ui_->actionCamera_from_video_file->setChecked(!Settings::getCamera_videoFilePath().isEmpty());
+	ui_->actionCamera_from_video_file->setChecked(!Settings::getCamera_5videoFilePath().isEmpty());
 
 	if(Settings::getGeneral_autoStartCamera())
 	{
@@ -113,7 +131,7 @@ MainWindow::~MainWindow()
 {
 	disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
 	camera_->stop();
-	dataTree_ = cv::Mat();
+	objectsDescriptors_ = cv::Mat();
 	qDeleteAll(objects_.begin(), objects_.end());
 	objects_.clear();
 	delete ui_;
@@ -141,7 +159,7 @@ void MainWindow::closeEvent(QCloseEvent * event)
 	}
 	if(quit)
 	{
-		Settings::saveSettings(Settings::iniDefaultPath(), this->saveGeometry());
+		Settings::saveSettings(Settings::iniDefaultPath(), this->saveGeometry(), this->saveState());
 		event->accept();
 	}
 	else
@@ -237,6 +255,42 @@ void MainWindow::removeAllObjects()
 	if(!camera_->isRunning() && !ui_->imageView_source->cvImage().empty())
 	{
 		this->update(ui_->imageView_source->cvImage());
+	}
+}
+
+void MainWindow::updateObjectsSize()
+{
+	for(int i=0; i<objects_.size(); ++i)
+	{
+		updateObjectSize(objects_[i]);
+	}
+}
+
+void MainWindow::updateObjectSize(ObjWidget * obj)
+{
+	if(obj)
+	{
+		int value = ui_->horizontalSlider_objectsSize->value();
+		if((obj->pixmap().width()*value)/100 > 4 && (obj->pixmap().height()*value)/100 > 4)
+		{
+			obj->setVisible(true);
+			obj->setMinimumSize((obj->pixmap().width()*value)/100, (obj->pixmap().height())*value/100);
+		}
+		else
+		{
+			obj->setVisible(false);
+		}
+		obj->setFeaturesShown(value<=50?false:true);
+	}
+}
+
+void MainWindow::updateMirrorView()
+{
+	bool mirrorView = Settings::getGeneral_mirrorView();
+	ui_->imageView_source->setMirrorView(mirrorView);
+	for(int i=0; i<objects_.size(); ++i)
+	{
+		objects_[i]->setMirrorView(mirrorView);
 	}
 }
 
@@ -353,16 +407,16 @@ void MainWindow::setupCameraFromVideoFile()
 {
 	if(!ui_->actionCamera_from_video_file->isChecked())
 	{
-		Settings::setCamera_videoFilePath("");
-		ui_->toolBox->updateParameter(Settings::kCamera_videoFilePath());
+		Settings::setCamera_5videoFilePath("");
+		ui_->toolBox->updateParameter(Settings::kCamera_5videoFilePath());
 	}
 	else
 	{
 		QString fileName = QFileDialog::getOpenFileName(this, tr("Setup camera from video file..."), Settings::workingDirectory(), tr("Video Files (%1)").arg(Settings::getGeneral_videoFormats()));
 		if(!fileName.isEmpty())
 		{
-			Settings::setCamera_videoFilePath(fileName);
-			ui_->toolBox->updateParameter(Settings::kCamera_videoFilePath());
+			Settings::setCamera_5videoFilePath(fileName);
+			ui_->toolBox->updateParameter(Settings::kCamera_5videoFilePath());
 			if(camera_->isRunning())
 			{
 				this->stopProcessing();
@@ -370,7 +424,7 @@ void MainWindow::setupCameraFromVideoFile()
 			}
 		}
 	}
-	ui_->actionCamera_from_video_file->setChecked(!Settings::getCamera_videoFilePath().isEmpty());
+	ui_->actionCamera_from_video_file->setChecked(!Settings::getCamera_5videoFilePath().isEmpty());
 }
 
 void MainWindow::showObject(ObjWidget * obj)
@@ -381,7 +435,6 @@ void MainWindow::showObject(ObjWidget * obj)
 		obj->setMirrorView(ui_->imageView_source->isMirrorView());
 		QList<ObjWidget*> objs = ui_->objects_area->findChildren<ObjWidget*>();
 		QVBoxLayout * vLayout = new QVBoxLayout();
-		obj->setMinimumSize(obj->pixmap().width(), obj->pixmap().height());
 		int id = Settings::getGeneral_nextObjID();
 		if(obj->id() == 0)
 		{
@@ -403,9 +456,10 @@ void MainWindow::showObject(ObjWidget * obj)
 		detectedLabel->setObjectName(QString("%1detection").arg(obj->id()));
 		QHBoxLayout * hLayout = new QHBoxLayout();
 		hLayout->addWidget(title);
-		hLayout->addWidget(detectorDescriptorType);
-		hLayout->addWidget(detectedLabel);
 		hLayout->addStretch(1);
+		hLayout->addWidget(detectorDescriptorType);
+		hLayout->addStretch(1);
+		hLayout->addWidget(detectedLabel);
 		vLayout->addLayout(hLayout);
 		vLayout->addWidget(obj);
 		objects_.last()->setDeletable(true);
@@ -415,6 +469,14 @@ void MainWindow::showObject(ObjWidget * obj)
 		connect(obj, SIGNAL(destroyed(QObject *)), detectorDescriptorType, SLOT(deleteLater()));
 		connect(obj, SIGNAL(destroyed(QObject *)), vLayout, SLOT(deleteLater()));
 		ui_->verticalLayout_objects->insertLayout(ui_->verticalLayout_objects->count()-1, vLayout);
+
+		QByteArray ba;
+		QBuffer buffer(&ba);
+		buffer.open(QIODevice::WriteOnly);
+		obj->pixmap().scaledToWidth(128).save(&buffer, "JPEG"); // writes image into JPEG format
+		imagesMap_.insert(obj->id(), ba);
+
+		updateObjectSize(obj);
 	}
 }
 
@@ -473,7 +535,7 @@ void MainWindow::updateData()
 		ui_->actionSave_objects->setEnabled(false);
 	}
 
-	dataTree_ = cv::Mat();
+	objectsDescriptors_ = cv::Mat();
 	dataRange_.clear();
 	int count = 0;
 	int dim = -1;
@@ -489,7 +551,7 @@ void MainWindow::updateData()
 			}
 			else
 			{
-				printf("ERROR: Descriptors of the objects are not all the same size! Objects opened must have all the same size (and from the same descriptor extractor).");
+				printf("ERROR: Descriptors of the objects are not all the same size! Objects opened must have all the same size (and from the same descriptor extractor).\n");
 			}
 			return;
 		}
@@ -502,7 +564,7 @@ void MainWindow::updateData()
 			}
 			else
 			{
-				printf("ERROR: Descriptors of the objects are not all the same type! Objects opened must have been processed by the same descriptor extractor.");
+				printf("ERROR: Descriptors of the objects are not all the same type! Objects opened must have been processed by the same descriptor extractor.\n");
 			}
 			return;
 		}
@@ -513,17 +575,32 @@ void MainWindow::updateData()
 	// Copy data
 	if(count)
 	{
-		cv::Mat data(count, dim, type);
+		objectsDescriptors_ = cv::Mat(count, dim, type);
 		printf("Total descriptors=%d, dim=%d, type=%d\n",count, dim, type);
 		int row = 0;
 		for(int i=0; i<objects_.size(); ++i)
 		{
-			cv::Mat dest(data, cv::Range(row, row+objects_.at(i)->descriptors().rows));
+			cv::Mat dest(objectsDescriptors_, cv::Range(row, row+objects_.at(i)->descriptors().rows));
 			objects_.at(i)->descriptors().copyTo(dest);
 			row += objects_.at(i)->descriptors().rows;
-			dataRange_.append(row);
+			// dataRange contains the upper_bound for each
+			// object (the last descriptors position in the
+			// global object descriptors matrix)
+			if(objects_.at(i)->descriptors().rows)
+			{
+				dataRange_.insert(row-1, i);
+			}
 		}
-		data.convertTo(dataTree_, CV_32F);
+		if(Settings::getGeneral_invertedSearch())
+		{
+			// CREATE INDEX
+			QTime time;
+			time.start();
+			cv::flann::IndexParams * params = Settings::createFlannIndexParams();
+			flannIndex_.build(objectsDescriptors_, *params, Settings::getFlannDistanceType());
+			delete params;
+			ui_->label_timeIndexing->setNum(time.restart());
+		}
 	}
 }
 
@@ -555,11 +632,11 @@ void MainWindow::startProcessing()
 		}
 		if(this->isVisible())
 		{
-			QMessageBox::critical(this, tr("Camera error"), tr("Camera initialization failed! (with device %1)").arg(Settings::getCamera_deviceId()));
+			QMessageBox::critical(this, tr("Camera error"), tr("Camera initialization failed! (with device %1)").arg(Settings::getCamera_1deviceId()));
 		}
 		else
 		{
-			printf("ERROR: Camera initialization failed! (with device %d)", Settings::getCamera_deviceId());
+			printf("ERROR: Camera initialization failed! (with device %d)", Settings::getCamera_1deviceId());
 		}
 	}
 }
@@ -594,6 +671,7 @@ void MainWindow::pauseProcessing()
 
 void MainWindow::update(const cv::Mat & image)
 {
+	updateRate_.start();
 	// reset objects color
 	for(int i=0; i<objects_.size(); ++i)
 	{
@@ -629,7 +707,7 @@ void MainWindow::update(const cv::Mat & image)
 		std::vector<cv::KeyPoint> keypoints;
 		detector->detect(img, keypoints);
 		delete detector;
-		ui_->label_timeDetection->setText(QString::number(time.restart()));
+		ui_->label_timeDetection->setNum(time.restart());
 
 		cv::Mat descriptors;
 		if(keypoints.size())
@@ -646,62 +724,77 @@ void MainWindow::update(const cv::Mat & image)
 			{
 				cvReleaseImage(&imageGrayScale);
 			}
-			ui_->label_timeExtraction->setText(QString::number(time.restart()));
+			ui_->label_timeExtraction->setNum(time.restart());
 		}
 		else
 		{
 			printf("WARNING: no features detected !?!\n");
-			ui_->label_timeExtraction->setText(QString::number(0));
+			ui_->label_timeExtraction->setNum(0);
 		}
 
 		// COMPARE
-		if(!dataTree_.empty() && keypoints.size() && (Settings::getNearestNeighbor_nndrRatioUsed() || Settings::getNearestNeighbor_minDistanceUsed()))
+		if(!objectsDescriptors_.empty() &&
+		   keypoints.size() &&
+		   (Settings::getNearestNeighbor_3nndrRatioUsed() || Settings::getNearestNeighbor_5minDistanceUsed()) &&
+		   objectsDescriptors_.type() == descriptors.type()) // binary descriptor issue, if the dataTree is not yet updated with modified settings
 		{
-			// CREATE INDEX
-			cv::Mat environment(descriptors.rows, descriptors.cols, CV_32F);
-			descriptors.convertTo(environment, CV_32F);
-			cv::flann::Index treeFlannIndex(environment, cv::flann::KDTreeIndexParams());
-			ui_->label_timeIndexing->setText(QString::number(time.restart()));
-			
+			if(!Settings::getGeneral_invertedSearch())
+			{
+				// CREATE INDEX
+				cv::flann::IndexParams * params = Settings::createFlannIndexParams();
+				flannIndex_.build(descriptors, *params, Settings::getFlannDistanceType());
+				delete params;
+				ui_->label_timeIndexing->setNum(time.restart());
+			}
+
 			// DO NEAREST NEIGHBOR
 			int k = 1;
-			if(Settings::getNearestNeighbor_nndrRatioUsed())
+			if(Settings::getNearestNeighbor_3nndrRatioUsed())
 			{
 				k = 2;
 			}
-			int emax = 64;
-			cv::Mat results(dataTree_.rows, k, CV_32SC1); // results index
-			cv::Mat dists(dataTree_.rows, k, CV_32FC1); // Distance results are CV_32FC1
-			treeFlannIndex.knnSearch(dataTree_, results, dists, k, cv::flann::SearchParams(emax) ); // maximum number of leafs checked
-			ui_->label_timeMatching->setText(QString::number(time.restart()));
+			cv::Mat results;
+			cv::Mat dists;
+			if(!Settings::getGeneral_invertedSearch())
+			{
+				results = cv::Mat(objectsDescriptors_.rows, k, CV_32SC1); // results index
+				dists = cv::Mat(objectsDescriptors_.rows, k, CV_32FC1); // Distance results are CV_32FC1
+				flannIndex_.knnSearch(objectsDescriptors_, results, dists, k, Settings::getFlannSearchParams() ); // maximum number of leafs checked
+			}
+			else
+			{
+				results = cv::Mat(descriptors.rows, k, CV_32SC1); // results index
+				dists = cv::Mat(descriptors.rows, k, CV_32FC1); // Distance results are CV_32FC1
+				flannIndex_.knnSearch(descriptors, results, dists, k, Settings::getFlannSearchParams() ); // maximum number of leafs checked
+			}
+
+			ui_->label_timeMatching->setNum(time.restart());
 
 			// PROCESS RESULTS
 			if(this->isVisible())
 			{
 				ui_->imageView_source->setData(keypoints, cv::Mat(), &iplImage, Settings::currentDetectorType(), Settings::currentDescriptorType());
 			}
-			int j=0;
-			std::vector<cv::Point2f> mpts_1, mpts_2;
-			std::vector<int> indexes_1, indexes_2;
-			std::vector<uchar> outlier_mask;
+
+			QVector<QMultiMap<int, int> > matches(objects_.size()); // Map< ObjectDescriptorIndex, SceneDescriptorIndex >
 			QMap<int, QPair<QRect, QTransform> > objectsDetected;
 			float minMatchedDistance = -1.0f;
 			float maxMatchedDistance = -1.0f;
-			for(int i=0; i<dataTree_.rows; ++i)
+			// Get all matches for each object
+			for(int i=0; i<dists.rows; ++i)
 			{
-				int nColor = j % 11 + 7;
-				QColor color((Qt::GlobalColor)(nColor==Qt::yellow?Qt::gray:nColor));
-				bool matched = false;
 				// Check if this descriptor matches with those of the objects
-				if(Settings::getNearestNeighbor_nndrRatioUsed() &&
-				   dists.at<float>(i,0) <= Settings::getNearestNeighbor_nndrRatio() * dists.at<float>(i,1))
+				bool matched = false;
+
+				if(Settings::getNearestNeighbor_3nndrRatioUsed() &&
+				   dists.at<float>(i,0) <= Settings::getNearestNeighbor_4nndrRatio() * dists.at<float>(i,1))
 				{
 					matched = true;
 				}
-				if((matched || !Settings::getNearestNeighbor_nndrRatioUsed()) &&
-				   Settings::getNearestNeighbor_minDistanceUsed())
+				if((matched || !Settings::getNearestNeighbor_3nndrRatioUsed()) &&
+				   Settings::getNearestNeighbor_5minDistanceUsed())
 				{
-					if(dists.at<float>(i,0) <= Settings::getNearestNeighbor_minDistance())
+					if(dists.at<float>(i,0) <= Settings::getNearestNeighbor_6minDistance())
 					{
 						matched = true;
 					}
@@ -710,128 +803,165 @@ void MainWindow::update(const cv::Mat & image)
 						matched = false;
 					}
 				}
-				if(minMatchedDistance == -1 || minMatchedDistance>dists.at<float>(i,0))
+				if(minMatchedDistance == -1 || minMatchedDistance > dists.at<float>(i,0))
 				{
 					minMatchedDistance = dists.at<float>(i,0);
 				}
-				if(maxMatchedDistance == -1 || maxMatchedDistance<dists.at<float>(i,0))
+				if(maxMatchedDistance == -1 || maxMatchedDistance < dists.at<float>(i,0))
 				{
 					maxMatchedDistance = dists.at<float>(i,0);
 				}
 
 				if(matched)
 				{
-					if(j>0)
+					if(Settings::getGeneral_invertedSearch())
 					{
-						mpts_1.push_back(objects_.at(j)->keypoints().at(i-dataRange_.at(j-1)).pt);
-						indexes_1.push_back(i-dataRange_.at(j-1));
+						QMap<int, int>::iterator iter = dataRange_.lowerBound(results.at<int>(i,0));
+						int objectIndex = iter.value();
+						int previousDescriptorIndex = (iter == dataRange_.begin())?0:(--iter).key()+1;
+						int objectDescriptorIndex = results.at<int>(i,0) - previousDescriptorIndex;
+						matches[objectIndex].insert(objectDescriptorIndex, i);
 					}
 					else
 					{
-						mpts_1.push_back(objects_.at(j)->keypoints().at(i).pt);
-						indexes_1.push_back(i);
-					}
-					mpts_2.push_back(keypoints.at(results.at<int>(i,0)).pt);
-					indexes_2.push_back(results.at<int>(i,0));
-
-					// colorize all matched if homography is not computed
-					if(!Settings::getHomography_homographyComputed())
-					{
-						objects_.at(j)->setKptColor(indexes_1.back(), color);
-						ui_->imageView_source->setKptColor(results.at<int>(i,0), color);
+						QMap<int, int>::iterator iter = dataRange_.lowerBound(i);
+						int objectIndex = iter.value();
+						int fisrtObjectDescriptorIndex = (iter == dataRange_.begin())?0:(--iter).key()+1;
+						int objectDescriptorIndex = i - fisrtObjectDescriptorIndex;
+						matches[objectIndex].insert(objectDescriptorIndex, results.at<int>(i,0));
 					}
 				}
+			}
 
-				if(i+1 >= dataRange_.at(j))
+			QMap<int, float> scores;
+			// For each object
+			for(int i=0; i<matches.size(); ++i)
+			{
+				if(Settings::getHomography_homographyComputed())
 				{
-					QLabel * label = ui_->dockWidget_objects->findChild<QLabel*>(QString("%1detection").arg(objects_.at(j)->id()));
-					if(Settings::getHomography_homographyComputed())
+					// HOMOGRAPHY
+					std::vector<cv::Point2f> mpts_1(matches[i].size()), mpts_2(matches[i].size());
+					std::vector<int> indexes_1(matches[i].size()), indexes_2(matches[i].size());
+					std::vector<uchar> outlier_mask;
+					int nColor = i % 11 + 7;
+					QColor color((Qt::GlobalColor)(nColor==Qt::yellow?Qt::gray:nColor));
+
+					int j=0;
+					for(QMultiMap<int, int>::iterator iter = matches[i].begin(); iter!=matches[i].end(); ++iter)
 					{
-						if(mpts_1.size() >= Settings::getHomography_minimumInliers())
+						mpts_1[j] = objects_.at(i)->keypoints().at(iter.key()).pt;
+						indexes_1[j] = iter.key();
+						mpts_2[j] = keypoints.at(iter.value()).pt;
+						indexes_2[j] = iter.value();
+						++j;
+					}
+
+					QLabel * label = ui_->dockWidget_objects->findChild<QLabel*>(QString("%1detection").arg(objects_.at(i)->id()));
+
+					if(mpts_1.size() >= Settings::getHomography_minimumInliers())
+					{
+						cv::Mat H = findHomography(mpts_1,
+								mpts_2,
+								cv::RANSAC,
+								Settings::getHomography_ransacReprojThr(),
+								outlier_mask);
+						uint inliers=0, outliers=0;
+						for(unsigned int k=0; k<mpts_1.size();++k)
 						{
-							cv::Mat H = findHomography(mpts_1,
-									mpts_2,
-									cv::RANSAC,
-									Settings::getHomography_ransacReprojThr(),
-									outlier_mask);
-							uint inliers=0, outliers=0;
-							for(unsigned int k=0; k<mpts_1.size();++k)
+							if(outlier_mask.at(k))
 							{
-								if(outlier_mask.at(k))
-								{
-									++inliers;
-								}
-								else
-								{
-									++outliers;
-								}
-							}
-
-							// COLORIZE
-							if(inliers >= Settings::getHomography_minimumInliers())
-							{
-								if(this->isVisible())
-								{
-									for(unsigned int k=0; k<mpts_1.size();++k)
-									{
-										if(outlier_mask.at(k))
-										{
-											objects_.at(j)->setKptColor(indexes_1.at(k), color);
-											ui_->imageView_source->setKptColor(indexes_2.at(k), color);
-										}
-										else
-										{
-											objects_.at(j)->setKptColor(indexes_1.at(k), QColor(0,0,0));
-										}
-									}
-								}
-
-								QTransform hTransform(
-									H.at<double>(0,0), H.at<double>(1,0), H.at<double>(2,0),
-									H.at<double>(0,1), H.at<double>(1,1), H.at<double>(2,1),
-									H.at<double>(0,2), H.at<double>(1,2), H.at<double>(2,2));
-
-								// find center of object
-								QRect rect = objects_.at(j)->pixmap().rect();
-								objectsDetected.insert(objects_.at(j)->id(), QPair<QRect, QTransform>(rect, hTransform));
-								// Example getting the center of the object in the scene using the homography
-								//QPoint pos(rect.width()/2, rect.height()/2);
-								//hTransform.map(pos)
-
-								// add rectangle
-								if(this->isVisible())
-								{
-									label->setText(QString("%1 in %2 out").arg(inliers).arg(outliers));
-									QPen rectPen(color);
-									rectPen.setWidth(4);
-									QGraphicsRectItem * rectItem = new QGraphicsRectItem(rect);
-									rectItem->setPen(rectPen);
-									rectItem->setTransform(hTransform);
-									ui_->imageView_source->addRect(rectItem);
-								}
+								++inliers;
 							}
 							else
 							{
-								label->setText(QString("Too low inliers (%1)").arg(inliers));
+								++outliers;
+							}
+						}
+
+						// COLORIZE
+						if(inliers >= Settings::getHomography_minimumInliers())
+						{
+							if(this->isVisible())
+							{
+								for(unsigned int k=0; k<mpts_1.size();++k)
+								{
+									if(outlier_mask.at(k))
+									{
+										objects_.at(i)->setKptColor(indexes_1.at(k), color);
+										ui_->imageView_source->setKptColor(indexes_2.at(k), color);
+									}
+									else
+									{
+										objects_.at(i)->setKptColor(indexes_1.at(k), QColor(0,0,0));
+									}
+								}
+							}
+
+							QTransform hTransform(
+								H.at<double>(0,0), H.at<double>(1,0), H.at<double>(2,0),
+								H.at<double>(0,1), H.at<double>(1,1), H.at<double>(2,1),
+								H.at<double>(0,2), H.at<double>(1,2), H.at<double>(2,2));
+
+							// find center of object
+							QRect rect = objects_.at(i)->pixmap().rect();
+							objectsDetected.insert(objects_.at(i)->id(), QPair<QRect, QTransform>(rect, hTransform));
+							// Example getting the center of the object in the scene using the homography
+							//QPoint pos(rect.width()/2, rect.height()/2);
+							//hTransform.map(pos)
+
+							// add rectangle
+							if(this->isVisible())
+							{
+								label->setText(QString("%1 in %2 out").arg(inliers).arg(outliers));
+								QPen rectPen(color);
+								rectPen.setWidth(4);
+								QGraphicsRectItem * rectItem = new QGraphicsRectItem(rect);
+								rectItem->setPen(rectPen);
+								rectItem->setTransform(hTransform);
+								ui_->imageView_source->addRect(rectItem);
 							}
 						}
 						else
 						{
-							label->setText(QString("Too low matches (%1)").arg(mpts_1.size()));
+							label->setText(QString("Too low inliers (%1 in %2 out)").arg(inliers).arg(outliers));
 						}
 					}
 					else
 					{
-						label->setText(QString("%1 matches").arg(mpts_1.size()));
+						label->setText(QString("Too low matches (%1)").arg(mpts_1.size()));
 					}
 					mpts_1.clear();
 					mpts_2.clear();
 					indexes_1.clear();
 					indexes_2.clear();
 					outlier_mask.clear();
-					++j;
 				}
+				else
+				{
+					// colorize all matches if homography is not computed
+					int nColor = i % 11 + 7;
+					QColor color((Qt::GlobalColor)(nColor==Qt::yellow?Qt::gray:nColor));
+					for(QMultiMap<int, int>::iterator iter = matches[i].begin(); iter!=matches[i].end(); ++iter)
+					{
+						printf("iter.key()=%d, iter.value()=%d\n", iter.key(), iter.value());
+						printf("objects_[%d].keypoints=%d\n", i, (int)objects_[i]->keypoints().size());
+						objects_[i]->setKptColor(iter.key(), color);
+						ui_->imageView_source->setKptColor(iter.value(), color);
+					}
+					QLabel * label = ui_->dockWidget_objects->findChild<QLabel*>(QString("%1detection").arg(objects_.at(i)->id()));
+					label->setText(QString("%1 matches").arg(matches[i].size()));
+				}
+
+				scores.insert(objects_.at(i)->id(), matches[i].size());
 			}
+
+			//update likelihood plot
+			likelihoodCurve_->setData(scores, QMap<int, int>());
+			if(ui_->likelihoodPlot->isVisible())
+			{
+				ui_->likelihoodPlot->update();
+			}
+
 			ui_->label_minMatchedDistance->setNum(minMatchedDistance);
 			ui_->label_maxMatchedDistance->setNum(maxMatchedDistance);
 
@@ -854,13 +984,15 @@ void MainWindow::update(const cv::Mat & image)
 			}
 		}
 
-		ui_->label_nfeatures->setText(QString::number(keypoints.size()));
+		ui_->label_nfeatures->setNum((int)keypoints.size());
 		ui_->imageView_source->update();
-		ui_->label_timeGui->setText(QString::number(time.restart()));
+		ui_->label_timeGui->setNum(time.restart());
 	}
 	ui_->label_detectorDescriptorType->setText(QString("%1/%2").arg(Settings::currentDetectorType()).arg(Settings::currentDescriptorType()));
 
-	int refreshRate = qRound(1000.0f/float(updateRate_.restart()));
+	int ms = updateRate_.restart();
+	ui_->label_timeTotal->setNum(ms);
+	int refreshRate = qRound(1000.0f/float(ms));
 	if(refreshRate > 0 && refreshRate < lowestRefreshRate_)
 	{
 		lowestRefreshRate_ = refreshRate;
@@ -868,9 +1000,9 @@ void MainWindow::update(const cv::Mat & image)
 	// Refresh the label only after each 1000 ms
 	if(refreshStartTime_.elapsed() > 1000)
 	{
-		if(Settings::getCamera_imageRate()>0)
+		if(Settings::getCamera_4imageRate()>0)
 		{
-			ui_->label_timeRefreshRate->setText(QString("(%1 Hz - %2 Hz)").arg(QString::number(Settings::getCamera_imageRate())).arg(QString::number(lowestRefreshRate_)));
+			ui_->label_timeRefreshRate->setText(QString("(%1 Hz - %2 Hz)").arg(QString::number(Settings::getCamera_4imageRate())).arg(QString::number(lowestRefreshRate_)));
 		}
 		else
 		{
@@ -898,5 +1030,5 @@ void MainWindow::notifyParametersChanged()
 		ui_->label_timeRefreshRate->setVisible(false);
 	}
 
-	ui_->actionCamera_from_video_file->setChecked(!Settings::getCamera_videoFilePath().isEmpty());
+	ui_->actionCamera_from_video_file->setChecked(!Settings::getCamera_5videoFilePath().isEmpty());
 }

@@ -48,6 +48,8 @@ public:
 	void setMirrorView(bool on);
 	void setAlpha(int alpha);
 	void setDeletable(bool deletable);
+	void setImageShown(bool shown);
+	void setFeaturesShown(bool shown);
 	void addRect(QGraphicsRectItem * rect);
 	void clearRoiSelection() {mousePressedPos_ = mouseCurrentPos_ = QPoint();update();}
 
