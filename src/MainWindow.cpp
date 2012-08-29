@@ -83,7 +83,7 @@ MainWindow::MainWindow(Camera * camera, QWidget * parent) :
 connect(ui_->toolBox, SIGNAL(parametersChanged(const QStringList &)), this, SLOT(notifyParametersChanged(const QStringList &)));
 
 	ui_->imageView_source->setGraphicsViewMode(false);
-	ui_->imageView_source->setTextLabel(tr("Press \"space\" to start camera..."));
+	ui_->imageView_source->setTextLabel(tr("Press \"space\" to start the camera..."));
 	ui_->imageView_source->setMirrorView(Settings::getGeneral_mirrorView());
 	connect((QCheckBox*)ui_->toolBox->getParameterWidget(Settings::kGeneral_mirrorView()),
 				SIGNAL(stateChanged(int)),
