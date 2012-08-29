@@ -1,4 +1,4 @@
-// Taken from RTAB-Map library r605 [www.rtabmap.googlecode.com]
+// Taken from RTAB-Map library r606 [www.rtabmap.googlecode.com]
 
 /*
  * Copyright (C) 2010-2011, Mathieu Labbe and IntRoLab - Universite de Sherbrooke

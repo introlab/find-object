@@ -31,7 +31,7 @@ private:
 	void addParameter(QVBoxLayout * layout, const QString & name, QWidget * widget);
 
 signals:
-	void parametersChanged();
+	void parametersChanged(const QStringList & name);
 
 private slots:
 	void changeParameter();
@@ -41,7 +41,7 @@ private slots:
 	void resetAllPages();
 
 private:
-	void resetPage(int index);
+	QStringList resetPage(int index);
 };
 
 #endif /* PARAMETERSTOOLBOX_H_ */

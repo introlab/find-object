@@ -1,4 +1,4 @@
-// Taken from UtiLite library r185 [www.utilite.googlecode.com]
+// Taken from UtiLite library r186 [www.utilite.googlecode.com]
 
 /*
 *  utilite is a cross-platform library with
@@ -296,7 +296,6 @@ void UPlotCurve::attach(UPlot * plot)
 	{
 		return;
 	}
-	this->setParent(plot);
 	if(_plot)
 	{
 		_plot->removeCurve(this);
@@ -1738,7 +1737,7 @@ UPlotCurve * UPlot::addCurve(const QString & curveName, const QColor & color)
 	return curve;
 }
 
-bool UPlot::addCurve(UPlotCurve * curve)
+bool UPlot::addCurve(UPlotCurve * curve, bool ownershipTransferred)
 {
 	if(curve)
 	{
@@ -1757,7 +1756,11 @@ bool UPlot::addCurve(UPlotCurve * curve)
 
 		// add curve
 		_curves.append(curve);
-		curve->attach(this); // ownership is transferred
+		curve->attach(this);
+		if(ownershipTransferred)
+		{
+			curve->setParent(this);
+		}
 		this->updateAxis(curve);
 		curve->setXStart(_axisMaximums[1]);
 

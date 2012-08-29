@@ -65,7 +65,7 @@ private slots:
 	void showHideControls();
 	void update(const cv::Mat & image);
 	void updateObjects();
-	void notifyParametersChanged();
+	void notifyParametersChanged(const QStringList & param);
 	void moveCameraFrame(int frame);
 
 signals:

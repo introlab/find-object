@@ -32,6 +32,7 @@
 #include <QtGui/QProgressDialog>
 #include <QtGui/QCloseEvent>
 #include <QtGui/QCheckBox>
+#include <QtGui/QScrollBar>
 
 #include "utilite/UDirectory.h"
 
@@ -48,8 +49,8 @@ MainWindow::MainWindow(Camera * camera, QWidget * parent) :
 	aboutDialog_ = new AboutDialog(this);
 	this->setStatusBar(new QStatusBar());
 
-	likelihoodCurve_ = new rtabmap::PdfPlotCurve("Likelihood", &imagesMap_);
-	ui_->likelihoodPlot->addCurve(likelihoodCurve_); // ownership transfered
+	likelihoodCurve_ = new rtabmap::PdfPlotCurve("Likelihood", &imagesMap_, this);
+	ui_->likelihoodPlot->addCurve(likelihoodCurve_, false);
 	ui_->likelihoodPlot->setGraphicsView(true);
 
 	if(!camera_)
@@ -79,7 +80,7 @@ MainWindow::MainWindow(Camera * camera, QWidget * parent) :
 	ui_->menuView->addAction(ui_->dockWidget_parameters->toggleViewAction());
 	ui_->menuView->addAction(ui_->dockWidget_objects->toggleViewAction());
 	ui_->menuView->addAction(ui_->dockWidget_plot->toggleViewAction());
-	connect(ui_->toolBox, SIGNAL(parametersChanged()), this, SLOT(notifyParametersChanged()));
+connect(ui_->toolBox, SIGNAL(parametersChanged(const QStringList &)), this, SLOT(notifyParametersChanged(const QStringList &)));
 
 	ui_->imageView_source->setGraphicsViewMode(false);
 	ui_->imageView_source->setTextLabel(tr("Press \"space\" to start camera..."));
@@ -637,7 +638,7 @@ void MainWindow::updateData()
 	if(count)
 	{
 		objectsDescriptors_ = cv::Mat(count, dim, type);
-		printf("Total descriptors=%d, dim=%d, type=%d\n",count, dim, type);
+		printf("Updating global descriptors matrix: Total descriptors=%d, dim=%d, type=%d\n",count, dim, type);
 		int row = 0;
 		for(int i=0; i<objects_.size(); ++i)
 		{
@@ -654,14 +655,16 @@ void MainWindow::updateData()
 		}
 		if(Settings::getGeneral_invertedSearch())
 		{
+			printf("Creating FLANN index (%s) with objects' descriptors...\n", Settings::currentNearestNeighborType().toStdString().c_str());
 			// CREATE INDEX
 			QTime time;
 			time.start();
 			cv::flann::IndexParams * params = Settings::createFlannIndexParams();
 			flannIndex_.build(objectsDescriptors_, *params, Settings::getFlannDistanceType());
 			delete params;
-			ui_->label_timeIndexing->setNum(time.restart());
+			ui_->label_timeIndexing->setNum(time.elapsed());
 			ui_->label_vocabularySize->setNum(objectsDescriptors_.rows);
+			printf("Creating FLANN index (%s) with objects' descriptors... done! (%d ms)\n", Settings::currentNearestNeighborType().toStdString().c_str(), time.elapsed());
 		}
 	}
 }
@@ -839,6 +842,7 @@ void MainWindow::update(const cv::Mat & image)
 			if(!Settings::getGeneral_invertedSearch())
 			{
 				// CREATE INDEX
+				//printf("Creating FLANN index (%s)\n", Settings::currentNearestNeighborType().toStdString().c_str());
 				cv::flann::IndexParams * params = Settings::createFlannIndexParams();
 				flannIndex_.build(descriptors, *params, Settings::getFlannDistanceType());
 				delete params;
@@ -933,6 +937,8 @@ void MainWindow::update(const cv::Mat & image)
 			}
 
 			QMap<int, float> scores;
+			int maxScoreId = -1;
+			int maxScore = 0;
 			// For each object
 			for(int i=0; i<matches.size(); ++i)
 			{
@@ -1052,6 +1058,11 @@ void MainWindow::update(const cv::Mat & image)
 				}
 
 				scores.insert(objects_.at(i)->id(), matches[i].size());
+				if(maxScoreId == -1 || maxScore < matches[i].size())
+				{
+					maxScoreId = objects_.at(i)->id();
+					maxScore = matches[i].size();
+				}
 			}
 
 			//update likelihood plot
@@ -1064,6 +1075,17 @@ void MainWindow::update(const cv::Mat & image)
 			ui_->label_minMatchedDistance->setNum(minMatchedDistance);
 			ui_->label_maxMatchedDistance->setNum(maxMatchedDistance);
 
+			//Scroll objects slider to the best score
+			if(maxScoreId>=0)
+			{
+				QLabel * label = ui_->dockWidget_objects->findChild<QLabel*>(QString("%1title").arg(maxScoreId));
+				if(label)
+				{
+					ui_->objects_area->verticalScrollBar()->setValue(label->pos().y());
+				}
+			}
+
+			// Emit homographies
 			if(objectsDetected.size())
 			{
 				emit objectsFound(objectsDetected);
@@ -1120,12 +1142,48 @@ void MainWindow::update(const cv::Mat & image)
 	}
 }
 
-void MainWindow::notifyParametersChanged()
+void MainWindow::notifyParametersChanged(const QStringList & paramChanged)
 {
-	printf("Parameters changed...\n");
+
+	//Selective update (to not update all objects for a simple camera's parameter modification)
+	bool detectorDescriptorParamsChanged = false;
+	bool nearestNeighborParamsChanged = false;
+	QString currentDetectorType = Settings::currentDetectorType();
+	QString currentDescriptorType = Settings::currentDescriptorType();
+	QString currentNNType = Settings::currentNearestNeighborType();
+	//printf("currentDescriptorType: %s\n", currentDescriptorType.toStdString().c_str());
+	//printf("currentNNType: %s\n", currentNNType.toStdString().c_str());
+	for(QStringList::const_iterator iter = paramChanged.begin(); iter!=paramChanged.end(); ++iter)
+	{
+		printf("Parameter changed: %s\n", iter->toStdString().c_str());
+		if(!detectorDescriptorParamsChanged &&
+		   ( iter->contains(currentDetectorType) ||
+		     iter->contains(currentDescriptorType) ||
+		     iter->compare(Settings::kDetector_Descriptor_1Detector()) == 0 ||
+		     iter->compare(Settings::kDetector_Descriptor_2Descriptor()) == 0 ))
+		{
+			detectorDescriptorParamsChanged = true;
+		}
+		else if(!nearestNeighborParamsChanged &&
+			    ( iter->contains(currentNNType) ||
+			      iter->compare(Settings::kGeneral_invertedSearch()) == 0 ||
+			      iter->compare(Settings::kNearestNeighbor_1Strategy()) == 0 ||
+			      iter->compare(Settings::kNearestNeighbor_2Distance_type()) == 0))
+		{
+			nearestNeighborParamsChanged = true;
+		}
+	}
+
 	if(Settings::getGeneral_autoUpdateObjects())
 	{
-		this->updateObjects();
+		if(detectorDescriptorParamsChanged)
+		{
+			this->updateObjects();
+		}
+		else if(nearestNeighborParamsChanged)
+		{
+			this->updateData();
+		}
 	}
 	else if(objects_.size())
 	{

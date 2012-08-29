@@ -223,13 +223,12 @@
     <addaction name="actionAdd_objects_from_files"/>
     <addaction name="separator"/>
     <addaction name="actionLoad_scene_from_file"/>
+    <addaction name="actionCamera_from_directory_of_images"/>
+    <addaction name="actionCamera_from_video_file"/>
     <addaction name="separator"/>
     <addaction name="actionStart_camera"/>
     <addaction name="actionPause_camera"/>
     <addaction name="actionStop_camera"/>
-    <addaction name="separator"/>
-    <addaction name="actionCamera_from_directory_of_images"/>
-    <addaction name="actionCamera_from_video_file"/>
     <addaction name="separator"/>
     <addaction name="actionRestore_all_default_settings"/>
     <addaction name="separator"/>
@@ -665,7 +664,7 @@
   </action>
   <action name="actionLoad_scene_from_file">
    <property name="text">
-    <string>Load scene from file...</string>
+    <string>Camera from single file...</string>
    </property>
   </action>
   <action name="actionPause_camera">

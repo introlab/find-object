@@ -1,4 +1,4 @@
-// Taken from UtiLite library r185 [www.utilite.googlecode.com]
+// Taken from UtiLite library r186 [www.utilite.googlecode.com]
 
 /*
 *  utilite is a cross-platform library with
@@ -141,7 +141,6 @@ public:
 	void setData(const std::vector<float> & y);
 	void getData(QVector<float> & x, QVector<float> & y) const; // only call in Qt MainThread
 	void draw(QPainter * painter);
-	const QVector<float> & getMinMax() const {return _minMax;}
 
 public slots:
 	/**
@@ -225,6 +224,7 @@ protected:
 	void attach(UPlot * plot);
 	void detach(UPlot * plot);
 	void updateMinMax();
+	const QVector<float> & getMinMax() const {return _minMax;}
 	int removeItem(int index);
 	void _addValue(UPlotItem * data);;
 	virtual bool isMinMaxValid() const {return _minMax.size();}
@@ -475,11 +475,9 @@ public:
 	 */
 	UPlotCurve * addCurve(const QString & curveName, const QColor & color = QColor());
 	/**
-	 * Add a curve. Ownership is transferred to UPlot.
- 	 * If you add the curve to more than one UPlot, the ownership is transferred
- 	 * to the last UPlot.
+	 * Add a curve. Ownership is transferred to UPlot if ownershipTransferred=true.
 	 */
-	bool addCurve(UPlotCurve * curve);
+	bool addCurve(UPlotCurve * curve, bool ownershipTransferred = true);
 	/**
 	 * Get all curve names.
 	 */

@@ -28,8 +28,9 @@ QWidget * ParametersToolBox::getParameterWidget(const QString & key)
 	return this->findChild<QWidget*>(key);
 }
 
-void ParametersToolBox::resetPage(int index)
+QStringList ParametersToolBox::resetPage(int index)
 {
+	QStringList paramChanged;
 	const QObjectList & children = this->widget(index)->children();
 	for(int j=0; j<children.size();++j)
 	{
@@ -40,49 +41,72 @@ void ParametersToolBox::resetPage(int index)
 			QVariant value = Settings::getDefaultParameters().value(key, QVariant());
 			if(value.isValid())
 			{
+				Settings::setParameter(key, value);
+
 				if(qobject_cast<QComboBox*>(children.at(j)))
 				{
-					((QComboBox*)children.at(j))->setCurrentIndex(value.toString().split(':').first().toInt());
+					if(((QComboBox*)children.at(j))->currentIndex() != value.toString().split(':').first().toInt())
+					{
+						((QComboBox*)children.at(j))->setCurrentIndex(value.toString().split(':').first().toInt());
+						paramChanged.append(key);
+					}
 				}
 				else if(qobject_cast<QSpinBox*>(children.at(j)))
 				{
-					((QSpinBox*)children.at(j))->setValue(value.toInt());
+					if(((QSpinBox*)children.at(j))->value() != value.toInt())
+					{
+						((QSpinBox*)children.at(j))->setValue(value.toInt());
+						paramChanged.append(key);
+					}
 				}
 				else if(qobject_cast<QDoubleSpinBox*>(children.at(j)))
 				{
-					((QDoubleSpinBox*)children.at(j))->setValue(value.toDouble());
+					if(((QDoubleSpinBox*)children.at(j))->value() != value.toDouble())
+					{
+						((QDoubleSpinBox*)children.at(j))->setValue(value.toDouble());
+						paramChanged.append(key);
+					}
 				}
 				else if(qobject_cast<QCheckBox*>(children.at(j)))
 				{
-					((QCheckBox*)children.at(j))->setChecked(value.toBool());
+					if(((QCheckBox*)children.at(j))->isChecked() != value.toBool())
+					{
+						((QCheckBox*)children.at(j))->setChecked(value.toBool());
+						paramChanged.append(key);
+					}
 				}
 				else if(qobject_cast<QLineEdit*>(children.at(j)))
 				{
-					((QLineEdit*)children.at(j))->setText(value.toString());
+					if(((QLineEdit*)children.at(j))->text().compare(value.toString()) != 0)
+					{
+						((QLineEdit*)children.at(j))->setText(value.toString());
+						paramChanged.append(key);
+					}
 				}
-				Settings::setParameter(key, value);
 			}
 		}
 	}
+	return paramChanged;
 }
 
 void ParametersToolBox::resetCurrentPage()
 {
 	this->blockSignals(true);
-	this->resetPage(this->currentIndex());
+	QStringList paramChanged = this->resetPage(this->currentIndex());
 	this->blockSignals(false);
-	emit parametersChanged();
+	emit parametersChanged(paramChanged);
 }
 
 void ParametersToolBox::resetAllPages()
 {
+	QStringList paramChanged;
 	this->blockSignals(true);
 	for(int i=0; i< this->count(); ++i)
 	{
-		this->resetPage(i);
+		paramChanged.append(this->resetPage(i));
 	}
 	this->blockSignals(false);
-	emit parametersChanged();
+	emit parametersChanged(paramChanged);
 }
 
 void ParametersToolBox::setupUi()
@@ -300,7 +324,9 @@ void ParametersToolBox::changeParameter(const QString & value)
 	if(sender())
 	{
 		Settings::setParameter(sender()->objectName(), value);
-		emit parametersChanged();
+		QStringList paramChanged;
+		paramChanged.append(sender()->objectName());
+		emit parametersChanged(paramChanged);
 	}
 }
 void ParametersToolBox::changeParameter()
@@ -322,21 +348,25 @@ void ParametersToolBox::changeParameter()
 		{
 			Settings::setParameter(sender()->objectName(), lineEdit->text());
 		}
-		emit parametersChanged();
+		QStringList paramChanged;
+		paramChanged.append(sender()->objectName());
+		emit parametersChanged(paramChanged);
 	}
 }
 void ParametersToolBox::changeParameter(const int & value)
 {
 	if(sender())
 	{
+		QStringList paramChanged;
 		QComboBox * comboBox = qobject_cast<QComboBox*>(sender());
 		QCheckBox * checkBox = qobject_cast<QCheckBox*>(sender());
 		if(comboBox)
 		{
+			bool nnStrategyChanged = false;
+			//verify binary issue with nearest neighbor strategy
 			if(comboBox->objectName().compare(Settings::kDetector_Descriptor_2Descriptor()) == 0 ||
 			   comboBox->objectName().compare(Settings::kNearestNeighbor_1Strategy()) == 0)
 			{
-				//verify binary issue
 				QComboBox * descriptorBox = (QComboBox*)this->getParameterWidget(Settings::kDetector_Descriptor_2Descriptor());
 				QComboBox * nnBox = (QComboBox*)this->getParameterWidget(Settings::kNearestNeighbor_1Strategy());
 				bool isBinaryDescriptor = descriptorBox->currentText().compare("ORB") == 0 || descriptorBox->currentText().compare("Brief") == 0;
@@ -351,12 +381,15 @@ void ParametersToolBox::changeParameter(const int & value)
 					QString tmp = Settings::getNearestNeighbor_1Strategy();
 					*tmp.begin() = '5'; // set index
 					Settings::setNearestNeighbor_1Strategy(tmp);
+					nnBox->blockSignals(true);
 					this->updateParameter(Settings::kNearestNeighbor_1Strategy());
+					nnBox->blockSignals(false);
 					if(sender() == nnBox)
 					{
 						return;
 					}
-
+					nnStrategyChanged = true;
+					paramChanged.append(Settings::kNearestNeighbor_1Strategy());
 				}
 				else if(!isBinaryDescriptor && nnBox->currentText().compare("Lsh") == 0)
 				{
@@ -369,11 +402,44 @@ void ParametersToolBox::changeParameter(const int & value)
 					QString tmp = Settings::getNearestNeighbor_1Strategy();
 					*tmp.begin() = '1'; // set index
 					Settings::setNearestNeighbor_1Strategy(tmp);
+					nnBox->blockSignals(true);
 					this->updateParameter(Settings::kNearestNeighbor_1Strategy());
+					nnBox->blockSignals(false);
 					if(sender() == nnBox)
 					{
 						return;
 					}
+					nnStrategyChanged = true;
+					paramChanged.append(Settings::kNearestNeighbor_1Strategy());
+				}
+			}
+
+			// Distance issue when using nearest neighbor strategy using CV_32F type, though Lsh support all type (doesn't crash at least)
+			if(nnStrategyChanged ||
+			   comboBox->objectName().compare(Settings::kNearestNeighbor_1Strategy()) == 0 ||
+			   comboBox->objectName().compare(Settings::kNearestNeighbor_2Distance_type()) == 0)
+			{
+				QComboBox * nnBox = (QComboBox*)this->getParameterWidget(Settings::kNearestNeighbor_1Strategy());
+				QComboBox * distBox = (QComboBox*)this->getParameterWidget(Settings::kNearestNeighbor_2Distance_type());
+				if(nnBox->currentText().compare("Lsh") != 0 && distBox->currentIndex() > 1)
+				{
+					QMessageBox::warning(this,
+										tr("Error"),
+										tr("Current selected nearest neighbor strategy type (\"%1\") cannot handle distance strategy (\"%2\").\n"
+										   "Falling back to \"EUCLIDEAN_L2\" distance strategy (by default).")
+										   .arg(nnBox->currentText())
+										   .arg(distBox->currentText()));
+					QString tmp = Settings::getNearestNeighbor_2Distance_type();
+					*tmp.begin() = '0'; // set index
+					Settings::setNearestNeighbor_2Distance_type(tmp);
+					distBox->blockSignals(true);
+					this->updateParameter(Settings::kNearestNeighbor_2Distance_type());
+					distBox->blockSignals(false);
+					if(sender() == distBox)
+					{
+						return;
+					}
+					paramChanged.append(Settings::kNearestNeighbor_2Distance_type());
 				}
 			}
 
@@ -389,6 +455,7 @@ void ParametersToolBox::changeParameter(const int & value)
 		{
 			Settings::setParameter(sender()->objectName(), value==Qt::Checked?true:false);
 		}
-		emit parametersChanged();
+		paramChanged.append(sender()->objectName());
+		emit parametersChanged(paramChanged);
 	}
 }
