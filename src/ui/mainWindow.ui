@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1180</width>
-    <height>684</height>
+    <width>825</width>
+    <height>441</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -202,7 +202,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1180</width>
+     <width>825</width>
      <height>22</height>
     </rect>
    </property>
@@ -475,7 +475,7 @@
           <x>0</x>
           <y>0</y>
           <width>348</width>
-          <height>357</height>
+          <height>114</height>
          </rect>
         </property>
         <attribute name="label">
@@ -496,6 +496,12 @@
    </widget>
   </widget>
   <widget class="QDockWidget" name="dockWidget_objects">
+   <property name="minimumSize">
+    <size>
+     <width>200</width>
+     <height>138</height>
+    </size>
+   </property>
    <property name="windowTitle">
     <string>Objects</string>
    </property>
@@ -526,8 +532,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>222</width>
-          <height>557</height>
+          <width>198</width>
+          <height>314</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_objects">
@@ -620,9 +626,6 @@
    </property>
   </action>
   <action name="actionAdd_object_from_scene">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
    <property name="text">
     <string>Add object from scene...</string>
    </property>
