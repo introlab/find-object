@@ -83,7 +83,7 @@ void Camera::takeImage()
 	}
 	else if(!images_.empty())
 	{
-		if(currentImageIndex_ < images_.size())
+		if(currentImageIndex_ < (unsigned int)images_.size())
 		{
 			img = cv::imread(images_[currentImageIndex_++]);
 		}

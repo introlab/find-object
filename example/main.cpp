@@ -66,10 +66,9 @@ int main(int argc, char * argv[])
 		// cv::FeatureDetector * detector = new cv::GFTTDetector();
 		// cv::FeatureDetector * detector = new cv::MSER();
 		// cv::FeatureDetector * detector = new cv::ORB();
-		// cv::FeatureDetector * detector = new cv::SIFT();
+		cv::FeatureDetector * detector = new cv::SIFT();
 		// cv::FeatureDetector * detector = new cv::StarFeatureDetector();
-		// cv::FeatureDetector * detector = new cv::SURF();
-		cv::FeatureDetector * detector = new cv::SURF(600.0);
+		// cv::FeatureDetector * detector = new cv::SURF(600.0);
 		detector->detect(objectImg, objectKeypoints);
 		printf("Object: %d keypoints detected in %d ms\n", (int)objectKeypoints.size(), time.restart());
 		detector->detect(sceneImg, sceneKeypoints);
@@ -81,9 +80,8 @@ int main(int argc, char * argv[])
 		// The extractor can be any of (see OpenCV features2d.hpp):
 		// cv::DescriptorExtractor * extractor = new cv::BriefDescriptorExtractor();
 		// cv::DescriptorExtractor * extractor = new cv::ORB();
-		// cv::DescriptorExtractor * extractor = new cv::SIFT();
-		// cv::DescriptorExtractor * extractor = new cv::SURF();
-		cv::DescriptorExtractor * extractor = new cv::SURF(600.0);
+		cv::DescriptorExtractor * extractor = new cv::SIFT();
+		// cv::DescriptorExtractor * extractor = new cv::SURF(600.0);
 		extractor->compute(objectImg, objectKeypoints, objectDescriptors);
 		printf("Object: %d descriptors extracted in %d ms\n", objectDescriptors.rows, time.restart());
 		extractor->compute(sceneImg, sceneKeypoints, sceneDescriptors);
@@ -92,46 +90,55 @@ int main(int argc, char * argv[])
 		////////////////////////////
 		// NEAREST NEIGHBOR MATCHING USING FLANN LIBRARY (included in OpenCV)
 		////////////////////////////
-		// Format descriptors for Flann
-		cv::Mat objectData;
-		cv::Mat sceneData;
-		if(objectDescriptors.type()!=CV_32F) {
-			objectDescriptors.convertTo(objectData, CV_32F); // make sure it's CV_32F
-		}
-		else {
-			objectData = objectDescriptors;
-		}
-		if(sceneDescriptors.type()!=CV_32F) {
-			sceneDescriptors.convertTo(sceneData, CV_32F); // make sure it's CV_32F
-		}
-		else {
-			sceneData = sceneDescriptors;
-		}
-
-		// Create Flann index
-		cv::flann::Index treeFlannIndex(sceneData, cv::flann::KDTreeIndexParams());
-		printf("Time creating FLANN index = %d ms\n", time.restart());
-
-		// search (nearest neighbor)
+		cv::Mat results;
+		cv::Mat dists;
 		int k=2; // find the 2 nearest neighbors
-		cv::Mat results(objectData.rows, k, CV_32SC1); // Results index
-		cv::Mat dists(objectData.rows, k, CV_32FC1); // Distance results are CV_32FC1
-		treeFlannIndex.knnSearch(objectData, results, dists, k, cv::flann::SearchParams() ); // maximum number of leafs checked
-		printf("Time nearest neighbor search = %d ms\n", time.restart());
+		if(objectDescriptors.type()==CV_8U)
+		{
+			// Binary descriptors detected (from ORB or Brief)
+
+			// Create Flann LSH index
+			cv::flann::Index flannIndex(sceneDescriptors, cv::flann::LshIndexParams(20, 10, 2));
+			printf("Time creating FLANN index = %d ms\n", time.restart());
+			results = cv::Mat(objectDescriptors.rows, k, CV_32SC1); // Results index
+			dists = cv::Mat(objectDescriptors.rows, k, CV_32FC1); // Distance results are CV_32FC1 ?!?!? NOTE OpenCV doc is not clear about that...
+
+			// search (nearest neighbor)
+			flannIndex.knnSearch(objectDescriptors, results, dists, k, cv::flann::SearchParams() );
+			printf("Time nearest neighbor search = %d ms\n", time.restart());
+		}
+		else
+		{
+			// assume it is CV_32F
+
+			// Create Flann KDTree index
+			cv::flann::Index flannIndex(sceneDescriptors, cv::flann::KDTreeIndexParams());
+			printf("Time creating FLANN index = %d ms\n", time.restart());
+			results = cv::Mat(objectDescriptors.rows, k, CV_32SC1); // Results index
+			dists = cv::Mat(objectDescriptors.rows, k, CV_32FC1); // Distance results are CV_32FC1
+
+			// search (nearest neighbor)
+			flannIndex.knnSearch(objectDescriptors, results, dists, k, cv::flann::SearchParams() );
+			printf("Time nearest neighbor search = %d ms\n", time.restart());
+		}
+
+
+
+
 
 		////////////////////////////
 		// PROCESS NEAREST NEIGHBOR RESULTS
 		////////////////////////////
 		// Set gui data
-		objWidget.setData(objectKeypoints, objectDescriptors, objectImg, "SURF", "SURF");
-		sceneWidget.setData(sceneKeypoints, sceneDescriptors, sceneImg, "SURF", "SURF");
+		objWidget.setData(objectKeypoints, objectDescriptors, objectImg, "", "");
+		sceneWidget.setData(sceneKeypoints, sceneDescriptors, sceneImg, "", "");
 
 		// Find correspondences by NNDR (Nearest Neighbor Distance Ratio)
 		float nndrRatio = 0.6;
 		std::vector<cv::Point2f> mpts_1, mpts_2; // Used for homography
 		std::vector<int> indexes_1, indexes_2; // Used for homography
 		std::vector<uchar> outlier_mask;  // Used for homography
-		for(int i=0; i<objectData.rows; ++i)
+		for(int i=0; i<objectDescriptors.rows; ++i)
 		{
 			// Check if this descriptor matches with those of the objects
 			// Apply NNDR

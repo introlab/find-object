@@ -1048,8 +1048,6 @@ void MainWindow::update(const cv::Mat & image)
 					QColor color((Qt::GlobalColor)(nColor==Qt::yellow?Qt::gray:nColor));
 					for(QMultiMap<int, int>::iterator iter = matches[i].begin(); iter!=matches[i].end(); ++iter)
 					{
-						printf("iter.key()=%d, iter.value()=%d\n", iter.key(), iter.value());
-						printf("objects_[%d].keypoints=%d\n", i, (int)objects_[i]->keypoints().size());
 						objects_[i]->setKptColor(iter.key(), color);
 						ui_->imageView_source->setKptColor(iter.value(), color);
 					}
