@@ -683,6 +683,8 @@ void MainWindow::startProcessing()
 		ui_->actionPause_camera->setEnabled(true);
 		ui_->actionStart_camera->setEnabled(false);
 		ui_->actionLoad_scene_from_file->setEnabled(false);
+		ui_->actionCamera_from_directory_of_images->setEnabled(false);
+		ui_->actionCamera_from_video_file->setEnabled(false);
 		ui_->label_timeRefreshRate->setVisible(true);
 
 		//update control bar
@@ -730,6 +732,8 @@ void MainWindow::stopProcessing()
 	ui_->actionPause_camera->setEnabled(false);
 	ui_->actionStart_camera->setEnabled(true);
 	ui_->actionLoad_scene_from_file->setEnabled(true);
+	ui_->actionCamera_from_directory_of_images->setEnabled(true);
+	ui_->actionCamera_from_video_file->setEnabled(true);
 	ui_->pushButton_play->setVisible(true);
 	ui_->pushButton_pause->setVisible(false);
 	ui_->pushButton_stop->setEnabled(false);
