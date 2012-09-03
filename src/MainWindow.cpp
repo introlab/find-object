@@ -544,6 +544,7 @@ void MainWindow::updateObjects()
 		{
 			QTime time;
 			time.start();
+			printf("Extracting descriptors from object %d...\n", objects_.at(i)->id());
 			const cv::Mat & img = objects_.at(i)->cvImage();
 			cv::FeatureDetector * detector = Settings::createFeaturesDetector();
 			std::vector<cv::KeyPoint> keypoints;
