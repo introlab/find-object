@@ -470,6 +470,9 @@ cvflann::flann_distance_t Settings::getFlannDistanceType()
 
 cv::flann::SearchParams Settings::getFlannSearchParams()
 {
-	return cv::flann::SearchParams();
+	return cv::flann::SearchParams(
+			getNearestNeighbor_7search_checks(),
+			getNearestNeighbor_8search_eps(),
+			getNearestNeighbor_9search_sorted());
 }
 

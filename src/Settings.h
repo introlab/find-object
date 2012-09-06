@@ -126,6 +126,10 @@ class Settings
 	PARAMETER(NearestNeighbor, 5minDistanceUsed, bool, false);
 	PARAMETER(NearestNeighbor, 6minDistance, float, 1.6f);
 
+	PARAMETER(NearestNeighbor, 7search_checks, int, 32);
+	PARAMETER(NearestNeighbor, 8search_eps, float, 0);
+	PARAMETER(NearestNeighbor, 9search_sorted, bool, true);
+
 	PARAMETER(NearestNeighbor, KDTree_trees, int, 4);
 
 	PARAMETER(NearestNeighbor, Composite_trees, int, 4);
