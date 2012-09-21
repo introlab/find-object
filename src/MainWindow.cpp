@@ -130,6 +130,7 @@ connect(ui_->toolBox, SIGNAL(parametersChanged(const QStringList &)), this, SLOT
 	ui_->pushButton_pause->setVisible(false);
 	ui_->pushButton_stop->setEnabled(true);
 	ui_->horizontalSlider_frames->setEnabled(false);
+	ui_->label_frame->setVisible(false);
 
 	ui_->objects_area->addAction(ui_->actionAdd_object_from_scene);
 	ui_->objects_area->addAction(ui_->actionAdd_objects_from_files);
@@ -693,7 +694,7 @@ void MainWindow::startProcessing()
 		ui_->pushButton_pause->setVisible(true);
 		ui_->pushButton_stop->setEnabled(true);
 		int totalFrames = camera_->getTotalFrames();
-		if(totalFrames)
+		if(totalFrames>0)
 		{
 			ui_->label_frame->setVisible(true);
 			ui_->horizontalSlider_frames->setEnabled(true);

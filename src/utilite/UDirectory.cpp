@@ -103,6 +103,26 @@ void UDirectory::setPath(const std::string & path, const std::string & extension
 	this->update();
 }
 
+#ifdef WIN32
+// returned whar_t * must be deleted : delete [] wText;
+wchar_t * createWCharFromChar(const char * text)
+{
+	DWORD length = MultiByteToWideChar (CP_ACP, 0, text, -1, NULL, 0);
+	wchar_t * wText = new wchar_t[length];
+	MultiByteToWideChar (CP_ACP, 0, text, -1, wText, length );
+	return wText;
+}
+
+// returned char * must be deleted : delete [] text;
+char * createCharFromWChar(const wchar_t * wText)
+{
+	DWORD length = WideCharToMultiByte (CP_ACP, 0, wText, -1, NULL, 0, NULL, NULL);
+	char * text = new char[length];
+	WideCharToMultiByte (CP_ACP, 0, wText, -1, text, length, NULL, NULL);
+	return text;
+}
+#endif
+
 void UDirectory::update()
 {
 	if(exists(path_))
@@ -122,12 +142,24 @@ void UDirectory::update()
 		fileNames_.clear();
 #ifdef WIN32
 		WIN32_FIND_DATA fileInformation;
+	#ifdef UNICODE
+		wchar_t * pathAll = createWCharFromChar((path_+"\\*").c_str());
+		HANDLE hFile  = ::FindFirstFile(pathAll, &fileInformation);
+		delete [] pathAll;
+	#else
 		HANDLE hFile  = ::FindFirstFile((path_+"\\*").c_str(), &fileInformation);
+	#endif
 		if(hFile != INVALID_HANDLE_VALUE)
 		{
 			do
 			{
+	#ifdef UNICODE
+				char * fileName = createCharFromWChar(fileInformation.cFileName);
+				fileNames_.push_back(fileName);
+				delete [] fileName;
+	#else
 				fileNames_.push_back(fileInformation.cFileName);
+	#endif
 			} while(::FindNextFile(hFile, &fileInformation) == TRUE);
 			::FindClose(hFile);
 			std::vector<std::string> vFileNames = uListToVector(fileNames_);
@@ -229,8 +261,14 @@ bool UDirectory::exists(const std::string & dirPath)
 {
 	bool r = false;
 #if WIN32
+	#ifdef UNICODE
+	wchar_t * wDirPath = createWCharFromChar(dirPath.c_str());
+	DWORD dwAttrib = GetFileAttributes(wDirPath);
+	delete [] wDirPath;
+	#else
 	DWORD dwAttrib = GetFileAttributes(dirPath.c_str());
-	r = (dwAttrib != INVALID_FILE_ATTRIBUTES && (dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
+	#endif
+ 	r = (dwAttrib != INVALID_FILE_ATTRIBUTES && (dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
 #else
 	DIR *dp;
 	if((dp  = opendir(dirPath.c_str())) != NULL)
@@ -329,9 +367,17 @@ std::string UDirectory::homeDir()
 {
 	std::string path;
 #if WIN32
+	#ifdef UNICODE
+	wchar_t wProfilePath[250];
+	ExpandEnvironmentStrings(L"%userprofile%",wProfilePath,250);
+	char * profilePath = createCharFromWChar(wProfilePath);
+	path = profilePath;
+	delete [] profilePath;
+	#else
 	char profilePath[250];
 	ExpandEnvironmentStrings("%userprofile%",profilePath,250);
 	path = profilePath;
+	#endif
 #else
 	path = getenv("HOME");
 #endif
