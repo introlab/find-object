@@ -1163,8 +1163,8 @@ void MainWindow::notifyParametersChanged(const QStringList & paramChanged)
 		if(!detectorDescriptorParamsChanged &&
 		   ( iter->contains(currentDetectorType) ||
 		     iter->contains(currentDescriptorType) ||
-		     iter->compare(Settings::kDetector_Descriptor_1Detector()) == 0 ||
-		     iter->compare(Settings::kDetector_Descriptor_2Descriptor()) == 0 ))
+		     iter->compare(Settings::kFeature2D_1Detector()) == 0 ||
+		     iter->compare(Settings::kFeature2D_2Descriptor()) == 0 ))
 		{
 			detectorDescriptorParamsChanged = true;
 		}

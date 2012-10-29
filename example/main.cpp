@@ -69,6 +69,7 @@ int main(int argc, char * argv[])
 		cv::FeatureDetector * detector = new cv::SIFT();
 		// cv::FeatureDetector * detector = new cv::StarFeatureDetector();
 		// cv::FeatureDetector * detector = new cv::SURF(600.0);
+		// cv::FeatureDetector * detector = new cv::BRISK();
 		detector->detect(objectImg, objectKeypoints);
 		printf("Object: %d keypoints detected in %d ms\n", (int)objectKeypoints.size(), time.restart());
 		detector->detect(sceneImg, sceneKeypoints);
@@ -82,6 +83,8 @@ int main(int argc, char * argv[])
 		// cv::DescriptorExtractor * extractor = new cv::ORB();
 		cv::DescriptorExtractor * extractor = new cv::SIFT();
 		// cv::DescriptorExtractor * extractor = new cv::SURF(600.0);
+		// cv::DescriptorExtractor * extractor = new cv::BRISK();
+		// cv::DescriptorExtractor * extractor = new cv::FREAK();
 		extractor->compute(objectImg, objectKeypoints, objectDescriptors);
 		printf("Object: %d descriptors extracted in %d ms\n", objectDescriptors.rows, time.restart());
 		extractor->compute(sceneImg, sceneKeypoints, sceneDescriptors);
@@ -98,8 +101,8 @@ int main(int argc, char * argv[])
 			// Binary descriptors detected (from ORB or Brief)
 
 			// Create Flann LSH index
-			cv::flann::Index flannIndex(sceneDescriptors, cv::flann::LshIndexParams(12, 20, 2));
-			printf("Time creating FLANN index = %d ms\n", time.restart());
+			cv::flann::Index flannIndex(sceneDescriptors, cv::flann::LshIndexParams(12, 20, 2), cvflann::FLANN_DIST_HAMMING);
+			printf("Time creating FLANN LSH index = %d ms\n", time.restart());
 			results = cv::Mat(objectDescriptors.rows, k, CV_32SC1); // Results index
 			dists = cv::Mat(objectDescriptors.rows, k, CV_32FC1); // Distance results are CV_32FC1 ?!?!? NOTE OpenCV doc is not clear about that...
 
@@ -112,8 +115,8 @@ int main(int argc, char * argv[])
 			// assume it is CV_32F
 
 			// Create Flann KDTree index
-			cv::flann::Index flannIndex(sceneDescriptors, cv::flann::KDTreeIndexParams());
-			printf("Time creating FLANN index = %d ms\n", time.restart());
+			cv::flann::Index flannIndex(sceneDescriptors, cv::flann::KDTreeIndexParams(), cvflann::FLANN_DIST_EUCLIDEAN);
+			printf("Time creating FLANN KDTree index = %d ms\n", time.restart());
 			results = cv::Mat(objectDescriptors.rows, k, CV_32SC1); // Results index
 			dists = cv::Mat(objectDescriptors.rows, k, CV_32FC1); // Distance results are CV_32FC1
 

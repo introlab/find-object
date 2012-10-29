@@ -364,12 +364,15 @@ void ParametersToolBox::changeParameter(const int & value)
 		{
 			bool nnStrategyChanged = false;
 			//verify binary issue with nearest neighbor strategy
-			if(comboBox->objectName().compare(Settings::kDetector_Descriptor_2Descriptor()) == 0 ||
+			if(comboBox->objectName().compare(Settings::kFeature2D_2Descriptor()) == 0 ||
 			   comboBox->objectName().compare(Settings::kNearestNeighbor_1Strategy()) == 0)
 			{
-				QComboBox * descriptorBox = (QComboBox*)this->getParameterWidget(Settings::kDetector_Descriptor_2Descriptor());
+				QComboBox * descriptorBox = (QComboBox*)this->getParameterWidget(Settings::kFeature2D_2Descriptor());
 				QComboBox * nnBox = (QComboBox*)this->getParameterWidget(Settings::kNearestNeighbor_1Strategy());
-				bool isBinaryDescriptor = descriptorBox->currentText().compare("ORB") == 0 || descriptorBox->currentText().compare("Brief") == 0;
+				bool isBinaryDescriptor = descriptorBox->currentText().compare("ORB") == 0 ||
+										  descriptorBox->currentText().compare("Brief") == 0 ||
+										  descriptorBox->currentText().compare("BRISK") == 0 ||
+										  descriptorBox->currentText().compare("FREAK") == 0;
 				if(isBinaryDescriptor && nnBox->currentText().compare("Lsh") != 0)
 				{
 					QMessageBox::warning(this,

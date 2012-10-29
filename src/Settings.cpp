@@ -49,6 +49,17 @@ void Settings::loadSettings(const QString & fileName, QByteArray * windowGeometr
 		QVariant value = ini.value(key, QVariant());
 		if(value.isValid())
 		{
+			QString str = value.toString();
+			if(str.contains(";") && str.size() != getParameter(key).toString().size())
+			{
+				// If a string list is modified, update the value
+				// (assuming that index < 10... one character for index)
+				QChar index = str.at(0);
+				str = getParameter(key).toString();
+				str[0] = index.toAscii();
+				value = QVariant(str);
+				printf("Updated list of parameter \"%s\"\n", key.toStdString().c_str());
+			}
 			setParameter(key, value);
 		}
 	}
@@ -107,7 +118,7 @@ void Settings::saveSettings(const QString & fileName, const QByteArray & windowG
 cv::FeatureDetector * Settings::createFeaturesDetector()
 {
 	cv::FeatureDetector * detector = 0;
-	QString str = getDetector_Descriptor_1Detector();
+	QString str = getFeature2D_1Detector();
 	QStringList split = str.split(':');
 	if(split.size()==2)
 	{
@@ -116,7 +127,7 @@ cv::FeatureDetector * Settings::createFeaturesDetector()
 		if(ok)
 		{
 			QStringList strategies = split.last().split(';');
-			if(strategies.size() == 8 && index>=0 && index<8)
+			if(strategies.size() == 9 && index>=0 && index<9)
 			{
 				switch(index)
 				{
@@ -124,13 +135,13 @@ cv::FeatureDetector * Settings::createFeaturesDetector()
 					if(strategies.at(index).compare("Dense") == 0)
 					{
 						detector = new cv::DenseFeatureDetector(
-								getDetector_Descriptor_Dense_initFeatureScale(),
-								getDetector_Descriptor_Dense_featureScaleLevels(),
-								getDetector_Descriptor_Dense_featureScaleMul(),
-								getDetector_Descriptor_Dense_initXyStep(),
-								getDetector_Descriptor_Dense_initImgBound(),
-								getDetector_Descriptor_Dense_varyXyStepWithScale(),
-								getDetector_Descriptor_Dense_varyImgBoundWithScale());
+								getFeature2D_Dense_initFeatureScale(),
+								getFeature2D_Dense_featureScaleLevels(),
+								getFeature2D_Dense_featureScaleMul(),
+								getFeature2D_Dense_initXyStep(),
+								getFeature2D_Dense_initImgBound(),
+								getFeature2D_Dense_varyXyStepWithScale(),
+								getFeature2D_Dense_varyImgBoundWithScale());
 						if(VERBOSE)printf("Settings::createFeaturesDetector() type=%s\n", "Dense");
 					}
 					break;
@@ -138,8 +149,8 @@ cv::FeatureDetector * Settings::createFeaturesDetector()
 					if(strategies.at(index).compare("Fast") == 0)
 					{
 						detector = new cv::FastFeatureDetector(
-								getDetector_Descriptor_Fast_threshold(),
-								getDetector_Descriptor_Fast_nonmaxSuppression());
+								getFeature2D_Fast_threshold(),
+								getFeature2D_Fast_nonmaxSuppression());
 						if(VERBOSE)printf("Settings::createFeaturesDetector() type=%s\n", "Fast");
 					}
 					break;
@@ -147,12 +158,12 @@ cv::FeatureDetector * Settings::createFeaturesDetector()
 					if(strategies.at(index).compare("GFTT") == 0)
 					{
 						detector = new cv::GFTTDetector(
-								getDetector_Descriptor_GFTT_maxCorners(),
-								getDetector_Descriptor_GFTT_qualityLevel(),
-								getDetector_Descriptor_GFTT_minDistance(),
-								getDetector_Descriptor_GFTT_blockSize(),
-								getDetector_Descriptor_GFTT_useHarrisDetector(),
-								getDetector_Descriptor_GFTT_k());
+								getFeature2D_GFTT_maxCorners(),
+								getFeature2D_GFTT_qualityLevel(),
+								getFeature2D_GFTT_minDistance(),
+								getFeature2D_GFTT_blockSize(),
+								getFeature2D_GFTT_useHarrisDetector(),
+								getFeature2D_GFTT_k());
 						if(VERBOSE)printf("Settings::createFeaturesDetector() type=%s\n", "GFTT");
 					}
 					break;
@@ -160,15 +171,15 @@ cv::FeatureDetector * Settings::createFeaturesDetector()
 					if(strategies.at(index).compare("MSER") == 0)
 					{
 						detector = new cv::MSER(
-								getDetector_Descriptor_MSER_delta(),
-								getDetector_Descriptor_MSER_minArea(),
-								getDetector_Descriptor_MSER_maxArea(),
-								getDetector_Descriptor_MSER_maxVariation(),
-								getDetector_Descriptor_MSER_minDiversity(),
-								getDetector_Descriptor_MSER_maxEvolution(),
-								getDetector_Descriptor_MSER_areaThreshold(),
-								getDetector_Descriptor_MSER_minMargin(),
-								getDetector_Descriptor_MSER_edgeBlurSize());
+								getFeature2D_MSER_delta(),
+								getFeature2D_MSER_minArea(),
+								getFeature2D_MSER_maxArea(),
+								getFeature2D_MSER_maxVariation(),
+								getFeature2D_MSER_minDiversity(),
+								getFeature2D_MSER_maxEvolution(),
+								getFeature2D_MSER_areaThreshold(),
+								getFeature2D_MSER_minMargin(),
+								getFeature2D_MSER_edgeBlurSize());
 						if(VERBOSE)printf("Settings::createFeaturesDetector() type=%s\n", "MSER");
 					}
 					break;
@@ -176,14 +187,14 @@ cv::FeatureDetector * Settings::createFeaturesDetector()
 					if(strategies.at(index).compare("ORB") == 0)
 					{
 						detector = new cv::ORB(
-								getDetector_Descriptor_ORB_nFeatures(),
-								getDetector_Descriptor_ORB_scaleFactor(),
-								getDetector_Descriptor_ORB_nLevels(),
-								getDetector_Descriptor_ORB_edgeThreshold(),
-								getDetector_Descriptor_ORB_firstLevel(),
-								getDetector_Descriptor_ORB_WTA_K(),
-								getDetector_Descriptor_ORB_scoreType(),
-								getDetector_Descriptor_ORB_patchSize());
+								getFeature2D_ORB_nFeatures(),
+								getFeature2D_ORB_scaleFactor(),
+								getFeature2D_ORB_nLevels(),
+								getFeature2D_ORB_edgeThreshold(),
+								getFeature2D_ORB_firstLevel(),
+								getFeature2D_ORB_WTA_K(),
+								getFeature2D_ORB_scoreType(),
+								getFeature2D_ORB_patchSize());
 						if(VERBOSE)printf("Settings::createFeaturesDetector() type=%s\n", "ORB");
 					}
 					break;
@@ -191,11 +202,11 @@ cv::FeatureDetector * Settings::createFeaturesDetector()
 					if(strategies.at(index).compare("SIFT") == 0)
 					{
 						detector = new cv::SIFT(
-								getDetector_Descriptor_SIFT_nfeatures(),
-								getDetector_Descriptor_SIFT_nOctaveLayers(),
-								getDetector_Descriptor_SIFT_contrastThreshold(),
-								getDetector_Descriptor_SIFT_edgeThreshold(),
-								getDetector_Descriptor_SIFT_sigma());
+								getFeature2D_SIFT_nfeatures(),
+								getFeature2D_SIFT_nOctaveLayers(),
+								getFeature2D_SIFT_contrastThreshold(),
+								getFeature2D_SIFT_edgeThreshold(),
+								getFeature2D_SIFT_sigma());
 						if(VERBOSE)printf("Settings::createFeaturesDetector() type=%s\n", "SIFT");
 					}
 					break;
@@ -203,11 +214,11 @@ cv::FeatureDetector * Settings::createFeaturesDetector()
 					if(strategies.at(index).compare("Star") == 0)
 					{
 						detector = new cv::StarFeatureDetector(
-								getDetector_Descriptor_Star_maxSize(),
-								getDetector_Descriptor_Star_responseThreshold(),
-								getDetector_Descriptor_Star_lineThresholdProjected(),
-								getDetector_Descriptor_Star_lineThresholdBinarized(),
-								getDetector_Descriptor_Star_suppressNonmaxSize());
+								getFeature2D_Star_maxSize(),
+								getFeature2D_Star_responseThreshold(),
+								getFeature2D_Star_lineThresholdProjected(),
+								getFeature2D_Star_lineThresholdBinarized(),
+								getFeature2D_Star_suppressNonmaxSize());
 						if(VERBOSE)printf("Settings::createFeaturesDetector() type=%s\n", "Star");
 					}
 					break;
@@ -215,12 +226,22 @@ cv::FeatureDetector * Settings::createFeaturesDetector()
 					if(strategies.at(index).compare("SURF") == 0)
 					{
 						detector = new cv::SURF(
-								getDetector_Descriptor_SURF_hessianThreshold(),
-								getDetector_Descriptor_SURF_nOctaves(),
-								getDetector_Descriptor_SURF_nOctaveLayers(),
-								getDetector_Descriptor_SURF_extended(),
-								getDetector_Descriptor_SURF_upright());
+								getFeature2D_SURF_hessianThreshold(),
+								getFeature2D_SURF_nOctaves(),
+								getFeature2D_SURF_nOctaveLayers(),
+								getFeature2D_SURF_extended(),
+								getFeature2D_SURF_upright());
 						if(VERBOSE)printf("Settings::createFeaturesDetector() type=%s\n", "SURF");
+					}
+					break;
+				case 8:
+					if(strategies.at(index).compare("BRISK") == 0)
+					{
+						detector = new cv::BRISK(
+								getFeature2D_BRISK_thresh(),
+								getFeature2D_BRISK_octaves(),
+								getFeature2D_BRISK_patternScale());
+						if(VERBOSE)printf("Settings::createFeaturesDetector() type=%s\n", "BRISK");
 					}
 					break;
 				default:
@@ -240,7 +261,7 @@ cv::FeatureDetector * Settings::createFeaturesDetector()
 cv::DescriptorExtractor * Settings::createDescriptorsExtractor()
 {
 	cv::DescriptorExtractor * extractor = 0;
-	QString str = getDetector_Descriptor_2Descriptor();
+	QString str = getFeature2D_2Descriptor();
 	QStringList split = str.split(':');
 	if(split.size()==2)
 	{
@@ -249,7 +270,7 @@ cv::DescriptorExtractor * Settings::createDescriptorsExtractor()
 		if(ok)
 		{
 			QStringList strategies = split.last().split(';');
-			if(strategies.size() == 4 && index>=0 && index<4)
+			if(strategies.size() == 6 && index>=0 && index<6)
 			{
 				switch(index)
 				{
@@ -257,7 +278,7 @@ cv::DescriptorExtractor * Settings::createDescriptorsExtractor()
 					if(strategies.at(index).compare("Brief") == 0)
 					{
 						extractor = new cv::BriefDescriptorExtractor(
-								getDetector_Descriptor_Brief_bytes());
+								getFeature2D_Brief_bytes());
 						if(VERBOSE)printf("Settings::createDescriptorsExtractor() type=%s\n", "Brief");
 					}
 					break;
@@ -265,14 +286,14 @@ cv::DescriptorExtractor * Settings::createDescriptorsExtractor()
 					if(strategies.at(index).compare("ORB") == 0)
 					{
 						extractor = new cv::ORB(
-								getDetector_Descriptor_ORB_nFeatures(),
-								getDetector_Descriptor_ORB_scaleFactor(),
-								getDetector_Descriptor_ORB_nLevels(),
-								getDetector_Descriptor_ORB_edgeThreshold(),
-								getDetector_Descriptor_ORB_firstLevel(),
-								getDetector_Descriptor_ORB_WTA_K(),
-								getDetector_Descriptor_ORB_scoreType(),
-								getDetector_Descriptor_ORB_patchSize());
+								getFeature2D_ORB_nFeatures(),
+								getFeature2D_ORB_scaleFactor(),
+								getFeature2D_ORB_nLevels(),
+								getFeature2D_ORB_edgeThreshold(),
+								getFeature2D_ORB_firstLevel(),
+								getFeature2D_ORB_WTA_K(),
+								getFeature2D_ORB_scoreType(),
+								getFeature2D_ORB_patchSize());
 						if(VERBOSE)printf("Settings::createDescriptorsExtractor() type=%s\n", "ORB");
 					}
 					break;
@@ -280,11 +301,11 @@ cv::DescriptorExtractor * Settings::createDescriptorsExtractor()
 					if(strategies.at(index).compare("SIFT") == 0)
 					{
 						extractor = new cv::SIFT(
-								getDetector_Descriptor_SIFT_nfeatures(),
-								getDetector_Descriptor_SIFT_nOctaveLayers(),
-								getDetector_Descriptor_SIFT_contrastThreshold(),
-								getDetector_Descriptor_SIFT_edgeThreshold(),
-								getDetector_Descriptor_SIFT_sigma());
+								getFeature2D_SIFT_nfeatures(),
+								getFeature2D_SIFT_nOctaveLayers(),
+								getFeature2D_SIFT_contrastThreshold(),
+								getFeature2D_SIFT_edgeThreshold(),
+								getFeature2D_SIFT_sigma());
 						if(VERBOSE)printf("Settings::createDescriptorsExtractor() type=%s\n", "SIFT");
 					}
 					break;
@@ -292,12 +313,33 @@ cv::DescriptorExtractor * Settings::createDescriptorsExtractor()
 					if(strategies.at(index).compare("SURF") == 0)
 					{
 						extractor = new cv::SURF(
-								getDetector_Descriptor_SURF_hessianThreshold(),
-								getDetector_Descriptor_SURF_nOctaves(),
-								getDetector_Descriptor_SURF_nOctaveLayers(),
-								getDetector_Descriptor_SURF_extended(),
-								getDetector_Descriptor_SURF_upright());
+								getFeature2D_SURF_hessianThreshold(),
+								getFeature2D_SURF_nOctaves(),
+								getFeature2D_SURF_nOctaveLayers(),
+								getFeature2D_SURF_extended(),
+								getFeature2D_SURF_upright());
 						if(VERBOSE)printf("Settings::createDescriptorsExtractor() type=%s\n", "SURF");
+					}
+					break;
+				case 4:
+					if(strategies.at(index).compare("BRISK") == 0)
+					{
+						extractor = new cv::BRISK(
+								getFeature2D_BRISK_thresh(),
+								getFeature2D_BRISK_octaves(),
+								getFeature2D_BRISK_patternScale());
+						if(VERBOSE)printf("Settings::createDescriptorsExtractor() type=%s\n", "BRISK");
+					}
+					break;
+				case 5:
+					if(strategies.at(index).compare("FREAK") == 0)
+					{
+						extractor = new cv::FREAK(
+								getFeature2D_FREAK_orientationNormalized(),
+								getFeature2D_FREAK_scaleNormalized(),
+								getFeature2D_FREAK_patternScale(),
+								getFeature2D_FREAK_nOctaves());
+						if(VERBOSE)printf("Settings::createDescriptorsExtractor() type=%s\n", "FREAK");
 					}
 					break;
 				default:
@@ -316,14 +358,14 @@ cv::DescriptorExtractor * Settings::createDescriptorsExtractor()
 
 QString Settings::currentDetectorType()
 {
-	int index = getDetector_Descriptor_1Detector().split(':').first().toInt();
-	return getDetector_Descriptor_1Detector().split(':').last().split(';').at(index);
+	int index = getFeature2D_1Detector().split(':').first().toInt();
+	return getFeature2D_1Detector().split(':').last().split(';').at(index);
 }
 
 QString Settings::currentDescriptorType()
 {
-	int index = getDetector_Descriptor_2Descriptor().split(':').first().toInt();
-	return getDetector_Descriptor_2Descriptor().split(':').last().split(';').at(index);
+	int index = getFeature2D_2Descriptor().split(':').first().toInt();
+	return getFeature2D_2Descriptor().split(':').last().split(';').at(index);
 }
 
 QString Settings::currentNearestNeighborType()

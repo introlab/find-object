@@ -59,68 +59,77 @@ class Settings
 	PARAMETER(Camera, 5mediaPath, QString, "");
 
 	//List format : [Index:item0;item1;item3;...]
-	PARAMETER(Detector_Descriptor, 1Detector, QString, "7:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF");
-	PARAMETER(Detector_Descriptor, 2Descriptor, QString, "3:Brief;ORB;SIFT;SURF");
+	PARAMETER(Feature2D, 1Detector, QString, "7:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK");
+	PARAMETER(Feature2D, 2Descriptor, QString, "3:Brief;ORB;SIFT;SURF;BRISK;FREAK");
 
-	PARAMETER(Detector_Descriptor, Brief_bytes, int, 32);
+	PARAMETER(Feature2D, Brief_bytes, int, 32);
 
-	PARAMETER(Detector_Descriptor, Dense_initFeatureScale, float, 1.f);
-	PARAMETER(Detector_Descriptor, Dense_featureScaleLevels, int, 1);
-	PARAMETER(Detector_Descriptor, Dense_featureScaleMul, float, 0.1f);
-	PARAMETER(Detector_Descriptor, Dense_initXyStep, int, 6);
-	PARAMETER(Detector_Descriptor, Dense_initImgBound, int, 0);
-	PARAMETER(Detector_Descriptor, Dense_varyXyStepWithScale, bool, true);
-	PARAMETER(Detector_Descriptor, Dense_varyImgBoundWithScale, bool, false);
+	PARAMETER(Feature2D, Dense_initFeatureScale, float, 1.f);
+	PARAMETER(Feature2D, Dense_featureScaleLevels, int, 1);
+	PARAMETER(Feature2D, Dense_featureScaleMul, float, 0.1f);
+	PARAMETER(Feature2D, Dense_initXyStep, int, 6);
+	PARAMETER(Feature2D, Dense_initImgBound, int, 0);
+	PARAMETER(Feature2D, Dense_varyXyStepWithScale, bool, true);
+	PARAMETER(Feature2D, Dense_varyImgBoundWithScale, bool, false);
 
-	PARAMETER(Detector_Descriptor, Fast_threshold, int, 10);
-	PARAMETER(Detector_Descriptor, Fast_nonmaxSuppression, bool, true);
+	PARAMETER(Feature2D, Fast_threshold, int, 10);
+	PARAMETER(Feature2D, Fast_nonmaxSuppression, bool, true);
 
-	PARAMETER(Detector_Descriptor, GFTT_maxCorners, int, 1000);
-	PARAMETER(Detector_Descriptor, GFTT_qualityLevel, double, 0.01);
-	PARAMETER(Detector_Descriptor, GFTT_minDistance, double, 1);
-	PARAMETER(Detector_Descriptor, GFTT_blockSize, int, 3);
-	PARAMETER(Detector_Descriptor, GFTT_useHarrisDetector, bool, false);
-	PARAMETER(Detector_Descriptor, GFTT_k, double, 0.04);
+	PARAMETER(Feature2D, GFTT_maxCorners, int, 1000);
+	PARAMETER(Feature2D, GFTT_qualityLevel, double, 0.01);
+	PARAMETER(Feature2D, GFTT_minDistance, double, 1);
+	PARAMETER(Feature2D, GFTT_blockSize, int, 3);
+	PARAMETER(Feature2D, GFTT_useHarrisDetector, bool, false);
+	PARAMETER(Feature2D, GFTT_k, double, 0.04);
 
-	PARAMETER(Detector_Descriptor, ORB_nFeatures, int, 500);
-	PARAMETER(Detector_Descriptor, ORB_scaleFactor, float,  1.2f);
-	PARAMETER(Detector_Descriptor, ORB_nLevels, int, 8);
-	PARAMETER(Detector_Descriptor, ORB_edgeThreshold, int, 31);
-	PARAMETER(Detector_Descriptor, ORB_firstLevel, int, 0);
-	PARAMETER(Detector_Descriptor, ORB_WTA_K, int, 2);
-	PARAMETER(Detector_Descriptor, ORB_scoreType, int, 0);
-	PARAMETER(Detector_Descriptor, ORB_patchSize, int, 31);
+	PARAMETER(Feature2D, ORB_nFeatures, int, 500);
+	PARAMETER(Feature2D, ORB_scaleFactor, float,  1.2f);
+	PARAMETER(Feature2D, ORB_nLevels, int, 8);
+	PARAMETER(Feature2D, ORB_edgeThreshold, int, 31);
+	PARAMETER(Feature2D, ORB_firstLevel, int, 0);
+	PARAMETER(Feature2D, ORB_WTA_K, int, 2);
+	PARAMETER(Feature2D, ORB_scoreType, int, 0);
+	PARAMETER(Feature2D, ORB_patchSize, int, 31);
 
-	PARAMETER(Detector_Descriptor, MSER_delta, int, 5);
-	PARAMETER(Detector_Descriptor, MSER_minArea, int, 60);
-	PARAMETER(Detector_Descriptor, MSER_maxArea, int, 14400);
-	PARAMETER(Detector_Descriptor, MSER_maxVariation, double, 0.25);
-	PARAMETER(Detector_Descriptor, MSER_minDiversity, double, 0.2);
-	PARAMETER(Detector_Descriptor, MSER_maxEvolution, int, 200);
-	PARAMETER(Detector_Descriptor, MSER_areaThreshold, double, 1.01);
-	PARAMETER(Detector_Descriptor, MSER_minMargin, double, 0.003);
-	PARAMETER(Detector_Descriptor, MSER_edgeBlurSize, int, 5);
+	PARAMETER(Feature2D, MSER_delta, int, 5);
+	PARAMETER(Feature2D, MSER_minArea, int, 60);
+	PARAMETER(Feature2D, MSER_maxArea, int, 14400);
+	PARAMETER(Feature2D, MSER_maxVariation, double, 0.25);
+	PARAMETER(Feature2D, MSER_minDiversity, double, 0.2);
+	PARAMETER(Feature2D, MSER_maxEvolution, int, 200);
+	PARAMETER(Feature2D, MSER_areaThreshold, double, 1.01);
+	PARAMETER(Feature2D, MSER_minMargin, double, 0.003);
+	PARAMETER(Feature2D, MSER_edgeBlurSize, int, 5);
 
-	PARAMETER(Detector_Descriptor, SIFT_nfeatures, int, 0);
-	PARAMETER(Detector_Descriptor, SIFT_nOctaveLayers, int, 3);
-	PARAMETER(Detector_Descriptor, SIFT_contrastThreshold, double, 0.04);
-	PARAMETER(Detector_Descriptor, SIFT_edgeThreshold, double, 10);
-	PARAMETER(Detector_Descriptor, SIFT_sigma, double, 1.6);
+	PARAMETER(Feature2D, SIFT_nfeatures, int, 0);
+	PARAMETER(Feature2D, SIFT_nOctaveLayers, int, 3);
+	PARAMETER(Feature2D, SIFT_contrastThreshold, double, 0.04);
+	PARAMETER(Feature2D, SIFT_edgeThreshold, double, 10);
+	PARAMETER(Feature2D, SIFT_sigma, double, 1.6);
 
-	PARAMETER(Detector_Descriptor, Star_maxSize, int, 45);
-	PARAMETER(Detector_Descriptor, Star_responseThreshold, int, 30);
-	PARAMETER(Detector_Descriptor, Star_lineThresholdProjected, int, 10);
-	PARAMETER(Detector_Descriptor, Star_lineThresholdBinarized, int, 8);
-	PARAMETER(Detector_Descriptor, Star_suppressNonmaxSize, int, 5);
+	PARAMETER(Feature2D, Star_maxSize, int, 45);
+	PARAMETER(Feature2D, Star_responseThreshold, int, 30);
+	PARAMETER(Feature2D, Star_lineThresholdProjected, int, 10);
+	PARAMETER(Feature2D, Star_lineThresholdBinarized, int, 8);
+	PARAMETER(Feature2D, Star_suppressNonmaxSize, int, 5);
 
-	PARAMETER(Detector_Descriptor, SURF_hessianThreshold, double, 600.0);
-	PARAMETER(Detector_Descriptor, SURF_nOctaves, int, 4);
-	PARAMETER(Detector_Descriptor, SURF_nOctaveLayers, int, 2);
-	PARAMETER(Detector_Descriptor, SURF_extended, bool, true);
-	PARAMETER(Detector_Descriptor, SURF_upright, bool, false);
+	PARAMETER(Feature2D, SURF_hessianThreshold, double, 600.0);
+	PARAMETER(Feature2D, SURF_nOctaves, int, 4);
+	PARAMETER(Feature2D, SURF_nOctaveLayers, int, 2);
+	PARAMETER(Feature2D, SURF_extended, bool, true);
+	PARAMETER(Feature2D, SURF_upright, bool, false);
+
+	PARAMETER(Feature2D, BRISK_thresh, int, 30);
+	PARAMETER(Feature2D, BRISK_octaves, int, 3);
+	PARAMETER(Feature2D, BRISK_patternScale, float, 1.0f);
+
+	PARAMETER(Feature2D, FREAK_orientationNormalized, bool, true);
+	PARAMETER(Feature2D, FREAK_scaleNormalized, bool, true);
+	PARAMETER(Feature2D, FREAK_patternScale, float, 22.0f);
+	PARAMETER(Feature2D, FREAK_nOctaves, int, 4);
 
 	PARAMETER(NearestNeighbor, 1Strategy, QString, "1:Linear;KDTree;KMeans;Composite;Autotuned;Lsh");
-	PARAMETER(NearestNeighbor, 2Distance_type, QString, "0:EUCLIDEAN_L2;MANHATTAN_L1;MINKOWSKI;MAX;HIST_INTERSECT;HELLINGER;CHI_SQUARE_CS;KULLBACK_LEIBLER_KL");
+	PARAMETER(NearestNeighbor, 2Distance_type, QString, "0:EUCLIDEAN_L2;MANHATTAN_L1;MINKOWSKI;MAX;HIST_INTERSECT;HELLINGER;CHI_SQUARE_CS;KULLBACK_LEIBLER_KL;HAMMING");
 	PARAMETER(NearestNeighbor, 3nndrRatioUsed, bool, true);
 	PARAMETER(NearestNeighbor, 4nndrRatio, float, 0.8f);
 	PARAMETER(NearestNeighbor, 5minDistanceUsed, bool, false);
