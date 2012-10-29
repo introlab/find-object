@@ -148,8 +148,8 @@ class Settings
 	PARAMETER(NearestNeighbor, KMeans_centers_init, QString, "0:RANDOM;GONZALES;KMEANSPP");
 	PARAMETER(NearestNeighbor, KMeans_cb_index, double, 0.2);
 
-	PARAMETER(NearestNeighbor, Lsh_table_number, int, 20);
-	PARAMETER(NearestNeighbor, Lsh_key_size, int, 10);
+	PARAMETER(NearestNeighbor, Lsh_table_number, int, 12);
+	PARAMETER(NearestNeighbor, Lsh_key_size, int, 20);
 	PARAMETER(NearestNeighbor, Lsh_multi_probe_level, int, 2);
 
 	PARAMETER(General, autoStartCamera, bool, false);

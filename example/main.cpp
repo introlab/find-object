@@ -98,7 +98,7 @@ int main(int argc, char * argv[])
 			// Binary descriptors detected (from ORB or Brief)
 
 			// Create Flann LSH index
-			cv::flann::Index flannIndex(sceneDescriptors, cv::flann::LshIndexParams(20, 10, 2));
+			cv::flann::Index flannIndex(sceneDescriptors, cv::flann::LshIndexParams(12, 20, 2));
 			printf("Time creating FLANN index = %d ms\n", time.restart());
 			results = cv::Mat(objectDescriptors.rows, k, CV_32SC1); // Results index
 			dists = cv::Mat(objectDescriptors.rows, k, CV_32FC1); // Distance results are CV_32FC1 ?!?!? NOTE OpenCV doc is not clear about that...
