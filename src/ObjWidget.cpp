@@ -533,7 +533,7 @@ void ObjWidget::paintEvent(QPaintEvent *event)
 				}
 				painter.setPen(Qt::NoPen);
 				painter.setBrush(QBrush(QColor(0,0,0,100)));
-				painter.drawRect(0, 0, pixmap_.width(), top-1);
+				painter.drawRect(0, 0, pixmap_.width(), top);
 				painter.drawRect(0, top, left, bottom-top);
 				painter.drawRect(right, top, pixmap_.width()-right, bottom-top);
 				painter.drawRect(0, bottom, pixmap_.width(), pixmap_.height()-bottom);
