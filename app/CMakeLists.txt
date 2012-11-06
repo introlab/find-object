@@ -89,15 +89,17 @@ IF(WIN32)
                              -o ${CMAKE_CURRENT_BINARY_DIR}/AppIco.o )
     SET(SRC_FILES ${SRC_FILES} ${CMAKE_CURRENT_BINARY_DIR}/AppIco.o)
   ELSE( MINGW )
-    SET(SRC_FILES ${SRC_FILES} ${PROJECT_NAME}.rc)
+   # SET(SRC_FILES ${SRC_FILES} ${PROJECT_NAME}.rc) # Error on visual studio 2008
   ENDIF( MINGW )
 ENDIF(WIN32)
 
 # create an executable file
 IF(APPLE AND BUILD_AS_BUNDLE)
   ADD_EXECUTABLE(find_object MACOSX_BUNDLE ${SRC_FILES})
-ELSE()
+ELSEIF(MINGW)
   ADD_EXECUTABLE(find_object WIN32 ${SRC_FILES})
+ELSE()
+  ADD_EXECUTABLE(find_object ${SRC_FILES})
 ENDIF()
 # Linking with Qt libraries
 TARGET_LINK_LIBRARIES(find_object ${LIBRARIES})
