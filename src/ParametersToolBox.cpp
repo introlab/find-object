@@ -376,7 +376,7 @@ void ParametersToolBox::changeParameter(const int & value)
 				if(isBinaryDescriptor && nnBox->currentText().compare("Lsh") != 0)
 				{
 					QMessageBox::warning(this,
-							tr("Error"),
+							tr("Warning"),
 							tr("Current selected descriptor type (\"%1\") is binary while nearest neighbor strategy is not (\"%2\").\n"
 							   "Falling back to \"Lsh\" nearest neighbor strategy (by default).")
 							   .arg(descriptorBox->currentText())
@@ -397,7 +397,7 @@ void ParametersToolBox::changeParameter(const int & value)
 				else if(!isBinaryDescriptor && nnBox->currentText().compare("Lsh") == 0)
 				{
 					QMessageBox::warning(this,
-							tr("Error"),
+							tr("Warning"),
 							tr("Current selected descriptor type (\"%1\") is not binary while nearest neighbor strategy is (\"%2\").\n"
 							   "Falling back to \"KDTree\" nearest neighbor strategy (by default).")
 							   .arg(descriptorBox->currentText())
@@ -427,7 +427,7 @@ void ParametersToolBox::changeParameter(const int & value)
 				if(nnBox->currentText().compare("Lsh") != 0 && distBox->currentIndex() > 1)
 				{
 					QMessageBox::warning(this,
-										tr("Error"),
+										tr("Warning"),
 										tr("Current selected nearest neighbor strategy type (\"%1\") cannot handle distance strategy (\"%2\").\n"
 										   "Falling back to \"EUCLIDEAN_L2\" distance strategy (by default).")
 										   .arg(nnBox->currentText())
