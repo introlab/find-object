@@ -59,8 +59,8 @@ class Settings
 	PARAMETER(Camera, 5mediaPath, QString, "");
 
 	//List format : [Index:item0;item1;item3;...]
-	PARAMETER(Feature2D, 1Detector, QString, "7:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK");
-	PARAMETER(Feature2D, 2Descriptor, QString, "3:Brief;ORB;SIFT;SURF;BRISK;FREAK");
+	PARAMETER(Feature2D, 1Detector, QString, "5:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK");
+	PARAMETER(Feature2D, 2Descriptor, QString, "2:Brief;ORB;SIFT;SURF;BRISK;FREAK");
 
 	PARAMETER(Feature2D, Brief_bytes, int, 32);
 
