@@ -22,6 +22,7 @@
 #include <QtCore/QTextStream>
 #include <QtCore/QFile>
 #include <QtCore/QBuffer>
+#include <QtCore/QThread>
 
 #include <QtGui/QFileDialog>
 #include <QtGui/QMessageBox>
@@ -153,7 +154,7 @@ MainWindow::~MainWindow()
 {
 	disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
 	camera_->stop();
-	objectsDescriptors_ = cv::Mat();
+	objectsDescriptors_.clear();
 	qDeleteAll(objects_.begin(), objects_.end());
 	objects_.clear();
 	delete ui_;
@@ -596,7 +597,7 @@ void MainWindow::updateData()
 		ui_->actionSave_objects->setEnabled(false);
 	}
 
-	objectsDescriptors_ = cv::Mat();
+	objectsDescriptors_.clear();
 	dataRange_.clear();
 	int count = 0;
 	int dim = -1;
@@ -639,34 +640,45 @@ void MainWindow::updateData()
 	// Copy data
 	if(count)
 	{
-		objectsDescriptors_ = cv::Mat(count, dim, type);
-		printf("Updating global descriptors matrix: Total descriptors=%d, dim=%d, type=%d\n",count, dim, type);
-		int row = 0;
-		for(int i=0; i<objects_.size(); ++i)
+		printf("Updating global descriptors matrix: Objects=%d, total descriptors=%d, dim=%d, type=%d\n", (int)objects_.size(), count, dim, type);
+		if(Settings::getGeneral_invertedSearch() || Settings::getGeneral_threads() == 1)
 		{
-			cv::Mat dest(objectsDescriptors_, cv::Range(row, row+objects_.at(i)->descriptors().rows));
-			objects_.at(i)->descriptors().copyTo(dest);
-			row += objects_.at(i)->descriptors().rows;
-			// dataRange contains the upper_bound for each
-			// object (the last descriptors position in the
-			// global object descriptors matrix)
-			if(objects_.at(i)->descriptors().rows)
+			// If inverted index or only one thread, put all descriptors in the same cv::Mat
+			objectsDescriptors_.push_back(cv::Mat(count, dim, type));
+			int row = 0;
+			for(int i=0; i<objects_.size(); ++i)
 			{
-				dataRange_.insert(row-1, i);
+				cv::Mat dest(objectsDescriptors_[0], cv::Range(row, row+objects_.at(i)->descriptors().rows));
+				objects_.at(i)->descriptors().copyTo(dest);
+				row += objects_.at(i)->descriptors().rows;
+				// dataRange contains the upper_bound for each
+				// object (the last descriptors position in the
+				// global object descriptors matrix)
+				if(objects_.at(i)->descriptors().rows)
+				{
+					dataRange_.insert(row-1, i);
+				}
+			}
+			if(Settings::getGeneral_invertedSearch())
+			{
+				printf("Creating FLANN index (%s) with objects' descriptors...\n", Settings::currentNearestNeighborType().toStdString().c_str());
+				// CREATE INDEX
+				QTime time;
+				time.start();
+				cv::flann::IndexParams * params = Settings::createFlannIndexParams();
+				flannIndex_.build(objectsDescriptors_[0], *params, Settings::getFlannDistanceType());
+				delete params;
+				ui_->label_timeIndexing->setNum(time.elapsed());
+				ui_->label_vocabularySize->setNum(objectsDescriptors_[0].rows);
+				printf("Creating FLANN index (%s) with objects' descriptors... done! (%d ms)\n", Settings::currentNearestNeighborType().toStdString().c_str(), time.elapsed());
 			}
 		}
-		if(Settings::getGeneral_invertedSearch())
+		else
 		{
-			printf("Creating FLANN index (%s) with objects' descriptors...\n", Settings::currentNearestNeighborType().toStdString().c_str());
-			// CREATE INDEX
-			QTime time;
-			time.start();
-			cv::flann::IndexParams * params = Settings::createFlannIndexParams();
-			flannIndex_.build(objectsDescriptors_, *params, Settings::getFlannDistanceType());
-			delete params;
-			ui_->label_timeIndexing->setNum(time.elapsed());
-			ui_->label_vocabularySize->setNum(objectsDescriptors_.rows);
-			printf("Creating FLANN index (%s) with objects' descriptors... done! (%d ms)\n", Settings::currentNearestNeighborType().toStdString().c_str(), time.elapsed());
+			for(int i=0; i<objects_.size(); ++i)
+			{
+				objectsDescriptors_.push_back(objects_.at(i)->descriptors());
+			}
 		}
 	}
 }
@@ -775,8 +787,180 @@ void MainWindow::moveCameraFrame(int frame)
 	}
 }
 
+class SearchThread: public QThread
+{
+public:
+	SearchThread(cv::flann::Index * index, int objectIndex, const cv::Mat * descriptors) :
+		index_(index),
+		objectIndex_(objectIndex),
+		descriptors_(descriptors),
+		minMatchedDistance_(-1.0f),
+		maxMatchedDistance_(-1.0f)
+	{
+		Q_ASSERT(index && descriptors);
+	}
+	virtual ~SearchThread() {}
+
+	int getObjectIndex() const {return objectIndex_;}
+	float getMinMatchedDistance() const {return minMatchedDistance_;}
+	float getMaxMatchedDistance() const {return maxMatchedDistance_;}
+	const QMultiMap<int, int> & getMatches() const {return matches_;}
+
+protected:
+	virtual void run()
+	{
+		//QTime time;
+		//time.start();
+
+		cv::Mat results;
+		cv::Mat dists;
+
+		//match objects to scene
+		int k = Settings::getNearestNeighbor_3nndrRatioUsed()?2:1;
+		results = cv::Mat(descriptors_->rows, k, CV_32SC1); // results index
+		dists = cv::Mat(descriptors_->rows, k, CV_32FC1); // Distance results are CV_32FC1
+		index_->knnSearch(*descriptors_, results, dists, k, Settings::getFlannSearchParams() ); // maximum number of leafs checked
+
+		// PROCESS RESULTS
+		// Get all matches for each object
+		for(int i=0; i<dists.rows; ++i)
+		{
+			// Check if this descriptor matches with those of the objects
+			bool matched = false;
+
+			if(Settings::getNearestNeighbor_3nndrRatioUsed() &&
+			   dists.at<float>(i,0) <= Settings::getNearestNeighbor_4nndrRatio() * dists.at<float>(i,1))
+			{
+				matched = true;
+			}
+			if((matched || !Settings::getNearestNeighbor_3nndrRatioUsed()) &&
+			   Settings::getNearestNeighbor_5minDistanceUsed())
+			{
+				if(dists.at<float>(i,0) <= Settings::getNearestNeighbor_6minDistance())
+				{
+					matched = true;
+				}
+				else
+				{
+					matched = false;
+				}
+			}
+			if(minMatchedDistance_ == -1 || minMatchedDistance_ > dists.at<float>(i,0))
+			{
+				minMatchedDistance_ = dists.at<float>(i,0);
+			}
+			if(maxMatchedDistance_ == -1 || maxMatchedDistance_ < dists.at<float>(i,0))
+			{
+				maxMatchedDistance_ = dists.at<float>(i,0);
+			}
+
+			if(matched)
+			{
+				matches_.insert(i, results.at<int>(i,0));
+			}
+		}
+
+		//printf("Search Object %d time=%d ms\n", objectIndex_, time.elapsed());
+	}
+private:
+	cv::flann::Index * index_; // would be const but flann search() method is not const!?
+	int objectIndex_;
+	const cv::Mat * descriptors_;
+
+	float minMatchedDistance_;
+	float maxMatchedDistance_;
+	QMultiMap<int, int> matches_;
+};
+
+class HomographyThread: public QThread
+{
+public:
+	HomographyThread(
+			const QMultiMap<int, int> * matches, // <object, scene>
+			int objectIndex,
+			const std::vector<cv::KeyPoint> * kptsA,
+			const std::vector<cv::KeyPoint> * kptsB) :
+				matches_(matches),
+				objectIndex_(objectIndex),
+				kptsA_(kptsA),
+				kptsB_(kptsB),
+				inliers_(0),
+				outliers_(0)
+	{
+		Q_ASSERT(matches && kptsA && kptsB);
+	}
+	virtual ~HomographyThread() {}
+
+	int getObjectIndex() const {return objectIndex_;}
+	const std::vector<int> & getIndexesA() const {return indexesA_;}
+	const std::vector<int> & getIndexesB() const {return indexesB_;}
+	const std::vector<uchar> & getOutlierMask() const {return outlierMask_;}
+	int getInliers() const {return inliers_;}
+	int getOutliers() const {return outliers_;}
+	const cv::Mat & getHomography() const {return h_;}
+
+protected:
+	virtual void run()
+	{
+		//QTime time;
+		//time.start();
+
+		std::vector<cv::Point2f> mpts_1(matches_->size());
+		std::vector<cv::Point2f> mpts_2(matches_->size());
+		indexesA_.resize(matches_->size());
+		indexesB_.resize(matches_->size());
+
+		int j=0;
+		for(QMultiMap<int, int>::const_iterator iter = matches_->begin(); iter!=matches_->end(); ++iter)
+		{
+			mpts_1[j] = kptsA_->at(iter.key()).pt;
+			indexesA_[j] = iter.key();
+			mpts_2[j] = kptsB_->at(iter.value()).pt;
+			indexesB_[j] = iter.value();
+			++j;
+		}
+
+		if((int)mpts_1.size() >= Settings::getHomography_minimumInliers())
+		{
+			h_ = findHomography(mpts_1,
+					mpts_2,
+					cv::RANSAC,
+					Settings::getHomography_ransacReprojThr(),
+					outlierMask_);
+
+			for(unsigned int k=0; k<mpts_1.size();++k)
+			{
+				if(outlierMask_.at(k))
+				{
+					++inliers_;
+				}
+				else
+				{
+					++outliers_;
+				}
+			}
+		}
+
+		//printf("Homography Object %d time=%d ms\n", objectIndex_, time.elapsed());
+	}
+private:
+	const QMultiMap<int, int> * matches_;
+	int objectIndex_;
+	const std::vector<cv::KeyPoint> * kptsA_;
+	const std::vector<cv::KeyPoint> * kptsB_;
+
+	std::vector<int> indexesA_;
+	std::vector<int> indexesB_;
+	std::vector<uchar> outlierMask_;
+	int inliers_;
+	int outliers_;
+	cv::Mat h_;
+};
+
 void MainWindow::update(const cv::Mat & image)
 {
+	//printf("====== UPDATE =======\n");
+
 	QTime totalTime;
 	totalTime.start();
 	// reset objects color
@@ -839,215 +1023,240 @@ void MainWindow::update(const cv::Mat & image)
 			ui_->label_timeExtraction->setNum(0);
 		}
 
+		if(this->isVisible())
+		{
+			ui_->imageView_source->setData(keypoints, cv::Mat(), &iplImage, Settings::currentDetectorType(), Settings::currentDescriptorType());
+		}
+
 		// COMPARE
 		if(!objectsDescriptors_.empty() &&
 		   keypoints.size() &&
 		   (Settings::getNearestNeighbor_3nndrRatioUsed() || Settings::getNearestNeighbor_5minDistanceUsed()) &&
-		   objectsDescriptors_.type() == descriptors.type()) // binary descriptor issue, if the dataTree is not yet updated with modified settings
+		   objectsDescriptors_[0].type() == descriptors.type()) // binary descriptor issue, if the dataTree is not yet updated with modified settings
 		{
+			QVector<QMultiMap<int, int> > matches(objects_.size()); // Map< ObjectDescriptorIndex, SceneDescriptorIndex >
+			float minMatchedDistance = -1.0f;
+			float maxMatchedDistance = -1.0f;
+
 			if(!Settings::getGeneral_invertedSearch())
 			{
-				// CREATE INDEX
+				// CREATE INDEX for the scene
 				//printf("Creating FLANN index (%s)\n", Settings::currentNearestNeighborType().toStdString().c_str());
 				cv::flann::IndexParams * params = Settings::createFlannIndexParams();
 				flannIndex_.build(descriptors, *params, Settings::getFlannDistanceType());
 				delete params;
 				ui_->label_timeIndexing->setNum(time.restart());
-				ui_->label_vocabularySize->setNum(objectsDescriptors_.rows);
+				ui_->label_vocabularySize->setNum(descriptors.rows);
 			}
 
-			// DO NEAREST NEIGHBOR
-			int k = 1;
-			if(Settings::getNearestNeighbor_3nndrRatioUsed())
+			if(Settings::getGeneral_invertedSearch() || Settings::getGeneral_threads() == 1)
 			{
-				k = 2;
-			}
-			cv::Mat results;
-			cv::Mat dists;
-			if(!Settings::getGeneral_invertedSearch())
-			{
-				results = cv::Mat(objectsDescriptors_.rows, k, CV_32SC1); // results index
-				dists = cv::Mat(objectsDescriptors_.rows, k, CV_32FC1); // Distance results are CV_32FC1
-				flannIndex_.knnSearch(objectsDescriptors_, results, dists, k, Settings::getFlannSearchParams() ); // maximum number of leafs checked
+				cv::Mat results;
+				cv::Mat dists;
+				// DO NEAREST NEIGHBOR
+				int k = Settings::getNearestNeighbor_3nndrRatioUsed()?2:1;
+				if(!Settings::getGeneral_invertedSearch())
+				{
+					//match objects to scene
+					results = cv::Mat(objectsDescriptors_[0].rows, k, CV_32SC1); // results index
+					dists = cv::Mat(objectsDescriptors_[0].rows, k, CV_32FC1); // Distance results are CV_32FC1
+					flannIndex_.knnSearch(objectsDescriptors_[0], results, dists, k, Settings::getFlannSearchParams() ); // maximum number of leafs checked
+				}
+				else
+				{
+					//match scene to objects
+					results = cv::Mat(descriptors.rows, k, CV_32SC1); // results index
+					dists = cv::Mat(descriptors.rows, k, CV_32FC1); // Distance results are CV_32FC1
+					flannIndex_.knnSearch(descriptors, results, dists, k, Settings::getFlannSearchParams() ); // maximum number of leafs checked
+				}
+
+				// PROCESS RESULTS
+				// Get all matches for each object
+				for(int i=0; i<dists.rows; ++i)
+				{
+					// Check if this descriptor matches with those of the objects
+					bool matched = false;
+
+					if(Settings::getNearestNeighbor_3nndrRatioUsed() &&
+					   dists.at<float>(i,0) <= Settings::getNearestNeighbor_4nndrRatio() * dists.at<float>(i,1))
+					{
+						matched = true;
+					}
+					if((matched || !Settings::getNearestNeighbor_3nndrRatioUsed()) &&
+					   Settings::getNearestNeighbor_5minDistanceUsed())
+					{
+						if(dists.at<float>(i,0) <= Settings::getNearestNeighbor_6minDistance())
+						{
+							matched = true;
+						}
+						else
+						{
+							matched = false;
+						}
+					}
+					if(minMatchedDistance == -1 || minMatchedDistance > dists.at<float>(i,0))
+					{
+						minMatchedDistance = dists.at<float>(i,0);
+					}
+					if(maxMatchedDistance == -1 || maxMatchedDistance < dists.at<float>(i,0))
+					{
+						maxMatchedDistance = dists.at<float>(i,0);
+					}
+
+					if(matched)
+					{
+						if(Settings::getGeneral_invertedSearch())
+						{
+							QMap<int, int>::iterator iter = dataRange_.lowerBound(results.at<int>(i,0));
+							int objectIndex = iter.value();
+							int previousDescriptorIndex = (iter == dataRange_.begin())?0:(--iter).key()+1;
+							int objectDescriptorIndex = results.at<int>(i,0) - previousDescriptorIndex;
+							matches[objectIndex].insert(objectDescriptorIndex, i);
+						}
+						else
+						{
+							QMap<int, int>::iterator iter = dataRange_.lowerBound(i);
+							int objectIndex = iter.value();
+							int fisrtObjectDescriptorIndex = (iter == dataRange_.begin())?0:(--iter).key()+1;
+							int objectDescriptorIndex = i - fisrtObjectDescriptorIndex;
+							matches[objectIndex].insert(objectDescriptorIndex, results.at<int>(i,0));
+						}
+					}
+				}
 			}
 			else
 			{
-				results = cv::Mat(descriptors.rows, k, CV_32SC1); // results index
-				dists = cv::Mat(descriptors.rows, k, CV_32FC1); // Distance results are CV_32FC1
-				flannIndex_.knnSearch(descriptors, results, dists, k, Settings::getFlannSearchParams() ); // maximum number of leafs checked
+				//multi-threaded, match objects to scene
+				unsigned int threadCounts = Settings::getGeneral_threads();
+				if(threadCounts == 0)
+				{
+					threadCounts = objectsDescriptors_.size();
+				}
+				for(unsigned int j=0; j<objectsDescriptors_.size(); j+=threadCounts)
+				{
+					QVector<SearchThread*> threads;
+
+					for(unsigned int k=j; k<j+threadCounts && k<objectsDescriptors_.size(); ++k)
+					{
+						threads.push_back(new SearchThread(&flannIndex_, k, &objectsDescriptors_[k]));
+						threads.back()->start();
+					}
+
+					for(int k=0; k<threads.size(); ++k)
+					{
+						threads[k]->wait();
+						matches[threads[k]->getObjectIndex()] = threads[k]->getMatches();
+
+						if(minMatchedDistance == -1 || minMatchedDistance > threads[k]->getMinMatchedDistance())
+						{
+							minMatchedDistance = threads[k]->getMinMatchedDistance();
+						}
+						if(maxMatchedDistance == -1 || maxMatchedDistance < threads[k]->getMaxMatchedDistance())
+						{
+							maxMatchedDistance = threads[k]->getMaxMatchedDistance();
+						}
+						delete threads[k];
+					}
+
+				}
 			}
 
 			ui_->label_timeMatching->setNum(time.restart());
 
-			// PROCESS RESULTS
-			if(this->isVisible())
-			{
-				ui_->imageView_source->setData(keypoints, cv::Mat(), &iplImage, Settings::currentDetectorType(), Settings::currentDescriptorType());
-			}
-
-			QVector<QMultiMap<int, int> > matches(objects_.size()); // Map< ObjectDescriptorIndex, SceneDescriptorIndex >
-			QMap<int, QPair<QRect, QTransform> > objectsDetected;
-			float minMatchedDistance = -1.0f;
-			float maxMatchedDistance = -1.0f;
-			// Get all matches for each object
-			for(int i=0; i<dists.rows; ++i)
-			{
-				// Check if this descriptor matches with those of the objects
-				bool matched = false;
-
-				if(Settings::getNearestNeighbor_3nndrRatioUsed() &&
-				   dists.at<float>(i,0) <= Settings::getNearestNeighbor_4nndrRatio() * dists.at<float>(i,1))
-				{
-					matched = true;
-				}
-				if((matched || !Settings::getNearestNeighbor_3nndrRatioUsed()) &&
-				   Settings::getNearestNeighbor_5minDistanceUsed())
-				{
-					if(dists.at<float>(i,0) <= Settings::getNearestNeighbor_6minDistance())
-					{
-						matched = true;
-					}
-					else
-					{
-						matched = false;
-					}
-				}
-				if(minMatchedDistance == -1 || minMatchedDistance > dists.at<float>(i,0))
-				{
-					minMatchedDistance = dists.at<float>(i,0);
-				}
-				if(maxMatchedDistance == -1 || maxMatchedDistance < dists.at<float>(i,0))
-				{
-					maxMatchedDistance = dists.at<float>(i,0);
-				}
-
-				if(matched)
-				{
-					if(Settings::getGeneral_invertedSearch())
-					{
-						QMap<int, int>::iterator iter = dataRange_.lowerBound(results.at<int>(i,0));
-						int objectIndex = iter.value();
-						int previousDescriptorIndex = (iter == dataRange_.begin())?0:(--iter).key()+1;
-						int objectDescriptorIndex = results.at<int>(i,0) - previousDescriptorIndex;
-						matches[objectIndex].insert(objectDescriptorIndex, i);
-					}
-					else
-					{
-						QMap<int, int>::iterator iter = dataRange_.lowerBound(i);
-						int objectIndex = iter.value();
-						int fisrtObjectDescriptorIndex = (iter == dataRange_.begin())?0:(--iter).key()+1;
-						int objectDescriptorIndex = i - fisrtObjectDescriptorIndex;
-						matches[objectIndex].insert(objectDescriptorIndex, results.at<int>(i,0));
-					}
-				}
-			}
-
+			// GUI: Homographies and color
 			QMap<int, float> scores;
 			int maxScoreId = -1;
 			int maxScore = 0;
-			// For each object
-			for(int i=0; i<matches.size(); ++i)
-			{
-				if(Settings::getHomography_homographyComputed())
-				{
-					// HOMOGRAPHY
-					std::vector<cv::Point2f> mpts_1(matches[i].size()), mpts_2(matches[i].size());
-					std::vector<int> indexes_1(matches[i].size()), indexes_2(matches[i].size());
-					std::vector<uchar> outlier_mask;
-					int nColor = i % 11 + 7;
-					QColor color((Qt::GlobalColor)(nColor==Qt::yellow?Qt::gray:nColor));
+			QMap<int, QPair<QRect, QTransform> > objectsDetected;
 
-					int j=0;
-					for(QMultiMap<int, int>::iterator iter = matches[i].begin(); iter!=matches[i].end(); ++iter)
+			if(Settings::getHomography_homographyComputed())
+			{
+				// HOMOGRAHPY
+				int threadCounts = Settings::getGeneral_threads();
+				if(threadCounts == 0)
+				{
+					threadCounts = matches.size();
+				}
+				for(int i=0; i<matches.size(); i+=threadCounts)
+				{
+					QVector<HomographyThread*> threads;
+
+					for(int k=i; k<i+threadCounts && k<matches.size(); ++k)
 					{
-						mpts_1[j] = objects_.at(i)->keypoints().at(iter.key()).pt;
-						indexes_1[j] = iter.key();
-						mpts_2[j] = keypoints.at(iter.value()).pt;
-						indexes_2[j] = iter.value();
-						++j;
+						threads.push_back(new HomographyThread(&matches[k], k, &objects_.at(k)->keypoints(), &keypoints));
+						threads.back()->start();
 					}
 
-					QLabel * label = ui_->dockWidget_objects->findChild<QLabel*>(QString("%1detection").arg(objects_.at(i)->id()));
-
-					if(mpts_1.size() >= Settings::getHomography_minimumInliers())
+					for(int j=0; j<threads.size(); ++j)
 					{
-						cv::Mat H = findHomography(mpts_1,
-								mpts_2,
-								cv::RANSAC,
-								Settings::getHomography_ransacReprojThr(),
-								outlier_mask);
-						uint inliers=0, outliers=0;
-						for(unsigned int k=0; k<mpts_1.size();++k)
+						threads[j]->wait();
+
+						int index = threads[j]->getObjectIndex();
+
+						// COLORIZE (should be done in the GUI thread)
+						int nColor = index % 11 + 7;
+						QColor color((Qt::GlobalColor)(nColor==Qt::yellow?Qt::gray:nColor));
+						QLabel * label = ui_->dockWidget_objects->findChild<QLabel*>(QString("%1detection").arg(objects_.at(index)->id()));
+						if(!threads[j]->getHomography().empty())
 						{
-							if(outlier_mask.at(k))
+							if(threads[j]->getInliers() >= Settings::getHomography_minimumInliers())
 							{
-								++inliers;
+								if(this->isVisible())
+								{
+									for(unsigned int k=0; k<threads[j]->getOutlierMask().size();++k)
+									{
+										if(threads[j]->getOutlierMask().at(k))
+										{
+											objects_.at(index)->setKptColor(threads[j]->getIndexesA().at(k), color);
+											ui_->imageView_source->setKptColor(threads[j]->getIndexesB().at(k), color);
+										}
+										else
+										{
+											objects_.at(index)->setKptColor(threads[j]->getIndexesA().at(k), QColor(0,0,0));
+										}
+									}
+								}
+
+								const cv::Mat & H = threads[j]->getHomography();
+								QTransform hTransform(
+									H.at<double>(0,0), H.at<double>(1,0), H.at<double>(2,0),
+									H.at<double>(0,1), H.at<double>(1,1), H.at<double>(2,1),
+									H.at<double>(0,2), H.at<double>(1,2), H.at<double>(2,2));
+
+								// find center of object
+								QRect rect = objects_.at(index)->pixmap().rect();
+								objectsDetected.insert(objects_.at(index)->id(), QPair<QRect, QTransform>(rect, hTransform));
+								// Example getting the center of the object in the scene using the homography
+								//QPoint pos(rect.width()/2, rect.height()/2);
+								//hTransform.map(pos)
+
+								// add rectangle
+								if(this->isVisible())
+								{
+									label->setText(QString("%1 in %2 out").arg(threads[j]->getInliers()).arg(threads[j]->getOutliers()));
+									QPen rectPen(color);
+									rectPen.setWidth(4);
+									QGraphicsRectItem * rectItem = new QGraphicsRectItem(rect);
+									rectItem->setPen(rectPen);
+									rectItem->setTransform(hTransform);
+									ui_->imageView_source->addRect(rectItem);
+								}
 							}
 							else
 							{
-								++outliers;
-							}
-						}
-
-						// COLORIZE
-						if(inliers >= Settings::getHomography_minimumInliers())
-						{
-							if(this->isVisible())
-							{
-								for(unsigned int k=0; k<mpts_1.size();++k)
-								{
-									if(outlier_mask.at(k))
-									{
-										objects_.at(i)->setKptColor(indexes_1.at(k), color);
-										ui_->imageView_source->setKptColor(indexes_2.at(k), color);
-									}
-									else
-									{
-										objects_.at(i)->setKptColor(indexes_1.at(k), QColor(0,0,0));
-									}
-								}
-							}
-
-							QTransform hTransform(
-								H.at<double>(0,0), H.at<double>(1,0), H.at<double>(2,0),
-								H.at<double>(0,1), H.at<double>(1,1), H.at<double>(2,1),
-								H.at<double>(0,2), H.at<double>(1,2), H.at<double>(2,2));
-
-							// find center of object
-							QRect rect = objects_.at(i)->pixmap().rect();
-							objectsDetected.insert(objects_.at(i)->id(), QPair<QRect, QTransform>(rect, hTransform));
-							// Example getting the center of the object in the scene using the homography
-							//QPoint pos(rect.width()/2, rect.height()/2);
-							//hTransform.map(pos)
-
-							// add rectangle
-							if(this->isVisible())
-							{
-								label->setText(QString("%1 in %2 out").arg(inliers).arg(outliers));
-								QPen rectPen(color);
-								rectPen.setWidth(4);
-								QGraphicsRectItem * rectItem = new QGraphicsRectItem(rect);
-								rectItem->setPen(rectPen);
-								rectItem->setTransform(hTransform);
-								ui_->imageView_source->addRect(rectItem);
+								label->setText(QString("Too low inliers (%1 in %2 out)").arg(threads[j]->getInliers()).arg(threads[j]->getOutliers()));
 							}
 						}
 						else
 						{
-							label->setText(QString("Too low inliers (%1 in %2 out)").arg(inliers).arg(outliers));
+							label->setText(QString("Too low matches (%1)").arg(matches[index].size()));
 						}
 					}
-					else
-					{
-						label->setText(QString("Too low matches (%1)").arg(mpts_1.size()));
-					}
-					mpts_1.clear();
-					mpts_2.clear();
-					indexes_1.clear();
-					indexes_2.clear();
-					outlier_mask.clear();
 				}
-				else
+			}
+			else
+			{
+				for(int i=0; i<matches.size(); ++i)
 				{
 					// colorize all matches if homography is not computed
 					int nColor = i % 11 + 7;
@@ -1060,7 +1269,11 @@ void MainWindow::update(const cv::Mat & image)
 					QLabel * label = ui_->dockWidget_objects->findChild<QLabel*>(QString("%1detection").arg(objects_.at(i)->id()));
 					label->setText(QString("%1 matches").arg(matches[i].size()));
 				}
+			}
 
+			//scores
+			for(int i=0; i<matches.size(); ++i)
+			{
 				scores.insert(objects_.at(i)->id(), matches[i].size());
 				if(maxScoreId == -1 || maxScore < matches[i].size())
 				{
@@ -1171,6 +1384,7 @@ void MainWindow::notifyParametersChanged(const QStringList & paramChanged)
 		else if(!nearestNeighborParamsChanged &&
 			    ( iter->contains(currentNNType) ||
 			      iter->compare(Settings::kGeneral_invertedSearch()) == 0 ||
+			      iter->compare(Settings::kGeneral_threads()) == 0 ||
 			      iter->compare(Settings::kNearestNeighbor_1Strategy()) == 0 ||
 			      iter->compare(Settings::kNearestNeighbor_2Distance_type()) == 0))
 		{

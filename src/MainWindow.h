@@ -83,7 +83,7 @@ private:
 	rtabmap::PdfPlotCurve * likelihoodCurve_;
 	AboutDialog * aboutDialog_;
 	QList<ObjWidget*> objects_;
-	cv::Mat objectsDescriptors_;
+	std::vector<cv::Mat> objectsDescriptors_;
 	cv::flann::Index flannIndex_;
 	QMap<int, int> dataRange_; // <last id of object's descriptor, id>
 	QTime updateRate_;

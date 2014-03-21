@@ -169,10 +169,11 @@ class Settings
 	PARAMETER(General, mirrorView, bool, true);
 	PARAMETER(General, invertedSearch, bool, false);
 	PARAMETER(General, controlsShown, bool, false);
+	PARAMETER(General, threads, int, 1);
 
 	PARAMETER(Homography, homographyComputed, bool, true);
 	PARAMETER(Homography, ransacReprojThr, double, 1.0);
-	PARAMETER(Homography, minimumInliers, uint, 10);
+	PARAMETER(Homography, minimumInliers, int, 10);
 
 public:
 	virtual ~Settings(){}
