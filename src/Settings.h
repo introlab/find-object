@@ -14,6 +14,7 @@ class Camera;
 
 typedef QMap<QString, QVariant> ParametersMap; // Key, value
 typedef QMap<QString, QString> ParametersType; // Key, type
+typedef QMap<QString, QString> DescriptionsMap; // Key, description
 
 typedef unsigned int uint;
 
@@ -32,11 +33,12 @@ typedef unsigned int uint;
 #define PARAMETER_GETTER_QString(PREFIX, NAME) \
 	static QString get##PREFIX##_##NAME() {return parameters_.value(#PREFIX "/" #NAME).toString();}
 
-#define PARAMETER(PREFIX, NAME, TYPE, DEFAULT_VALUE) \
+#define PARAMETER(PREFIX, NAME, TYPE, DEFAULT_VALUE, DESCRIPTION) \
 	public: \
 		static QString k##PREFIX##_##NAME() {return QString(#PREFIX "/" #NAME);} \
 		static TYPE default##PREFIX##_##NAME() {return DEFAULT_VALUE;} \
 		static QString type##PREFIX##_##NAME() {return QString(#TYPE);} \
+		static QString description##PREFIX##_##NAME() {return QString(DESCRIPTION);} \
 		PARAMETER_GETTER_##TYPE(PREFIX, NAME) \
 		static void set##PREFIX##_##NAME(const TYPE & value) {parameters_[#PREFIX "/" #NAME] = value;} \
 	private: \
@@ -45,135 +47,136 @@ typedef unsigned int uint;
 			Dummy##PREFIX##_##NAME() { \
 				defaultParameters_.insert(#PREFIX "/" #NAME, QVariant(DEFAULT_VALUE)); \
 				parameters_.insert(#PREFIX "/" #NAME, DEFAULT_VALUE); \
-				parametersType_.insert(#PREFIX "/" #NAME, #TYPE);} \
+				parametersType_.insert(#PREFIX "/" #NAME, #TYPE); \
+				descriptions_.insert(#PREFIX "/" #NAME, DESCRIPTION);} \
 		}; \
 		Dummy##PREFIX##_##NAME dummy##PREFIX##_##NAME;
 // MACRO END
 
 class Settings
 {
-	PARAMETER(Camera, 1deviceId, int, 0);
-	PARAMETER(Camera, 2imageWidth, int, 640);
-	PARAMETER(Camera, 3imageHeight, int, 480);
-	PARAMETER(Camera, 4imageRate, double, 2.0); // Hz
-	PARAMETER(Camera, 5mediaPath, QString, "");
+	PARAMETER(Camera, 1deviceId, int, 0, "Device ID (default 0).");
+	PARAMETER(Camera, 2imageWidth, int, 640, "Image width (0 means default width from camera).");
+	PARAMETER(Camera, 3imageHeight, int, 480, "Image height (0 means default height from camera).");
+	PARAMETER(Camera, 4imageRate, double, 2.0, "Image rate in Hz (0 Hz means as fast as possible)."); // Hz
+	PARAMETER(Camera, 5mediaPath, QString, "", "Video file or directory of images. If set, the camera is not used. See General->videoFormats and General->imageFormats for available formats.");
 
 	//List format : [Index:item0;item1;item3;...]
-	PARAMETER(Feature2D, 1Detector, QString, "5:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK");
-	PARAMETER(Feature2D, 2Descriptor, QString, "2:Brief;ORB;SIFT;SURF;BRISK;FREAK");
+	PARAMETER(Feature2D, 1Detector, QString, "5:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK" , "Keypoint detector.");
+	PARAMETER(Feature2D, 2Descriptor, QString, "2:Brief;ORB;SIFT;SURF;BRISK;FREAK", "Keypoint descriptor.");
 
-	PARAMETER(Feature2D, Brief_bytes, int, 32);
+	PARAMETER(Feature2D, Brief_bytes, int, 32, "Bytes is a length of descriptor in bytes. It can be equal 16, 32 or 64 bytes.");
 
-	PARAMETER(Feature2D, Dense_initFeatureScale, float, 1.f);
-	PARAMETER(Feature2D, Dense_featureScaleLevels, int, 1);
-	PARAMETER(Feature2D, Dense_featureScaleMul, float, 0.1f);
-	PARAMETER(Feature2D, Dense_initXyStep, int, 6);
-	PARAMETER(Feature2D, Dense_initImgBound, int, 0);
-	PARAMETER(Feature2D, Dense_varyXyStepWithScale, bool, true);
-	PARAMETER(Feature2D, Dense_varyImgBoundWithScale, bool, false);
+	PARAMETER(Feature2D, Dense_initFeatureScale, float, 1.f, "");
+	PARAMETER(Feature2D, Dense_featureScaleLevels, int, 1, "");
+	PARAMETER(Feature2D, Dense_featureScaleMul, float, 0.1f, "");
+	PARAMETER(Feature2D, Dense_initXyStep, int, 6, "");
+	PARAMETER(Feature2D, Dense_initImgBound, int, 0, "");
+	PARAMETER(Feature2D, Dense_varyXyStepWithScale, bool, true, "");
+	PARAMETER(Feature2D, Dense_varyImgBoundWithScale, bool, false, "");
 
-	PARAMETER(Feature2D, Fast_threshold, int, 10);
-	PARAMETER(Feature2D, Fast_nonmaxSuppression, bool, true);
+	PARAMETER(Feature2D, Fast_threshold, int, 10, "Threshold on difference between intensity of the central pixel and pixels of a circle around this pixel.");
+	PARAMETER(Feature2D, Fast_nonmaxSuppression, bool, true, " If true, non-maximum suppression is applied to detected corners (keypoints).");
 
-	PARAMETER(Feature2D, GFTT_maxCorners, int, 1000);
-	PARAMETER(Feature2D, GFTT_qualityLevel, double, 0.01);
-	PARAMETER(Feature2D, GFTT_minDistance, double, 1);
-	PARAMETER(Feature2D, GFTT_blockSize, int, 3);
-	PARAMETER(Feature2D, GFTT_useHarrisDetector, bool, false);
-	PARAMETER(Feature2D, GFTT_k, double, 0.04);
+	PARAMETER(Feature2D, GFTT_maxCorners, int, 1000, "");
+	PARAMETER(Feature2D, GFTT_qualityLevel, double, 0.01, "");
+	PARAMETER(Feature2D, GFTT_minDistance, double, 1, "");
+	PARAMETER(Feature2D, GFTT_blockSize, int, 3, "");
+	PARAMETER(Feature2D, GFTT_useHarrisDetector, bool, false, "");
+	PARAMETER(Feature2D, GFTT_k, double, 0.04, "");
 
-	PARAMETER(Feature2D, ORB_nFeatures, int, 500);
-	PARAMETER(Feature2D, ORB_scaleFactor, float,  1.2f);
-	PARAMETER(Feature2D, ORB_nLevels, int, 8);
-	PARAMETER(Feature2D, ORB_edgeThreshold, int, 31);
-	PARAMETER(Feature2D, ORB_firstLevel, int, 0);
-	PARAMETER(Feature2D, ORB_WTA_K, int, 2);
-	PARAMETER(Feature2D, ORB_scoreType, int, 0);
-	PARAMETER(Feature2D, ORB_patchSize, int, 31);
+	PARAMETER(Feature2D, ORB_nFeatures, int, 500, "The maximum number of features to retain.");
+	PARAMETER(Feature2D, ORB_scaleFactor, float,  1.2f, "Pyramid decimation ratio, greater than 1. scaleFactor==2 means the classical pyramid, where each next level has 4x less pixels than the previous, but such a big scale factor will degrade feature matching scores dramatically. On the other hand, too close to 1 scale factor will mean that to cover certain scale range you will need more pyramid levels and so the speed will suffer.");
+	PARAMETER(Feature2D, ORB_nLevels, int, 8, "The number of pyramid levels. The smallest level will have linear size equal to input_image_linear_size/pow(scaleFactor, nlevels).");
+	PARAMETER(Feature2D, ORB_edgeThreshold, int, 31, "This is size of the border where the features are not detected. It should roughly match the patchSize parameter.");
+	PARAMETER(Feature2D, ORB_firstLevel, int, 0, "It should be 0 in the current implementation.");
+	PARAMETER(Feature2D, ORB_WTA_K, int, 2, "The number of points that produce each element of the oriented BRIEF descriptor. The default value 2 means the BRIEF where we take a random point pair and compare their brightnesses, so we get 0/1 response. Other possible values are 3 and 4. For example, 3 means that we take 3 random points (of course, those point coordinates are random, but they are generated from the pre-defined seed, so each element of BRIEF descriptor is computed deterministically from the pixel rectangle), find point of maximum brightness and output index of the winner (0, 1 or 2). Such output will occupy 2 bits, and therefore it will need a special variant of Hamming distance, denoted as NORM_HAMMING2 (2 bits per bin). When WTA_K=4, we take 4 random points to compute each bin (that will also occupy 2 bits with possible values 0, 1, 2 or 3).");
+	PARAMETER(Feature2D, ORB_scoreType, int, 0, "The default HARRIS_SCORE means that Harris algorithm is used to rank features (the score is written to KeyPoint::score and is used to retain best nfeatures features); FAST_SCORE is alternative value of the parameter that produces slightly less stable keypoints, but it is a little faster to compute.");
+	PARAMETER(Feature2D, ORB_patchSize, int, 31, "size of the patch used by the oriented BRIEF descriptor. Of course, on smaller pyramid layers the perceived image area covered by a feature will be larger.");
 
-	PARAMETER(Feature2D, MSER_delta, int, 5);
-	PARAMETER(Feature2D, MSER_minArea, int, 60);
-	PARAMETER(Feature2D, MSER_maxArea, int, 14400);
-	PARAMETER(Feature2D, MSER_maxVariation, double, 0.25);
-	PARAMETER(Feature2D, MSER_minDiversity, double, 0.2);
-	PARAMETER(Feature2D, MSER_maxEvolution, int, 200);
-	PARAMETER(Feature2D, MSER_areaThreshold, double, 1.01);
-	PARAMETER(Feature2D, MSER_minMargin, double, 0.003);
-	PARAMETER(Feature2D, MSER_edgeBlurSize, int, 5);
+	PARAMETER(Feature2D, MSER_delta, int, 5, "");
+	PARAMETER(Feature2D, MSER_minArea, int, 60, "");
+	PARAMETER(Feature2D, MSER_maxArea, int, 14400, "");
+	PARAMETER(Feature2D, MSER_maxVariation, double, 0.25, "");
+	PARAMETER(Feature2D, MSER_minDiversity, double, 0.2, "");
+	PARAMETER(Feature2D, MSER_maxEvolution, int, 200, "");
+	PARAMETER(Feature2D, MSER_areaThreshold, double, 1.01, "");
+	PARAMETER(Feature2D, MSER_minMargin, double, 0.003, "");
+	PARAMETER(Feature2D, MSER_edgeBlurSize, int, 5, "");
 
-	PARAMETER(Feature2D, SIFT_nfeatures, int, 0);
-	PARAMETER(Feature2D, SIFT_nOctaveLayers, int, 3);
-	PARAMETER(Feature2D, SIFT_contrastThreshold, double, 0.04);
-	PARAMETER(Feature2D, SIFT_edgeThreshold, double, 10);
-	PARAMETER(Feature2D, SIFT_sigma, double, 1.6);
+	PARAMETER(Feature2D, SIFT_nfeatures, int, 0, "The number of best features to retain. The features are ranked by their scores (measured in SIFT algorithm as the local contrast).");
+	PARAMETER(Feature2D, SIFT_nOctaveLayers, int, 3, "The number of layers in each octave. 3 is the value used in D. Lowe paper. The number of octaves is computed automatically from the image resolution.");
+	PARAMETER(Feature2D, SIFT_contrastThreshold, double, 0.04, "The contrast threshold used to filter out weak features in semi-uniform (low-contrast) regions. The larger the threshold, the less features are produced by the detector.");
+	PARAMETER(Feature2D, SIFT_edgeThreshold, double, 10, "The threshold used to filter out edge-like features. Note that the its meaning is different from the contrastThreshold, i.e. the larger the edgeThreshold, the less features are filtered out (more features are retained).");
+	PARAMETER(Feature2D, SIFT_sigma, double, 1.6, "The sigma of the Gaussian applied to the input image at the octave #0. If your image is captured with a weak camera with soft lenses, you might want to reduce the number.");
 
-	PARAMETER(Feature2D, Star_maxSize, int, 45);
-	PARAMETER(Feature2D, Star_responseThreshold, int, 30);
-	PARAMETER(Feature2D, Star_lineThresholdProjected, int, 10);
-	PARAMETER(Feature2D, Star_lineThresholdBinarized, int, 8);
-	PARAMETER(Feature2D, Star_suppressNonmaxSize, int, 5);
+	PARAMETER(Feature2D, Star_maxSize, int, 45, "");
+	PARAMETER(Feature2D, Star_responseThreshold, int, 30, "");
+	PARAMETER(Feature2D, Star_lineThresholdProjected, int, 10, "");
+	PARAMETER(Feature2D, Star_lineThresholdBinarized, int, 8, "");
+	PARAMETER(Feature2D, Star_suppressNonmaxSize, int, 5, "");
 
-	PARAMETER(Feature2D, SURF_hessianThreshold, double, 600.0);
-	PARAMETER(Feature2D, SURF_nOctaves, int, 4);
-	PARAMETER(Feature2D, SURF_nOctaveLayers, int, 2);
-	PARAMETER(Feature2D, SURF_extended, bool, true);
-	PARAMETER(Feature2D, SURF_upright, bool, false);
+	PARAMETER(Feature2D, SURF_hessianThreshold, double, 600.0, "Threshold for hessian keypoint detector used in SURF.");
+	PARAMETER(Feature2D, SURF_nOctaves, int, 4, "Number of pyramid octaves the keypoint detector will use.");
+	PARAMETER(Feature2D, SURF_nOctaveLayers, int, 2, "Number of octave layers within each octave.");
+	PARAMETER(Feature2D, SURF_extended, bool, true, "Extended descriptor flag (true - use extended 128-element descriptors; false - use 64-element descriptors).");
+	PARAMETER(Feature2D, SURF_upright, bool, false, "Up-right or rotated features flag (true - do not compute orientation of features; false - compute orientation).");
 
-	PARAMETER(Feature2D, BRISK_thresh, int, 30);
-	PARAMETER(Feature2D, BRISK_octaves, int, 3);
-	PARAMETER(Feature2D, BRISK_patternScale, float, 1.0f);
+	PARAMETER(Feature2D, BRISK_thresh, int, 30, "FAST/AGAST detection threshold score.");
+	PARAMETER(Feature2D, BRISK_octaves, int, 3, "Detection octaves. Use 0 to do single scale.");
+	PARAMETER(Feature2D, BRISK_patternScale, float, 1.0f, "Apply this scale to the pattern used for sampling the neighbourhood of a keypoint.");
 
-	PARAMETER(Feature2D, FREAK_orientationNormalized, bool, true);
-	PARAMETER(Feature2D, FREAK_scaleNormalized, bool, true);
-	PARAMETER(Feature2D, FREAK_patternScale, float, 22.0f);
-	PARAMETER(Feature2D, FREAK_nOctaves, int, 4);
+	PARAMETER(Feature2D, FREAK_orientationNormalized, bool, true, "Enable orientation normalization.");
+	PARAMETER(Feature2D, FREAK_scaleNormalized, bool, true, "Enable scale normalization.");
+	PARAMETER(Feature2D, FREAK_patternScale, float, 22.0f, "Scaling of the description pattern.");
+	PARAMETER(Feature2D, FREAK_nOctaves, int, 4, "Number of octaves covered by the detected keypoints.");
 
-	PARAMETER(NearestNeighbor, 1Strategy, QString, "1:Linear;KDTree;KMeans;Composite;Autotuned;Lsh");
-	PARAMETER(NearestNeighbor, 2Distance_type, QString, "0:EUCLIDEAN_L2;MANHATTAN_L1;MINKOWSKI;MAX;HIST_INTERSECT;HELLINGER;CHI_SQUARE_CS;KULLBACK_LEIBLER_KL;HAMMING");
-	PARAMETER(NearestNeighbor, 3nndrRatioUsed, bool, true);
-	PARAMETER(NearestNeighbor, 4nndrRatio, float, 0.8f);
-	PARAMETER(NearestNeighbor, 5minDistanceUsed, bool, false);
-	PARAMETER(NearestNeighbor, 6minDistance, float, 1.6f);
+	PARAMETER(NearestNeighbor, 1Strategy, QString, "1:Linear;KDTree;KMeans;Composite;Autotuned;Lsh", "Nearest neighbor strategy.");
+	PARAMETER(NearestNeighbor, 2Distance_type, QString, "0:EUCLIDEAN_L2;MANHATTAN_L1;MINKOWSKI;MAX;HIST_INTERSECT;HELLINGER;CHI_SQUARE_CS;KULLBACK_LEIBLER_KL;HAMMING", "Distance type.");
+	PARAMETER(NearestNeighbor, 3nndrRatioUsed, bool, true, "Nearest neighbor distance ratio approach to accept the best match.");
+	PARAMETER(NearestNeighbor, 4nndrRatio, float, 0.8f, "Nearest neighbor distance ratio.");
+	PARAMETER(NearestNeighbor, 5minDistanceUsed, bool, false, "Minimum distance with the nearest descriptor to accept a match.");
+	PARAMETER(NearestNeighbor, 6minDistance, float, 1.6f, "Minimum distance. You can look at top of this panel where minimum and maximum distances are shown to properly set this parameter depending of the descriptor used.");
 
-	PARAMETER(NearestNeighbor, 7search_checks, int, 32);
-	PARAMETER(NearestNeighbor, 8search_eps, float, 0);
-	PARAMETER(NearestNeighbor, 9search_sorted, bool, true);
+	PARAMETER(NearestNeighbor, 7search_checks, int, 32, "The number of times the tree(s) in the index should be recursively traversed. A higher value for this parameter would give better search precision, but also take more time. If automatic configuration was used when the index was created, the number of checks required to achieve the specified precision was also computed, in which case this parameter is ignored.");
+	PARAMETER(NearestNeighbor, 8search_eps, float, 0, "");
+	PARAMETER(NearestNeighbor, 9search_sorted, bool, true, "");
 
-	PARAMETER(NearestNeighbor, KDTree_trees, int, 4);
+	PARAMETER(NearestNeighbor, KDTree_trees, int, 4, "The number of parallel kd-trees to use. Good values are in the range [1..16].");
 
-	PARAMETER(NearestNeighbor, Composite_trees, int, 4);
-	PARAMETER(NearestNeighbor, Composite_branching, int, 32);
-	PARAMETER(NearestNeighbor, Composite_iterations, int, 11);
-	PARAMETER(NearestNeighbor, Composite_centers_init, QString, "0:RANDOM;GONZALES;KMEANSPP");
-	PARAMETER(NearestNeighbor, Composite_cb_index, double, 0.2);
+	PARAMETER(NearestNeighbor, Composite_trees, int, 4, "The number of parallel kd-trees to use. Good values are in the range [1..16].");
+	PARAMETER(NearestNeighbor, Composite_branching, int, 32, "The branching factor to use for the hierarchical k-means tree.");
+	PARAMETER(NearestNeighbor, Composite_iterations, int, 11, "The maximum number of iterations to use in the k-means clustering stage when building the k-means tree. A value of -1 used here means that the k-means clustering should be iterated until convergence.");
+	PARAMETER(NearestNeighbor, Composite_centers_init, QString, "0:RANDOM;GONZALES;KMEANSPP", "The algorithm to use for selecting the initial centers when performing a k-means clustering step. The possible values are CENTERS_RANDOM (picks the initial cluster centers randomly), CENTERS_GONZALES (picks the initial centers using Gonzales’ algorithm) and CENTERS_KMEANSPP (picks the initial centers using the algorithm suggested in arthur_kmeanspp_2007 ).");
+	PARAMETER(NearestNeighbor, Composite_cb_index, double, 0.2, "This parameter (cluster boundary index) influences the way exploration is performed in the hierarchical kmeans tree. When cb_index is zero the next kmeans domain to be explored is chosen to be the one with the closest center. A value greater then zero also takes into account the size of the domain.");
 
-	PARAMETER(NearestNeighbor, Autotuned_target_precision, double, 0.8);
-	PARAMETER(NearestNeighbor, Autotuned_build_weight, double, 0.01);
-	PARAMETER(NearestNeighbor, Autotuned_memory_weight, double, 0);
-	PARAMETER(NearestNeighbor, Autotuned_sample_fraction, double, 0.1);
+	PARAMETER(NearestNeighbor, Autotuned_target_precision, double, 0.8, "Is a number between 0 and 1 specifying the percentage of the approximate nearest-neighbor searches that return the exact nearest-neighbor. Using a higher value for this parameter gives more accurate results, but the search takes longer. The optimum value usually depends on the application.");
+	PARAMETER(NearestNeighbor, Autotuned_build_weight, double, 0.01, "Specifies the importance of the index build time raported to the nearest-neighbor search time. In some applications it’s acceptable for the index build step to take a long time if the subsequent searches in the index can be performed very fast. In other applications it’s required that the index be build as fast as possible even if that leads to slightly longer search times.");
+	PARAMETER(NearestNeighbor, Autotuned_memory_weight, double, 0, "Is used to specify the tradeoff between time (index build time and search time) and memory used by the index. A value less than 1 gives more importance to the time spent and a value greater than 1 gives more importance to the memory usage.");
+	PARAMETER(NearestNeighbor, Autotuned_sample_fraction, double, 0.1, "Is a number between 0 and 1 indicating what fraction of the dataset to use in the automatic parameter configuration algorithm. Running the algorithm on the full dataset gives the most accurate results, but for very large datasets can take longer than desired. In such case using just a fraction of the data helps speeding up this algorithm while still giving good approximations of the optimum parameters.");
 
-	PARAMETER(NearestNeighbor, KMeans_branching, int, 32);
-	PARAMETER(NearestNeighbor, KMeans_iterations, int, 11);
-	PARAMETER(NearestNeighbor, KMeans_centers_init, QString, "0:RANDOM;GONZALES;KMEANSPP");
-	PARAMETER(NearestNeighbor, KMeans_cb_index, double, 0.2);
+	PARAMETER(NearestNeighbor, KMeans_branching, int, 32, "The branching factor to use for the hierarchical k-means tree.");
+	PARAMETER(NearestNeighbor, KMeans_iterations, int, 11, "The maximum number of iterations to use in the k-means clustering stage when building the k-means tree. A value of -1 used here means that the k-means clustering should be iterated until convergence.");
+	PARAMETER(NearestNeighbor, KMeans_centers_init, QString, "0:RANDOM;GONZALES;KMEANSPP", "The algorithm to use for selecting the initial centers when performing a k-means clustering step. The possible values are CENTERS_RANDOM (picks the initial cluster centers randomly), CENTERS_GONZALES (picks the initial centers using Gonzales’ algorithm) and CENTERS_KMEANSPP (picks the initial centers using the algorithm suggested in arthur_kmeanspp_2007 ).");
+	PARAMETER(NearestNeighbor, KMeans_cb_index, double, 0.2, "This parameter (cluster boundary index) influences the way exploration is performed in the hierarchical kmeans tree. When cb_index is zero the next kmeans domain to be explored is chosen to be the one with the closest center. A value greater then zero also takes into account the size of the domain.");
 
-	PARAMETER(NearestNeighbor, Lsh_table_number, int, 12);
-	PARAMETER(NearestNeighbor, Lsh_key_size, int, 20);
-	PARAMETER(NearestNeighbor, Lsh_multi_probe_level, int, 2);
+	PARAMETER(NearestNeighbor, Lsh_table_number, int, 12, "The number of hash tables to use (between 10 and 30 usually).");
+	PARAMETER(NearestNeighbor, Lsh_key_size, int, 20, "The size of the hash key in bits (between 10 and 20 usually).");
+	PARAMETER(NearestNeighbor, Lsh_multi_probe_level, int, 2, "The number of bits to shift to check for neighboring buckets (0 is regular LSH, 2 is recommended).");
 
-	PARAMETER(General, autoStartCamera, bool, false);
-	PARAMETER(General, autoUpdateObjects, bool, true);
-	PARAMETER(General, nextObjID, uint, 1);
-	PARAMETER(General, imageFormats, QString, "*.png *.jpg *.bmp *.tiff *.ppm");
-	PARAMETER(General, videoFormats, QString, "*.avi *.m4v *.mp4");
-	PARAMETER(General, mirrorView, bool, true);
-	PARAMETER(General, invertedSearch, bool, false);
-	PARAMETER(General, controlsShown, bool, false);
-	PARAMETER(General, threads, int, 1);
+	PARAMETER(General, autoStartCamera, bool, false, "Automatically start the camera when the applciation is opened.");
+	PARAMETER(General, autoUpdateObjects, bool, true, "Automatically update objects on every parameter changes, otherwise you would need to press \"Update objects\" on the objects panel.");
+	PARAMETER(General, nextObjID, uint, 1, "Next object ID to use.");
+	PARAMETER(General, imageFormats, QString, "*.png *.jpg *.bmp *.tiff *.ppm", "Image formats supported.");
+	PARAMETER(General, videoFormats, QString, "*.avi *.m4v *.mp4", "Video formats supported.");
+	PARAMETER(General, mirrorView, bool, true, "Flip the camera image horizontally (like all webcam applications).");
+	PARAMETER(General, invertedSearch, bool, false, "In contrast to classic Find-Object usage (where we match descriptors from the objects to those in a vocabulary created with descriptors extracted from the scene), we create a vocabulary from all the objects' descriptors and we match scene's descriptors to this vocabulary. It is the inverted search mode.");
+	PARAMETER(General, controlsShown, bool, false, "Show play/image seek controls (useful with video file and directory of images modes).");
+	PARAMETER(General, threads, int, 1, "Number of threads used for objects matching and homography computation. 0 means as many threads as objects. On InvertedSearch mode, multi-threading has only effect on homography computation.");
 
-	PARAMETER(Homography, homographyComputed, bool, true);
-	PARAMETER(Homography, ransacReprojThr, double, 1.0);
-	PARAMETER(Homography, minimumInliers, int, 10);
+	PARAMETER(Homography, homographyComputed, bool, true, "Compute homography? On ROS, this is required to publish objects detected.");
+	PARAMETER(Homography, ransacReprojThr, double, 1.0, "Maximum allowed reprojection error to treat a point pair as an inlier (used in the RANSAC method only). It usually makes sense to set this parameter somewhere in the range of 1 to 10.");
+	PARAMETER(Homography, minimumInliers, int, 10, "Minimum inliers to accept the homography.");
 
 public:
 	virtual ~Settings(){}
@@ -188,6 +191,7 @@ public:
 	static const ParametersMap & getDefaultParameters() {return defaultParameters_;}
 	static const ParametersMap & getParameters() {return parameters_;}
 	static const ParametersType & getParametersType() {return parametersType_;}
+	static const DescriptionsMap & getDescriptions() {return descriptions_;}
 	static void setParameter(const QString & key, const QVariant & value) {if(parameters_.contains(key))parameters_[key] = value;}
 	static void resetParameter(const QString & key) {if(defaultParameters_.contains(key)) parameters_.insert(key, defaultParameters_.value(key));}
 	static QVariant getParameter(const QString & key) {return parameters_.value(key, QVariant());}
@@ -210,6 +214,7 @@ private:
 	static ParametersMap defaultParameters_;
 	static ParametersMap parameters_;
 	static ParametersType parametersType_;
+	static DescriptionsMap descriptions_;
 	static Settings dummyInit_;
 };
 

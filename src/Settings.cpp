@@ -15,6 +15,7 @@
 ParametersMap Settings::defaultParameters_;
 ParametersMap Settings::parameters_;
 ParametersType Settings::parametersType_;
+DescriptionsMap Settings::descriptions_;
 Settings Settings::dummyInit_;
 
 QString Settings::workingDirectory()

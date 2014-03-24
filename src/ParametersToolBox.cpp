@@ -224,14 +224,14 @@ void ParametersToolBox::addParameter(QVBoxLayout * layout,
 		widget->addItems(splitted.last().split(';'));
 		widget->setCurrentIndex(splitted.first().toInt());
 		connect(widget, SIGNAL(currentIndexChanged(int)), this, SLOT(changeParameter(int)));
-		addParameter(layout, key.split('/').last(), widget);
+		addParameter(layout, key, widget);
 	}
 	else
 	{
 		QLineEdit * widget = new QLineEdit(value, this);
 		widget->setObjectName(key);
 		connect(widget, SIGNAL(editingFinished()), this, SLOT(changeParameter()));
-		addParameter(layout, key.split('/').last(), widget);
+		addParameter(layout, key, widget);
 	}
 }
 
@@ -266,7 +266,7 @@ void ParametersToolBox::addParameter(QVBoxLayout * layout,
 	widget->setValue(value);
 	widget->setObjectName(key);
 	connect(widget, SIGNAL(editingFinished()), this, SLOT(changeParameter()));
-	addParameter(layout, key.split('/').last(), widget);
+	addParameter(layout, key, widget);
 }
 
 void ParametersToolBox::addParameter(QVBoxLayout * layout,
@@ -292,7 +292,7 @@ void ParametersToolBox::addParameter(QVBoxLayout * layout,
 	widget->setValue(value);
 	widget->setObjectName(key);
 	connect(widget, SIGNAL(editingFinished()), this, SLOT(changeParameter()));
-	addParameter(layout, key.split('/').last(), widget);
+	addParameter(layout, key, widget);
 }
 
 void ParametersToolBox::addParameter(QVBoxLayout * layout,
@@ -303,19 +303,21 @@ void ParametersToolBox::addParameter(QVBoxLayout * layout,
 	widget->setChecked(value);
 	widget->setObjectName(key);
 	connect(widget, SIGNAL(stateChanged(int)), this, SLOT(changeParameter(int)));
-	addParameter(layout, key.split('/').last(), widget);
+	addParameter(layout, key, widget);
 }
 
-void ParametersToolBox::addParameter(QVBoxLayout * layout, const QString & name, QWidget * widget)
+void ParametersToolBox::addParameter(QVBoxLayout * layout, const QString & key, QWidget * widget)
 {
 	QHBoxLayout * hLayout = new QHBoxLayout();
 	layout->insertLayout(layout->count()-1, hLayout);
-	QString tmp = name;
+	QString tmp = key.split('/').last();
 	if(tmp.at(0).isDigit())
 	{
 		tmp.remove(0,1);
 	}
-	hLayout->addWidget(new QLabel(tmp, this));
+	QLabel * label = new QLabel(tmp, this);
+	label->setToolTip(QString("<FONT>%1</FONT>").arg(Settings::getDescriptions().value(key, "")));
+	hLayout->addWidget(label);
 	hLayout->addWidget(widget);
 }
 
