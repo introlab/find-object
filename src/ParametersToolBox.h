@@ -42,6 +42,7 @@ private slots:
 
 private:
 	QStringList resetPage(int index);
+	void updateParametersVisibility();
 };
 
 #endif /* PARAMETERSTOOLBOX_H_ */

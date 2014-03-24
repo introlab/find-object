@@ -109,6 +109,76 @@ void ParametersToolBox::resetAllPages()
 	emit parametersChanged(paramChanged);
 }
 
+void ParametersToolBox::updateParametersVisibility()
+{
+	//show/hide not used parameters
+	QComboBox * descriptorBox = this->findChild<QComboBox*>(Settings::kFeature2D_2Descriptor());
+	QComboBox * detectorBox = this->findChild<QComboBox*>(Settings::kFeature2D_1Detector());
+	if(descriptorBox && detectorBox)
+	{
+		QString group = Settings::kFeature2D_2Descriptor().split('/').first();
+		QWidget * panel = 0;
+		for(int i=0; i<this->count(); ++i)
+		{
+			if(this->widget(i)->objectName().compare(group) == 0)
+			{
+				panel = this->widget(i);
+				break;
+			}
+		}
+		if(panel)
+		{
+			const QObjectList & objects = panel->children();
+			QString descriptorName = descriptorBox->currentText();
+			QString detectorName = detectorBox->currentText();
+
+			for(int i=0; i<objects.size(); ++i)
+			{
+				if(objects[i]->objectName().contains(descriptorName) || objects[i]->objectName().contains(detectorName))
+				{
+					((QWidget*)objects[i])->setVisible(true);
+				}
+				else if(!objects[i]->objectName().split('/').at(1).at(0).isDigit())
+				{
+					((QWidget*)objects[i])->setVisible(false);
+				}
+			}
+		}
+	}
+
+	QComboBox * nnBox = this->findChild<QComboBox*>(Settings::kNearestNeighbor_1Strategy());
+	if(nnBox)
+	{
+		QString group = Settings::kNearestNeighbor_1Strategy().split('/').first();
+		QWidget * panel = 0;
+		for(int i=0; i<this->count(); ++i)
+		{
+			if(this->widget(i)->objectName().compare(group) == 0)
+			{
+				panel = this->widget(i);
+				break;
+			}
+		}
+		if(panel)
+		{
+			const QObjectList & objects = panel->children();
+			QString nnName = nnBox->currentText();
+
+			for(int i=0; i<objects.size(); ++i)
+			{
+				if(objects[i]->objectName().contains(nnName))
+				{
+					((QWidget*)objects[i])->setVisible(true);
+				}
+				else if(!objects[i]->objectName().split('/').at(1).at(0).isDigit())
+				{
+					((QWidget*)objects[i])->setVisible(false);
+				}
+			}
+		}
+	}
+}
+
 void ParametersToolBox::setupUi()
 {
 	this->removeItem(0); // remove dummy page used in .ui
@@ -139,6 +209,8 @@ void ParametersToolBox::setupUi()
 			addParameter((QVBoxLayout*)currentItem->layout(), iter.key(), iter.value());
 		}
 	}
+
+	updateParametersVisibility();
 }
 
 void ParametersToolBox::updateParameter(const QString & key)
@@ -316,6 +388,7 @@ void ParametersToolBox::addParameter(QVBoxLayout * layout, const QString & key, 
 		tmp.remove(0,1);
 	}
 	QLabel * label = new QLabel(tmp, this);
+	label->setObjectName(key+"/label");
 	label->setToolTip(QString("<FONT>%1</FONT>").arg(Settings::getDescriptions().value(key, "")));
 	hLayout->addWidget(label);
 	hLayout->addWidget(widget);
@@ -355,6 +428,7 @@ void ParametersToolBox::changeParameter()
 		emit parametersChanged(paramChanged);
 	}
 }
+
 void ParametersToolBox::changeParameter(const int & value)
 {
 	if(sender())
@@ -391,6 +465,7 @@ void ParametersToolBox::changeParameter(const int & value)
 					nnBox->blockSignals(false);
 					if(sender() == nnBox)
 					{
+						this->updateParametersVisibility();
 						return;
 					}
 					nnStrategyChanged = true;
@@ -412,6 +487,7 @@ void ParametersToolBox::changeParameter(const int & value)
 					nnBox->blockSignals(false);
 					if(sender() == nnBox)
 					{
+						this->updateParametersVisibility();
 						return;
 					}
 					nnStrategyChanged = true;
@@ -442,6 +518,7 @@ void ParametersToolBox::changeParameter(const int & value)
 					distBox->blockSignals(false);
 					if(sender() == distBox)
 					{
+						this->updateParametersVisibility();
 						return;
 					}
 					paramChanged.append(Settings::kNearestNeighbor_2Distance_type());
@@ -455,6 +532,8 @@ void ParametersToolBox::changeParameter(const int & value)
 			}
 			QString merged = QString::number(value) + QString(":") + items.join(";");
 			Settings::setParameter(sender()->objectName(), merged);
+
+			this->updateParametersVisibility();
 		}
 		else if(checkBox)
 		{
