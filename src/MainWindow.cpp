@@ -38,9 +38,10 @@
 #include "utilite/UDirectory.h"
 
 // Camera ownership transferred
-MainWindow::MainWindow(Camera * camera, QWidget * parent) :
+MainWindow::MainWindow(Camera * camera, const QString & settings, QWidget * parent) :
 	QMainWindow(parent),
 	camera_(camera),
+	settings_(settings),
 	likelihoodCurve_(0),
 	lowestRefreshRate_(99),
 	objectsModified_(false)
@@ -67,9 +68,14 @@ MainWindow::MainWindow(Camera * camera, QWidget * parent) :
 	ui_->dockWidget_plot->setVisible(false);
 	ui_->widget_controls->setVisible(false);
 
+	if(settings_.isEmpty())
+	{
+		settings_ = Settings::iniDefaultPath();
+	}
+
 	QByteArray geometry;
 	QByteArray state;
-	Settings::loadSettings(Settings::iniDefaultPath(), &geometry, &state);
+	Settings::loadSettings(settings_, &geometry, &state);
 	this->restoreGeometry(geometry);
 	this->restoreState(state);
 
@@ -121,6 +127,8 @@ connect(ui_->toolBox, SIGNAL(parametersChanged(const QStringList &)), this, SLOT
 	connect(ui_->actionAbout, SIGNAL(triggered()), aboutDialog_ , SLOT(exec()));
 	connect(ui_->actionRestore_all_default_settings, SIGNAL(triggered()), ui_->toolBox, SLOT(resetAllPages()));
 	connect(ui_->actionRemove_all_objects, SIGNAL(triggered()), this, SLOT(removeAllObjects()));
+	connect(ui_->actionSave_settings, SIGNAL(triggered()), this, SLOT(saveSettings()));
+	connect(ui_->actionLoad_settings, SIGNAL(triggered()), this, SLOT(loadSettings()));
 
 	connect(ui_->pushButton_play, SIGNAL(clicked()), this, SLOT(startProcessing()));
 	connect(ui_->pushButton_stop, SIGNAL(clicked()), this, SLOT(stopProcessing()));
@@ -182,7 +190,7 @@ void MainWindow::closeEvent(QCloseEvent * event)
 	}
 	if(quit)
 	{
-		Settings::saveSettings(Settings::iniDefaultPath(), this->saveGeometry(), this->saveState());
+		Settings::saveSettings(settings_, this->saveGeometry(), this->saveState());
 		event->accept();
 	}
 	else
@@ -199,6 +207,65 @@ ParametersToolBox * MainWindow::parametersToolBox() const
 void MainWindow::setSourceImageText(const QString & text)
 {
 	ui_->imageView_source->setTextLabel(text);
+}
+
+void MainWindow::loadSettings()
+{
+	QString path = QFileDialog::getOpenFileName(this, tr("Load settings..."), Settings::workingDirectory(), "*.ini");
+	if(!path.isEmpty())
+	{
+		if(QFileInfo(path).suffix().compare("ini") != 0)
+		{
+			path.append(".ini");
+		}
+		loadSettings(path);
+	}
+}
+void MainWindow::saveSettings()
+{
+	QString path = QFileDialog::getSaveFileName(this, tr("Save settings..."), Settings::workingDirectory(), "*.ini");
+	if(!path.isEmpty())
+	{
+		if(QFileInfo(path).suffix().compare("ini") != 0)
+		{
+			path.append(".ini");
+		}
+		saveSettings(path);
+	}
+}
+
+bool MainWindow::loadSettings(const QString & path)
+{
+	if(!path.isEmpty() && QFileInfo(path).suffix().compare("ini") == 0)
+	{
+		QByteArray geometry;
+		QByteArray state;
+		Settings::loadSettings(path, &geometry, &state);
+		this->restoreGeometry(geometry);
+		this->restoreState(state);
+
+		//update parameters tool box
+		const ParametersMap & parameters = Settings::getParameters();
+		for(ParametersMap::const_iterator iter = parameters.begin(); iter!= parameters.constEnd(); ++iter)
+		{
+			ui_->toolBox->updateParameter(iter.key());
+		}
+
+		return true;
+	}
+	printf("Path \"%s\" not valid (should be *.ini)\n", path.toStdString().c_str());
+	return false;
+}
+
+bool MainWindow::saveSettings(const QString & path)
+{
+	if(!path.isEmpty() && QFileInfo(path).suffix().compare("ini") == 0)
+	{
+		Settings::saveSettings(path, this->saveGeometry(), this->saveState());
+		return true;
+	}
+	printf("Path \"%s\" not valid (should be *.ini)\n", path.toStdString().c_str());
+	return false;
 }
 
 int MainWindow::loadObjects(const QString & dirPath)

@@ -33,8 +33,11 @@ class MainWindow : public QMainWindow
 	Q_OBJECT
 
 public:
-	MainWindow(Camera * camera = 0, QWidget * parent = 0);
+	MainWindow(Camera * camera = 0, const QString & settings = "", QWidget * parent = 0);
 	virtual ~MainWindow();
+
+	bool loadSettings(const QString & path);
+	bool saveSettings(const QString & path);
 
 	int loadObjects(const QString & dirPath);
 	void saveObjects(const QString & dirPath);
@@ -51,6 +54,8 @@ public slots:
 	void pauseProcessing();
 
 private slots:
+	void loadSettings();
+	void saveSettings();
 	void loadObjects();
 	bool saveObjects();
 	void addObjectFromScene();
@@ -80,6 +85,7 @@ private:
 private:
 	Ui_mainWindow * ui_;
 	Camera * camera_;
+	QString settings_;
 	rtabmap::PdfPlotCurve * likelihoodCurve_;
 	AboutDialog * aboutDialog_;
 	QList<ObjWidget*> objects_;
