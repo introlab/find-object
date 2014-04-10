@@ -18,6 +18,7 @@
 #include <stdio.h>
 
 #include "opencv2/calib3d/calib3d.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
 
 #include <QtCore/QTextStream>
 #include <QtCore/QFile>
@@ -1038,32 +1039,24 @@ void MainWindow::update(const cv::Mat & image)
 
 	if(!image.empty())
 	{
-		IplImage iplImage = image;
-
 		QTime time;
 		time.start();
 
 		//Convert to grayscale
-		IplImage * imageGrayScale = 0;
-		if(iplImage.nChannels != 1 || iplImage.depth != IPL_DEPTH_8U)
+		cv::Mat grayscaleImg;
+		if(image.channels() != 1 || image.depth() != CV_8U)
 		{
-			imageGrayScale = cvCreateImage(cvSize(iplImage.width,iplImage.height), IPL_DEPTH_8U, 1);
-			cvCvtColor(&iplImage, imageGrayScale, CV_BGR2GRAY);
-		}
-		cv::Mat img;
-		if(imageGrayScale)
-		{
-			img = cv::Mat(imageGrayScale);
+			cv::cvtColor(image, grayscaleImg, cv::COLOR_BGR2GRAY);
 		}
 		else
 		{
-			img =  cv::Mat(&iplImage);
+			grayscaleImg =  image;
 		}
 
 		// EXTRACT KEYPOINTS
 		cv::FeatureDetector * detector = Settings::createFeaturesDetector();
 		std::vector<cv::KeyPoint> keypoints;
-		detector->detect(img, keypoints);
+		detector->detect(grayscaleImg, keypoints);
 		delete detector;
 		ui_->label_timeDetection->setNum(time.restart());
 
@@ -1072,15 +1065,11 @@ void MainWindow::update(const cv::Mat & image)
 		{
 			// EXTRACT DESCRIPTORS
 			cv::DescriptorExtractor * extractor = Settings::createDescriptorsExtractor();
-			extractor->compute(img, keypoints, descriptors);
+			extractor->compute(grayscaleImg, keypoints, descriptors);
 			delete extractor;
 			if((int)keypoints.size() != descriptors.rows)
 			{
 				printf("ERROR : kpt=%d != descriptors=%d\n", (int)keypoints.size(), descriptors.rows);
-			}
-			if(imageGrayScale)
-			{
-				cvReleaseImage(&imageGrayScale);
 			}
 			ui_->label_timeExtraction->setNum(time.restart());
 		}
@@ -1092,7 +1081,7 @@ void MainWindow::update(const cv::Mat & image)
 
 		if(this->isVisible())
 		{
-			ui_->imageView_source->setData(keypoints, cv::Mat(), &iplImage, Settings::currentDetectorType(), Settings::currentDescriptorType());
+			ui_->imageView_source->setData(keypoints, cv::Mat(), image, Settings::currentDetectorType(), Settings::currentDescriptorType());
 		}
 
 		// COMPARE
@@ -1377,7 +1366,7 @@ void MainWindow::update(const cv::Mat & image)
 		}
 		else if(this->isVisible())
 		{
-			ui_->imageView_source->setData(keypoints, cv::Mat(), &iplImage, Settings::currentDetectorType(), Settings::currentDescriptorType());
+			ui_->imageView_source->setData(keypoints, cv::Mat(), image, Settings::currentDetectorType(), Settings::currentDescriptorType());
 		}
 
 		if(this->isVisible())
