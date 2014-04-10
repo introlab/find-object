@@ -164,7 +164,7 @@ class Settings
 	PARAMETER(NearestNeighbor, Lsh_key_size, int, 20, "The size of the hash key in bits (between 10 and 20 usually).");
 	PARAMETER(NearestNeighbor, Lsh_multi_probe_level, int, 2, "The number of bits to shift to check for neighboring buckets (0 is regular LSH, 2 is recommended).");
 
-	PARAMETER(General, autoStartCamera, bool, false, "Automatically start the camera when the applciation is opened.");
+	PARAMETER(General, autoStartCamera, bool, false, "Automatically start the camera when the application is opened.");
 	PARAMETER(General, autoUpdateObjects, bool, true, "Automatically update objects on every parameter changes, otherwise you would need to press \"Update objects\" on the objects panel.");
 	PARAMETER(General, nextObjID, uint, 1, "Next object ID to use.");
 	PARAMETER(General, imageFormats, QString, "*.png *.jpg *.bmp *.tiff *.ppm", "Image formats supported.");
