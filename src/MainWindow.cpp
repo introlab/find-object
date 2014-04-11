@@ -992,7 +992,7 @@ protected:
 		{
 			h_ = findHomography(mpts_1,
 					mpts_2,
-					cv::RANSAC,
+					Settings::getHomographyMethod(),
 					Settings::getHomography_ransacReprojThr(),
 					outlierMask_);
 
@@ -1005,6 +1005,14 @@ protected:
 				else
 				{
 					++outliers_;
+				}
+			}
+			if(Settings::getHomography_ignoreWhenAllInliers())
+			{
+				// ignore homography when all features are inliers
+				if(inliers_ == (int)outlierMask_.size())
+				{
+					h_ = cv::Mat();
 				}
 			}
 		}
@@ -1091,6 +1099,7 @@ void MainWindow::update(const cv::Mat & image)
 		   objectsDescriptors_[0].type() == descriptors.type()) // binary descriptor issue, if the dataTree is not yet updated with modified settings
 		{
 			QVector<QMultiMap<int, int> > matches(objects_.size()); // Map< ObjectDescriptorIndex, SceneDescriptorIndex >
+			QVector<int> matchesId(objects_.size(), -1);
 			float minMatchedDistance = -1.0f;
 			float maxMatchedDistance = -1.0f;
 
@@ -1223,7 +1232,7 @@ void MainWindow::update(const cv::Mat & image)
 			QMap<int, float> scores;
 			int maxScoreId = -1;
 			int maxScore = 0;
-			QMap<int, QPair<QRect, QTransform> > objectsDetected;
+			QMultiMap<int, QPair<QRect, QTransform> > objectsDetected;
 
 			if(Settings::getHomography_homographyComputed())
 			{
@@ -1239,7 +1248,8 @@ void MainWindow::update(const cv::Mat & image)
 
 					for(int k=i; k<i+threadCounts && k<matches.size(); ++k)
 					{
-						threads.push_back(new HomographyThread(&matches[k], k, &objects_.at(k)->keypoints(), &keypoints));
+						int objectId = matchesId[k] >=0 ? matchesId[k]:k; // the first matches ids correspond object index
+						threads.push_back(new HomographyThread(&matches[k], objectId, &objects_.at(objectId)->keypoints(), &keypoints));
 						threads.back()->start();
 					}
 
@@ -1257,55 +1267,101 @@ void MainWindow::update(const cv::Mat & image)
 						{
 							if(threads[j]->getInliers() >= Settings::getHomography_minimumInliers())
 							{
-								if(this->isVisible())
-								{
-									for(unsigned int k=0; k<threads[j]->getOutlierMask().size();++k)
-									{
-										if(threads[j]->getOutlierMask().at(k))
-										{
-											objects_.at(index)->setKptColor(threads[j]->getIndexesA().at(k), color);
-											ui_->imageView_source->setKptColor(threads[j]->getIndexesB().at(k), color);
-										}
-										else
-										{
-											objects_.at(index)->setKptColor(threads[j]->getIndexesA().at(k), QColor(0,0,0));
-										}
-									}
-								}
-
 								const cv::Mat & H = threads[j]->getHomography();
 								QTransform hTransform(
 									H.at<double>(0,0), H.at<double>(1,0), H.at<double>(2,0),
 									H.at<double>(0,1), H.at<double>(1,1), H.at<double>(2,1),
 									H.at<double>(0,2), H.at<double>(1,2), H.at<double>(2,2));
 
-								// find center of object
-								QRect rect = objects_.at(index)->pixmap().rect();
-								objectsDetected.insert(objects_.at(index)->id(), QPair<QRect, QTransform>(rect, hTransform));
-								// Example getting the center of the object in the scene using the homography
-								//QPoint pos(rect.width()/2, rect.height()/2);
-								//hTransform.map(pos)
-
-								// add rectangle
-								if(this->isVisible())
+								int distance = Settings::getGeneral_multiDetectionRadius(); // in pixels
+								if(Settings::getGeneral_multiDetection())
 								{
-									label->setText(QString("%1 in %2 out").arg(threads[j]->getInliers()).arg(threads[j]->getOutliers()));
-									QPen rectPen(color);
-									rectPen.setWidth(4);
-									QGraphicsRectItem * rectItem = new QGraphicsRectItem(rect);
-									rectItem->setPen(rectPen);
-									rectItem->setTransform(hTransform);
-									ui_->imageView_source->addRect(rectItem);
+									// Remove inliers and recompute homography
+									QMultiMap<int, int> newMatches;
+									for(unsigned int k=0; k<threads[j]->getOutlierMask().size();++k)
+									{
+										if(!threads[j]->getOutlierMask().at(k))
+										{
+											newMatches.insert(threads[j]->getIndexesA().at(k), threads[j]->getIndexesB().at(k));
+										}
+									}
+									matches.push_back(newMatches);
+									matchesId.push_back(index);
+
+									// compute distance from previous added same objects...
+									QMultiMap<int, QPair<QRect, QTransform> >::iterator objIter = objectsDetected.find(objects_.at(index)->id());
+									for(;objIter!=objectsDetected.end() && objIter.key() == objects_.at(index)->id(); ++objIter)
+									{
+										qreal dx = objIter.value().second.m31() - hTransform.m31();
+										qreal dy = objIter.value().second.m32() - hTransform.m32();
+										int d = (int)sqrt(dx*dx + dy*dy);
+										if(d < distance)
+										{
+											distance = d;
+										}
+									}
+								}
+
+								if(distance >= Settings::getGeneral_multiDetectionRadius())
+								{
+									if(this->isVisible())
+									{
+										for(unsigned int k=0; k<threads[j]->getOutlierMask().size();++k)
+										{
+											if(threads[j]->getOutlierMask().at(k))
+											{
+												objects_.at(index)->setKptColor(threads[j]->getIndexesA().at(k), color);
+												ui_->imageView_source->setKptColor(threads[j]->getIndexesB().at(k), color);
+											}
+											else if(!objectsDetected.contains(objects_.at(index)->id()))
+											{
+												objects_.at(index)->setKptColor(threads[j]->getIndexesA().at(k), QColor(0,0,0));
+											}
+										}
+									}
+
+									QRect rect = objects_.at(index)->pixmap().rect();
+									objectsDetected.insert(objects_.at(index)->id(), QPair<QRect, QTransform>(rect, hTransform));
+									// Example getting the center of the object in the scene using the homography
+									//QPoint pos(rect.width()/2, rect.height()/2);
+									//hTransform.map(pos)
+
+									// add rectangle
+									if(this->isVisible())
+									{
+										if(objectsDetected.count(objects_.at(index)->id()) > 1)
+										{
+											// if a homography is already found, set the objects count
+											label->setText(QString("%1 objects found").arg(objectsDetected.count(objects_.at(index)->id())));
+										}
+										else
+										{
+											label->setText(QString("%1 in %2 out").arg(threads[j]->getInliers()).arg(threads[j]->getOutliers()));
+										}
+										QPen rectPen(color);
+										rectPen.setWidth(4);
+										QGraphicsRectItem * rectItem = new QGraphicsRectItem(rect);
+										rectItem->setPen(rectPen);
+										rectItem->setTransform(hTransform);
+										ui_->imageView_source->addRect(rectItem);
+									}
 								}
 							}
-							else
+							else if(this->isVisible() && objectsDetected.count(objects_.at(index)->id()) == 0)
 							{
 								label->setText(QString("Too low inliers (%1 in %2 out)").arg(threads[j]->getInliers()).arg(threads[j]->getOutliers()));
 							}
 						}
-						else
+						else if(this->isVisible() && objectsDetected.count(objects_.at(index)->id()) == 0)
 						{
-							label->setText(QString("Too low matches (%1)").arg(matches[index].size()));
+							if(threads[j]->getInliers() >= Settings::getHomography_minimumInliers())
+							{
+								label->setText(QString("Ignored, all inliers (%1 in %2 out)").arg(matches[index].size()).arg(threads[j]->getOutliers()));
+							}
+							else
+							{
+								label->setText(QString("Too low matches (%1)").arg(matches[index].size()));
+							}
 						}
 					}
 				}
@@ -1330,10 +1386,14 @@ void MainWindow::update(const cv::Mat & image)
 			//scores
 			for(int i=0; i<matches.size(); ++i)
 			{
-				scores.insert(objects_.at(i)->id(), matches[i].size());
+				int objectIndex = matchesId.at(i) >= 0? matchesId.at(i): i;
+				if(!scores.contains(objects_.at(objectIndex)->id()))
+				{
+					scores.insert(objects_.at(objectIndex)->id(), matches[i].size());
+				}
 				if(maxScoreId == -1 || maxScore < matches[i].size())
 				{
-					maxScoreId = objects_.at(i)->id();
+					maxScoreId = objects_.at(objectIndex)->id();
 					maxScore = matches[i].size();
 				}
 			}

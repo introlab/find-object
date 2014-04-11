@@ -173,10 +173,14 @@ class Settings
 	PARAMETER(General, invertedSearch, bool, false, "In contrast to classic Find-Object usage (where we match descriptors from the objects to those in a vocabulary created with descriptors extracted from the scene), we create a vocabulary from all the objects' descriptors and we match scene's descriptors to this vocabulary. It is the inverted search mode.");
 	PARAMETER(General, controlsShown, bool, false, "Show play/image seek controls (useful with video file and directory of images modes).");
 	PARAMETER(General, threads, int, 1, "Number of threads used for objects matching and homography computation. 0 means as many threads as objects. On InvertedSearch mode, multi-threading has only effect on homography computation.");
+	PARAMETER(General, multiDetection, bool, false, "Multiple detection of the same object.");
+	PARAMETER(General, multiDetectionRadius, int, 30, "Ignore detection of the same object in X pixels radius of the previous detections.");
 
 	PARAMETER(Homography, homographyComputed, bool, true, "Compute homography? On ROS, this is required to publish objects detected.");
+	PARAMETER(Homography, method, QString, "1:LMEDS;RANSAC", "Type of the robust estimation algorithm: least-median algorithm or RANSAC algorithm.");
 	PARAMETER(Homography, ransacReprojThr, double, 1.0, "Maximum allowed reprojection error to treat a point pair as an inlier (used in the RANSAC method only). It usually makes sense to set this parameter somewhere in the range of 1 to 10.");
 	PARAMETER(Homography, minimumInliers, int, 10, "Minimum inliers to accept the homography.");
+	PARAMETER(Homography, ignoreWhenAllInliers, bool, false, "Ignore homography when all features are inliers (sometimes when the homography doesn't converge, it returns the best homography with all features as inliers).");
 
 public:
 	virtual ~Settings(){}
@@ -206,6 +210,8 @@ public:
 	static cv::flann::IndexParams * createFlannIndexParams();
 	static cvflann::flann_distance_t getFlannDistanceType();
 	static cv::flann::SearchParams getFlannSearchParams();
+
+	static int getHomographyMethod();
 
 private:
 	Settings(){}

@@ -74,7 +74,7 @@ private slots:
 	void moveCameraFrame(int frame);
 
 signals:
-	void objectsFound(const QMap<int, QPair<QRect, QTransform> > &);
+	void objectsFound(const QMultiMap<int, QPair<QRect, QTransform> > &);
 
 private:
 	void addObjectFromFile(const QString & filePath);

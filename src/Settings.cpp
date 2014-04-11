@@ -9,6 +9,7 @@
 #include <QtCore/QDir>
 #include <stdio.h>
 #include <opencv2/nonfree/features2d.hpp>
+#include <opencv2/calib3d/calib3d.hpp>
 
 #define VERBOSE 0
 
@@ -519,3 +520,32 @@ cv::flann::SearchParams Settings::getFlannSearchParams()
 			getNearestNeighbor_9search_sorted());
 }
 
+int Settings::getHomographyMethod()
+{
+	int method = cv::RANSAC;
+	QString str = getHomography_method();
+	QStringList split = str.split(':');
+	if(split.size()==2)
+	{
+		bool ok = false;
+		int index = split.first().toInt(&ok);
+		if(ok)
+		{
+			QStringList strategies = split.last().split(';');
+			if(strategies.size() == 2 && index>=0 && index<2)
+			{
+				switch(method)
+				{
+				case 0:
+					method = cv::LMEDS;
+					break;
+				default:
+					method = cv::RANSAC;
+					break;
+				}
+			}
+		}
+	}
+	if(VERBOSE)printf("Settings::getHomographyMethod() method=%d\n", method);
+	return method;
+}
