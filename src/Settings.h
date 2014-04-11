@@ -62,8 +62,8 @@ class Settings
 	PARAMETER(Camera, 5mediaPath, QString, "", "Video file or directory of images. If set, the camera is not used. See General->videoFormats and General->imageFormats for available formats.");
 
 	//List format : [Index:item0;item1;item3;...]
-	PARAMETER(Feature2D, 1Detector, QString, "5:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK" , "Keypoint detector.");
-	PARAMETER(Feature2D, 2Descriptor, QString, "2:Brief;ORB;SIFT;SURF;BRISK;FREAK", "Keypoint descriptor.");
+	PARAMETER(Feature2D, 1Detector, QString, "7:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK" , "Keypoint detector.");
+	PARAMETER(Feature2D, 2Descriptor, QString, "3:Brief;ORB;SIFT;SURF;BRISK;FREAK", "Keypoint descriptor.");
 
 	PARAMETER(Feature2D, Brief_bytes, int, 32, "Bytes is a length of descriptor in bytes. It can be equal 16, 32 or 64 bytes.");
 

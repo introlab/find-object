@@ -134,13 +134,16 @@ void ParametersToolBox::updateParametersVisibility()
 
 			for(int i=0; i<objects.size(); ++i)
 			{
-				if(objects[i]->objectName().contains(descriptorName) || objects[i]->objectName().contains(detectorName))
+				if(!objects[i]->objectName().isEmpty())
 				{
-					((QWidget*)objects[i])->setVisible(true);
-				}
-				else if(!objects[i]->objectName().split('/').at(1).at(0).isDigit())
-				{
-					((QWidget*)objects[i])->setVisible(false);
+					if(objects[i]->objectName().contains(descriptorName) || objects[i]->objectName().contains(detectorName))
+					{
+						((QWidget*)objects[i])->setVisible(true);
+					}
+					else if(!objects[i]->objectName().split('/').at(1).at(0).isDigit())
+					{
+						((QWidget*)objects[i])->setVisible(false);
+					}
 				}
 			}
 		}
@@ -166,13 +169,16 @@ void ParametersToolBox::updateParametersVisibility()
 
 			for(int i=0; i<objects.size(); ++i)
 			{
-				if(objects[i]->objectName().contains(nnName))
+				if(!objects[i]->objectName().isEmpty())
 				{
-					((QWidget*)objects[i])->setVisible(true);
-				}
-				else if(!objects[i]->objectName().split('/').at(1).at(0).isDigit())
-				{
-					((QWidget*)objects[i])->setVisible(false);
+					if(objects[i]->objectName().contains(nnName))
+					{
+						((QWidget*)objects[i])->setVisible(true);
+					}
+					else if(!objects[i]->objectName().split('/').at(1).at(0).isDigit())
+					{
+						((QWidget*)objects[i])->setVisible(false);
+					}
 				}
 			}
 		}
