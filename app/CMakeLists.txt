@@ -47,6 +47,7 @@ SET(SRC_FILES
 	../src/utilite/UPlot.cpp
 	../src/utilite/UDirectory.cpp
 	../src/utilite/UFile.cpp
+	../src/utilite/UConversion.cpp
 	../src/rtabmap/PdfPlot.cpp
 	${moc_srcs} 
 	${moc_uis} 

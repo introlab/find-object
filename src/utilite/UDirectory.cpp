@@ -1,4 +1,4 @@
-// Taken from UtiLite library r185 [www.utilite.googlecode.com]
+// Taken from UtiLite library r266 [www.utilite.googlecode.com]
 
 /*
 *  utilite is a cross-platform library with
@@ -40,6 +40,7 @@
 #include "utilite/UStl.h"
 #include "utilite/UFile.h"
 #include "utilite/UDirectory.h"
+#include "utilite/UConversion.h"
 
 #ifdef WIN32
 
@@ -48,11 +49,8 @@ bool sortCallback(const std::string & a, const std::string & b)
 	return uStrNumCmp(a,b) < 0;
 }
 #elif __APPLE__
-int sortCallback(const void * aa, const void * bb)
+int sortCallback(const struct dirent ** a, const struct dirent ** b)
 {
-	const struct dirent ** a = (const struct dirent **)aa;
-	const struct dirent ** b = (const struct dirent **)bb;
-
 	return uStrNumCmp((*a)->d_name, (*b)->d_name);
 }
 #else
@@ -102,26 +100,6 @@ void UDirectory::setPath(const std::string & path, const std::string & extension
 	iFileName_ = fileNames_.begin();
 	this->update();
 }
-
-#ifdef WIN32
-// returned whar_t * must be deleted : delete [] wText;
-wchar_t * createWCharFromChar(const char * text)
-{
-	DWORD length = MultiByteToWideChar (CP_ACP, 0, text, -1, NULL, 0);
-	wchar_t * wText = new wchar_t[length];
-	MultiByteToWideChar (CP_ACP, 0, text, -1, wText, length );
-	return wText;
-}
-
-// returned char * must be deleted : delete [] text;
-char * createCharFromWChar(const wchar_t * wText)
-{
-	DWORD length = WideCharToMultiByte (CP_ACP, 0, wText, -1, NULL, 0, NULL, NULL);
-	char * text = new char[length];
-	WideCharToMultiByte (CP_ACP, 0, wText, -1, text, length, NULL, NULL);
-	return text;
-}
-#endif
 
 void UDirectory::update()
 {
@@ -268,7 +246,7 @@ bool UDirectory::exists(const std::string & dirPath)
 	#else
 	DWORD dwAttrib = GetFileAttributes(dirPath.c_str());
 	#endif
- 	r = (dwAttrib != INVALID_FILE_ATTRIBUTES && (dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
+	r = (dwAttrib != INVALID_FILE_ATTRIBUTES && (dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
 #else
 	DIR *dp;
 	if((dp  = opendir(dirPath.c_str())) != NULL)
