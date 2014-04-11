@@ -22,6 +22,7 @@
 
 #include <sstream>
 #include <string.h>
+#include <stdio.h>
 
 std::string uReplaceChar(const std::string & str, char before, char after)
 {
