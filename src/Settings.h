@@ -175,11 +175,12 @@ class Settings
 	PARAMETER(General, threads, int, 1, "Number of threads used for objects matching and homography computation. 0 means as many threads as objects. On InvertedSearch mode, multi-threading has only effect on homography computation.");
 	PARAMETER(General, multiDetection, bool, false, "Multiple detection of the same object.");
 	PARAMETER(General, multiDetectionRadius, int, 30, "Ignore detection of the same object in X pixels radius of the previous detections.");
+	PARAMETER(General, port, int, 0, "Port on objects detected are published. If port=0, a port is chosen automatically.")
 
 	PARAMETER(Homography, homographyComputed, bool, true, "Compute homography? On ROS, this is required to publish objects detected.");
 	PARAMETER(Homography, method, QString, "1:LMEDS;RANSAC", "Type of the robust estimation algorithm: least-median algorithm or RANSAC algorithm.");
 	PARAMETER(Homography, ransacReprojThr, double, 1.0, "Maximum allowed reprojection error to treat a point pair as an inlier (used in the RANSAC method only). It usually makes sense to set this parameter somewhere in the range of 1 to 10.");
-	PARAMETER(Homography, minimumInliers, int, 10, "Minimum inliers to accept the homography.");
+	PARAMETER(Homography, minimumInliers, int, 10, "Minimum inliers to accept the homography. Value must be >= 4.");
 	PARAMETER(Homography, ignoreWhenAllInliers, bool, false, "Ignore homography when all features are inliers (sometimes when the homography doesn't converge, it returns the best homography with all features as inliers).");
 
 public:

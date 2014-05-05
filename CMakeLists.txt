@@ -41,7 +41,7 @@ SET(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
 
 ####### DEPENDENCIES #######
 FIND_PACKAGE(OpenCV REQUIRED) # tested on 2.3.1
-FIND_PACKAGE(Qt4 COMPONENTS QtCore QtGui) # tested on Qt4.7
+FIND_PACKAGE(Qt4 COMPONENTS QtCore QtGui QtNetwork) # tested on Qt4.7
 
 ####### OSX BUNDLE CMAKE_INSTALL_PREFIX #######
 OPTION(BUILD_AS_BUNDLE "Set to ON to build as bundle (DragNDrop)" OFF)
@@ -64,6 +64,7 @@ ENDIF(APPLE AND BUILD_AS_BUNDLE)
 ####### SOURCES (Projects) #######
 ADD_SUBDIRECTORY( app )
 ADD_SUBDIRECTORY( example )
+ADD_SUBDIRECTORY( tcpClient )
 ADD_SUBDIRECTORY( console_app )
 
 

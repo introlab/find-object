@@ -8,6 +8,7 @@ SET(headers_ui
 	../src/Camera.h
 	../src/ParametersToolBox.h
 	../src/AboutDialog.h
+	../src/TcpServer.h
 	../src/utilite/UPlot.h
 	../src/rtabmap/PdfPlot.h
 )
@@ -44,6 +45,7 @@ SET(SRC_FILES
 	../src/Settings.cpp
 	../src/ObjWidget.cpp
 	../src/AboutDialog.cpp
+	../src/TcpServer.cpp
 	../src/utilite/UPlot.cpp
 	../src/utilite/UDirectory.cpp
 	../src/utilite/UFile.cpp

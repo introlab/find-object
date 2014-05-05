@@ -22,6 +22,7 @@ class Camera;
 class ParametersToolBox;
 class QLabel;
 class AboutDialog;
+class TcpServer;
 
 namespace rtabmap
 {
@@ -77,6 +78,7 @@ signals:
 	void objectsFound(const QMultiMap<int, QPair<QRect, QTransform> > &);
 
 private:
+	void setupTCPServer();
 	void addObjectFromFile(const QString & filePath);
 	void showObject(ObjWidget * obj);
 	void updateData();
@@ -97,6 +99,7 @@ private:
 	int lowestRefreshRate_;
 	bool objectsModified_;
 	QMap<int, QByteArray> imagesMap_;
+	TcpServer * tcpServer_;
 };
 
 #endif /* MainWindow_H_ */

@@ -12,6 +12,7 @@
 #include "Settings.h"
 #include "ParametersToolBox.h"
 #include "AboutDialog.h"
+#include "TcpServer.h"
 #include "rtabmap/PdfPlot.h"
 
 #include <iostream>
@@ -45,7 +46,8 @@ MainWindow::MainWindow(Camera * camera, const QString & settings, QWidget * pare
 	settings_(settings),
 	likelihoodCurve_(0),
 	lowestRefreshRate_(99),
-	objectsModified_(false)
+	objectsModified_(false),
+	tcpServer_(0)
 {
 	ui_ = new Ui_mainWindow();
 	ui_->setupUi(this);
@@ -88,7 +90,7 @@ MainWindow::MainWindow(Camera * camera, const QString & settings, QWidget * pare
 	ui_->menuView->addAction(ui_->dockWidget_parameters->toggleViewAction());
 	ui_->menuView->addAction(ui_->dockWidget_objects->toggleViewAction());
 	ui_->menuView->addAction(ui_->dockWidget_plot->toggleViewAction());
-connect(ui_->toolBox, SIGNAL(parametersChanged(const QStringList &)), this, SLOT(notifyParametersChanged(const QStringList &)));
+	connect(ui_->toolBox, SIGNAL(parametersChanged(const QStringList &)), this, SLOT(notifyParametersChanged(const QStringList &)));
 
 	ui_->imageView_source->setGraphicsViewMode(false);
 	ui_->imageView_source->setTextLabel(tr("Press \"space\" to start the camera..."));
@@ -152,6 +154,10 @@ connect(ui_->toolBox, SIGNAL(parametersChanged(const QStringList &)), this, SLOT
 	ui_->actionCamera_from_video_file->setChecked(!Settings::getCamera_5mediaPath().isEmpty() && !UDirectory::exists(Settings::getCamera_5mediaPath().toStdString()));
 	ui_->actionCamera_from_directory_of_images->setChecked(!Settings::getCamera_5mediaPath().isEmpty() && UDirectory::exists(Settings::getCamera_5mediaPath().toStdString()));
 
+	ui_->label_ipAddress->setTextInteractionFlags(Qt::TextSelectableByMouse);
+	ui_->label_port->setTextInteractionFlags(Qt::TextSelectableByMouse);
+	setupTCPServer();
+
 	if(Settings::getGeneral_autoStartCamera())
 	{
 		// Set 1 msec to see state on the status bar.
@@ -198,6 +204,21 @@ void MainWindow::closeEvent(QCloseEvent * event)
 	{
 		event->ignore();
 	}
+}
+
+void MainWindow::setupTCPServer()
+{
+	if(tcpServer_)
+	{
+		tcpServer_->close();
+		delete tcpServer_;
+	}
+	tcpServer_ = new TcpServer(Settings::getGeneral_port(), this);
+	connect(this, SIGNAL(objectsFound(QMultiMap<int,QPair<QRect,QTransform> >)), tcpServer_, SLOT(publishObjects(QMultiMap<int,QPair<QRect,QTransform> >)));
+	ui_->label_ipAddress->setText(tcpServer_->getHostAddress().toString());
+	ui_->label_port->setNum(tcpServer_->getPort());
+	printf("IP: %s\nport: %d\n",
+			tcpServer_->getHostAddress().toString().toStdString().c_str(), tcpServer_->getPort());
 }
 
 ParametersToolBox * MainWindow::parametersToolBox() const
@@ -1007,10 +1028,11 @@ protected:
 					++outliers_;
 				}
 			}
-			if(Settings::getHomography_ignoreWhenAllInliers())
+
+			// ignore homography when all features are inliers
+			if(inliers_ == (int)outlierMask_.size() && !h_.empty())
 			{
-				// ignore homography when all features are inliers
-				if(inliers_ == (int)outlierMask_.size())
+				if(Settings::getHomography_ignoreWhenAllInliers() || cv::countNonZero(h_) < 1)
 				{
 					h_ = cv::Mat();
 				}
@@ -1505,6 +1527,13 @@ void MainWindow::notifyParametersChanged(const QStringList & paramChanged)
 			      iter->compare(Settings::kNearestNeighbor_2Distance_type()) == 0))
 		{
 			nearestNeighborParamsChanged = true;
+		}
+
+		if(iter->compare(Settings::kGeneral_port()) == 0 &&
+		   Settings::getGeneral_port() != ui_->label_port->text().toInt() &&
+		   Settings::getGeneral_port() != 0)
+		{
+			setupTCPServer();
 		}
 	}
 

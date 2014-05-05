@@ -423,7 +423,18 @@ void ParametersToolBox::changeParameter()
 		}
 		else if(spinBox)
 		{
-			Settings::setParameter(sender()->objectName(), spinBox->value());
+			if(spinBox->objectName().compare(Settings::kHomography_minimumInliers()) == 0 &&
+			   spinBox->value() < 4)
+			{
+				Settings::setHomography_minimumInliers(4);
+				spinBox->blockSignals(true);
+				this->updateParameter(Settings::kHomography_minimumInliers());
+				spinBox->blockSignals(false);
+			}
+			else
+			{
+				Settings::setParameter(sender()->objectName(), spinBox->value());
+			}
 		}
 		else if(lineEdit)
 		{
@@ -545,6 +556,7 @@ void ParametersToolBox::changeParameter(const int & value)
 		{
 			Settings::setParameter(sender()->objectName(), value==Qt::Checked?true:false);
 		}
+
 		paramChanged.append(sender()->objectName());
 		emit parametersChanged(paramChanged);
 	}

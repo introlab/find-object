@@ -287,13 +287,20 @@
          <number>0</number>
         </property>
         <item>
-         <layout class="QGridLayout" name="gridLayout" columnstretch="0,0,0">
+         <layout class="QGridLayout" name="gridLayout" columnstretch="1,0,0">
           <property name="horizontalSpacing">
            <number>6</number>
           </property>
           <property name="verticalSpacing">
            <number>0</number>
           </property>
+          <item row="3" column="1">
+           <widget class="QLabel" name="label_timeIndexing">
+            <property name="text">
+             <string>000</string>
+            </property>
+           </widget>
+          </item>
           <item row="4" column="1">
            <widget class="QLabel" name="label_timeMatching">
             <property name="text">
@@ -420,13 +427,6 @@
             </property>
            </widget>
           </item>
-          <item row="3" column="1">
-           <widget class="QLabel" name="label_timeIndexing">
-            <property name="text">
-             <string>000</string>
-            </property>
-           </widget>
-          </item>
           <item row="0" column="0">
            <widget class="QLabel" name="label_6">
             <property name="text">
@@ -462,6 +462,34 @@
             </property>
            </widget>
           </item>
+          <item row="9" column="0">
+           <widget class="QLabel" name="label_18">
+            <property name="text">
+             <string>IP address</string>
+            </property>
+           </widget>
+          </item>
+          <item row="10" column="0">
+           <widget class="QLabel" name="label_19">
+            <property name="text">
+             <string>Port</string>
+            </property>
+           </widget>
+          </item>
+          <item row="9" column="1">
+           <widget class="QLabel" name="label_ipAddress">
+            <property name="text">
+             <string>0.0.0.0</string>
+            </property>
+           </widget>
+          </item>
+          <item row="10" column="1">
+           <widget class="QLabel" name="label_port">
+            <property name="text">
+             <string>0</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </item>
        </layout>
@@ -478,7 +506,7 @@
           <x>0</x>
           <y>0</y>
           <width>360</width>
-          <height>120</height>
+          <height>86</height>
          </rect>
         </property>
         <attribute name="label">
