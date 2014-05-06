@@ -92,7 +92,7 @@ IF(WIN32)
                              -o ${CMAKE_CURRENT_BINARY_DIR}/AppIco.o )
     SET(SRC_FILES ${SRC_FILES} ${CMAKE_CURRENT_BINARY_DIR}/AppIco.o)
   ELSE( MINGW )
-   # SET(SRC_FILES ${SRC_FILES} ${PROJECT_NAME}.rc) # Error on visual studio 2008
+    SET(SRC_FILES ${SRC_FILES} ${PROJECT_NAME}.rc) # Error on visual studio 2008
   ENDIF( MINGW )
 ENDIF(WIN32)
 
