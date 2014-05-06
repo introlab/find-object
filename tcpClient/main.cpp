@@ -11,7 +11,7 @@
 
 void showUsage()
 {
-	printf("exampleTcpClient [hostname] port\n");
+	printf("tcpClient [hostname] port\n");
 	exit(-1);
 }
 
