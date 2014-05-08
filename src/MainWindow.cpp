@@ -416,7 +416,7 @@ void MainWindow::addObjectFromScene()
 	disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
 	AddObjectDialog * dialog;
 	bool resumeCamera = camera_->isRunning();
-	if(!ui_->actionStart_camera->isEnabled() || ui_->imageView_source->cvImage().empty())
+	if(camera_->isRunning() || ui_->imageView_source->cvImage().empty())
 	{
 		dialog = new AddObjectDialog(camera_, cv::Mat(), ui_->imageView_source->isMirrorView(), this);
 	}
