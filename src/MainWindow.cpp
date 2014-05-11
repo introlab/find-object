@@ -45,6 +45,7 @@ MainWindow::MainWindow(Camera * camera, const QString & settings, QWidget * pare
 	camera_(camera),
 	settings_(settings),
 	likelihoodCurve_(0),
+	inliersCurve_(0),
 	lowestRefreshRate_(99),
 	objectsModified_(false),
 	tcpServer_(0)
@@ -55,7 +56,11 @@ MainWindow::MainWindow(Camera * camera, const QString & settings, QWidget * pare
 	this->setStatusBar(new QStatusBar());
 
 	likelihoodCurve_ = new rtabmap::PdfPlotCurve("Likelihood", &imagesMap_, this);
+	inliersCurve_ = new rtabmap::PdfPlotCurve("Inliers", &imagesMap_, this);
+	likelihoodCurve_->setPen(QPen(Qt::blue));
+	inliersCurve_->setPen(QPen(Qt::red));
 	ui_->likelihoodPlot->addCurve(likelihoodCurve_, false);
+	ui_->likelihoodPlot->addCurve(inliersCurve_, false);
 	ui_->likelihoodPlot->setGraphicsView(true);
 
 	if(!camera_)
@@ -67,6 +72,7 @@ MainWindow::MainWindow(Camera * camera, const QString & settings, QWidget * pare
 		camera_->setParent(this);
 	}
 
+	ui_->dockWidget_statistics->setVisible(false);
 	ui_->dockWidget_parameters->setVisible(false);
 	ui_->dockWidget_plot->setVisible(false);
 	ui_->widget_controls->setVisible(false);
@@ -87,6 +93,7 @@ MainWindow::MainWindow(Camera * camera, const QString & settings, QWidget * pare
 			SIGNAL(editingFinished()),
 			camera_,
 			SLOT(updateImageRate()));
+	ui_->menuView->addAction(ui_->dockWidget_statistics->toggleViewAction());
 	ui_->menuView->addAction(ui_->dockWidget_parameters->toggleViewAction());
 	ui_->menuView->addAction(ui_->dockWidget_objects->toggleViewAction());
 	ui_->menuView->addAction(ui_->dockWidget_plot->toggleViewAction());
@@ -293,20 +300,20 @@ bool MainWindow::saveSettings(const QString & path)
 int MainWindow::loadObjects(const QString & dirPath)
 {
 	int loadedObjects = 0;
-	QDir dir(dirPath);
-	if(dir.exists())
+	QString formats = Settings::getGeneral_imageFormats().remove('*').remove('.');
+	UDirectory dir(dirPath.toStdString(), formats.toStdString());
+	if(dir.isValid())
 	{
-		QStringList filters = Settings::getGeneral_imageFormats().split(' ');
-		QFileInfoList list = dir.entryInfoList(filters, QDir::Files, QDir::Name);
-		for(int i=0; i<list.size(); ++i)
+		const std::list<std::string> & names = dir.getFileNames(); // sorted in natural order
+		for(std::list<std::string>::const_iterator iter=names.begin(); iter!=names.end(); ++iter)
 		{
-			this->addObjectFromFile(list.at(i).filePath());
+			this->addObjectFromFile((dirPath.toStdString()+dir.separator()+*iter).c_str());
 		}
-		if(list.size())
+		if(names.size())
 		{
 			this->updateObjects();
 		}
-		loadedObjects = list.size();
+		loadedObjects = names.size();
 	}
 	return loadedObjects;
 }
@@ -320,6 +327,7 @@ void MainWindow::saveObjects(const QString & dirPath)
 		{
 			objects_.at(i)->pixmap().save(QString("%1/%2.bmp").arg(dirPath).arg(objects_.at(i)->id()));
 		}
+		objectsModified_ = false;
 	}
 }
 
@@ -392,7 +400,6 @@ void MainWindow::updateObjectSize(ObjWidget * obj)
 		{
 			obj->setVisible(false);
 		}
-		obj->setFeaturesShown(value<=50?false:true);
 	}
 }
 
@@ -627,45 +634,96 @@ void MainWindow::showObject(ObjWidget * obj)
 	}
 }
 
+class ExtractFeaturesThread : public QThread
+{
+public:
+	ExtractFeaturesThread(int objectId, int objectIndex, const cv::Mat & image) :
+		objectId_(objectId),
+		objectIndex_(objectIndex),
+		image_(image)
+	{
+
+	}
+	int objectId() const {return objectId_;}
+	int objectIndex() const {return objectIndex_;}
+	const cv::Mat & image() const {return image_;}
+	const std::vector<cv::KeyPoint> & keypoints() const {return keypoints_;}
+	const cv::Mat & descriptors() const {return descriptors_;}
+protected:
+	virtual void run()
+	{
+		QTime time;
+		time.start();
+		printf("Extracting descriptors from object %d...\n", objectId_);
+		cv::FeatureDetector * detector = Settings::createFeaturesDetector();
+		keypoints_.clear();
+		descriptors_ = cv::Mat();
+		detector->detect(image_, keypoints_);
+		delete detector;
+
+		if(keypoints_.size())
+		{
+			cv::DescriptorExtractor * extractor = Settings::createDescriptorsExtractor();
+			extractor->compute(image_, keypoints_, descriptors_);
+			delete extractor;
+			if((int)keypoints_.size() != descriptors_.rows)
+			{
+				printf("ERROR : obj=%d kpt=%d != descriptors=%d\n", objectId_, (int)keypoints_.size(), descriptors_.rows);
+			}
+		}
+		else
+		{
+			printf("WARNING: no features detected in object %d !?!\n", objectId_);
+		}
+		printf("%d descriptors extracted from object %d (in %d ms)\n", descriptors_.rows, objectId_, time.elapsed());
+	}
+private:
+	int objectId_;
+	int objectIndex_;
+	cv::Mat image_;
+	std::vector<cv::KeyPoint> keypoints_;
+	cv::Mat descriptors_;
+};
+
 void MainWindow::updateObjects()
 {
 	if(objects_.size())
 	{
-		for(int i=0; i<objects_.size(); ++i)
+		int threadCounts = Settings::getGeneral_threads();
+		if(threadCounts == 0)
 		{
-			QTime time;
-			time.start();
-			printf("Extracting descriptors from object %d...\n", objects_.at(i)->id());
-			const cv::Mat & img = objects_.at(i)->cvImage();
-			cv::FeatureDetector * detector = Settings::createFeaturesDetector();
-			std::vector<cv::KeyPoint> keypoints;
-			detector->detect(img, keypoints);
-			delete detector;
-
-			cv::Mat descriptors;
-			if(keypoints.size())
-			{
-				cv::DescriptorExtractor * extractor = Settings::createDescriptorsExtractor();
-				extractor->compute(img, keypoints, descriptors);
-				delete extractor;
-				if((int)keypoints.size() != descriptors.rows)
-				{
-					printf("ERROR : kpt=%d != descriptors=%d\n", (int)keypoints.size(), descriptors.rows);
-				}
-			}
-			else
-			{
-				printf("WARNING: no features detected in object %d !?!\n", objects_.at(i)->id());
-			}
-			printf("%d descriptors extracted from object %d (in %d ms)\n", descriptors.rows, objects_.at(i)->id(), time.elapsed());
-			objects_.at(i)->setData(keypoints, descriptors, img, Settings::currentDetectorType(), Settings::currentDescriptorType());
-
-			//update object labels
-			QLabel * title = qFindChild<QLabel*>(this, QString("%1title").arg(objects_.at(i)->id()));
-			title->setText(QString("%1 (%2)").arg(objects_.at(i)->id()).arg(QString::number(objects_.at(i)->keypoints().size())));
-			QLabel * detectorDescriptorType = qFindChild<QLabel*>(this, QString("%1type").arg(objects_.at(i)->id()));
-			detectorDescriptorType->setText(QString("%1/%2").arg(objects_.at(i)->detectorType()).arg(objects_.at(i)->descriptorType()));
+			threadCounts = objects_.size();
 		}
+
+		QTime time;
+		time.start();
+		printf("Features extraction from %d objects...\n", objects_.size());
+		for(int i=0; i<objects_.size(); i+=threadCounts)
+		{
+			QVector<ExtractFeaturesThread*> threads;
+			for(int k=i; k<i+threadCounts && k<objects_.size(); ++k)
+			{
+				threads.push_back(new ExtractFeaturesThread(objects_.at(k)->id(), k, objects_.at(k)->cvImage()));
+				threads.back()->start();
+			}
+
+			for(int j=0; j<threads.size(); ++j)
+			{
+				threads[j]->wait();
+
+				int index = threads[j]->objectIndex();
+
+				objects_.at(index)->setData(threads[j]->keypoints(), threads[j]->descriptors(), threads[j]->image(), Settings::currentDetectorType(), Settings::currentDescriptorType());
+
+				//update object labels
+				QLabel * title = qFindChild<QLabel*>(this, QString("%1title").arg(objects_.at(index)->id()));
+				title->setText(QString("%1 (%2)").arg(objects_.at(index)->id()).arg(QString::number(objects_.at(index)->keypoints().size())));
+				QLabel * detectorDescriptorType = qFindChild<QLabel*>(this, QString("%1type").arg(objects_.at(index)->id()));
+				detectorDescriptorType->setText(QString("%1/%2").arg(objects_.at(index)->detectorType()).arg(objects_.at(index)->descriptorType()));
+			}
+		}
+		printf("Features extraction from %d objects... done! (%d ms)\n", objects_.size(), time.elapsed());
+
 		updateData();
 	}
 	if(!camera_->isRunning() && !ui_->imageView_source->cvImage().empty())
@@ -688,6 +746,7 @@ void MainWindow::updateData()
 
 	objectsDescriptors_.clear();
 	dataRange_.clear();
+	vocabulary_.clear();
 	int count = 0;
 	int dim = -1;
 	int type = -1;
@@ -732,7 +791,7 @@ void MainWindow::updateData()
 		printf("Updating global descriptors matrix: Objects=%d, total descriptors=%d, dim=%d, type=%d\n", (int)objects_.size(), count, dim, type);
 		if(Settings::getGeneral_invertedSearch() || Settings::getGeneral_threads() == 1)
 		{
-			// If inverted index or only one thread, put all descriptors in the same cv::Mat
+			// If only one thread, put all descriptors in the same cv::Mat
 			objectsDescriptors_.push_back(cv::Mat(count, dim, type));
 			int row = 0;
 			for(int i=0; i<objects_.size(); ++i)
@@ -748,18 +807,47 @@ void MainWindow::updateData()
 					dataRange_.insert(row-1, i);
 				}
 			}
+
 			if(Settings::getGeneral_invertedSearch())
 			{
-				printf("Creating FLANN index (%s) with objects' descriptors...\n", Settings::currentNearestNeighborType().toStdString().c_str());
-				// CREATE INDEX
 				QTime time;
 				time.start();
-				cv::flann::IndexParams * params = Settings::createFlannIndexParams();
-				flannIndex_.build(objectsDescriptors_[0], *params, Settings::getFlannDistanceType());
-				delete params;
+				bool incremental = Settings::getGeneral_incrementalVocabulary();
+				if(incremental)
+				{
+					printf("Creating incremental vocabulary...\n");
+				}
+				else
+				{
+					printf("Creating vocabulary...\n");
+				}
+				QTime localTime;
+				localTime.start();
+				for(int i=0; i<objects_.size(); ++i)
+				{
+					QMultiMap<int, int> words = vocabulary_.addWords(objects_[i]->descriptors(), i, incremental);
+					objects_[i]->setWords(words);
+					printf("Object %d, %d words from %d descriptors (%d words, %d ms)\n",
+							objects_[i]->id(),
+							words.uniqueKeys().size(),
+							objects_[i]->descriptors().rows,
+							vocabulary_.size(),
+							localTime.restart());
+				}
+				if(!incremental)
+				{
+					vocabulary_.update();
+				}
 				ui_->label_timeIndexing->setNum(time.elapsed());
-				ui_->label_vocabularySize->setNum(objectsDescriptors_[0].rows);
-				printf("Creating FLANN index (%s) with objects' descriptors... done! (%d ms)\n", Settings::currentNearestNeighborType().toStdString().c_str(), time.elapsed());
+				ui_->label_vocabularySize->setNum(vocabulary_.size());
+				if(incremental)
+				{
+					printf("Creating incremental vocabulary... done! size=%d (%d ms)\n", vocabulary_.size(), time.elapsed());
+				}
+				else
+				{
+					printf("Creating vocabulary... done! size=%d (%d ms)\n", vocabulary_.size(), time.elapsed());
+				}
 			}
 		}
 		else
@@ -879,10 +967,11 @@ void MainWindow::moveCameraFrame(int frame)
 class SearchThread: public QThread
 {
 public:
-	SearchThread(cv::flann::Index * index, int objectIndex, const cv::Mat * descriptors) :
-		index_(index),
+	SearchThread(Vocabulary * vocabulary, int objectIndex, const cv::Mat * descriptors, const ObjWidget * sceneObject) :
+		vocabulary_(vocabulary),
 		objectIndex_(objectIndex),
 		descriptors_(descriptors),
+		sceneObject_(sceneObject),
 		minMatchedDistance_(-1.0f),
 		maxMatchedDistance_(-1.0f)
 	{
@@ -908,7 +997,7 @@ protected:
 		int k = Settings::getNearestNeighbor_3nndrRatioUsed()?2:1;
 		results = cv::Mat(descriptors_->rows, k, CV_32SC1); // results index
 		dists = cv::Mat(descriptors_->rows, k, CV_32FC1); // Distance results are CV_32FC1
-		index_->knnSearch(*descriptors_, results, dists, k, Settings::getFlannSearchParams() ); // maximum number of leafs checked
+		vocabulary_->search(*descriptors_, results, dists, k);
 
 		// PROCESS RESULTS
 		// Get all matches for each object
@@ -934,6 +1023,10 @@ protected:
 					matched = false;
 				}
 			}
+			if(!matched && !Settings::getNearestNeighbor_3nndrRatioUsed() && !Settings::getNearestNeighbor_5minDistanceUsed())
+			{
+				matched = true; // no criterion, match to the nearest descriptor
+			}
 			if(minMatchedDistance_ == -1 || minMatchedDistance_ > dists.at<float>(i,0))
 			{
 				minMatchedDistance_ = dists.at<float>(i,0);
@@ -943,8 +1036,10 @@ protected:
 				maxMatchedDistance_ = dists.at<float>(i,0);
 			}
 
-			if(matched)
+			int wordId = results.at<int>(i,0);
+			if(matched && sceneObject_->words().count(wordId) == 1)
 			{
+				matches_.insert(i, sceneObject_->words().value(wordId));
 				matches_.insert(i, results.at<int>(i,0));
 			}
 		}
@@ -952,9 +1047,10 @@ protected:
 		//printf("Search Object %d time=%d ms\n", objectIndex_, time.elapsed());
 	}
 private:
-	cv::flann::Index * index_; // would be const but flann search() method is not const!?
+	Vocabulary * vocabulary_; // would be const but flann search() method is not const!?
 	int objectIndex_;
 	const cv::Mat * descriptors_;
+	const ObjWidget * sceneObject_;
 
 	float minMatchedDistance_;
 	float maxMatchedDistance_;
@@ -1114,10 +1210,14 @@ void MainWindow::update(const cv::Mat & image)
 			ui_->imageView_source->setData(keypoints, cv::Mat(), image, Settings::currentDetectorType(), Settings::currentDescriptorType());
 		}
 
+		bool consistentNNData = (vocabulary_.size()!=0 && vocabulary_.wordToObjects().begin().value()!=-1 && Settings::getGeneral_invertedSearch()) ||
+								((vocabulary_.size()==0 || vocabulary_.wordToObjects().begin().value()==-1) && !Settings::getGeneral_invertedSearch());
+
 		// COMPARE
 		if(!objectsDescriptors_.empty() &&
 		   keypoints.size() &&
-		   (Settings::getNearestNeighbor_3nndrRatioUsed() || Settings::getNearestNeighbor_5minDistanceUsed()) &&
+		   consistentNNData &&
+		   objectsDescriptors_[0].cols == descriptors.cols &&
 		   objectsDescriptors_[0].type() == descriptors.type()) // binary descriptor issue, if the dataTree is not yet updated with modified settings
 		{
 			QVector<QMultiMap<int, int> > matches(objects_.size()); // Map< ObjectDescriptorIndex, SceneDescriptorIndex >
@@ -1129,11 +1229,15 @@ void MainWindow::update(const cv::Mat & image)
 			{
 				// CREATE INDEX for the scene
 				//printf("Creating FLANN index (%s)\n", Settings::currentNearestNeighborType().toStdString().c_str());
-				cv::flann::IndexParams * params = Settings::createFlannIndexParams();
-				flannIndex_.build(descriptors, *params, Settings::getFlannDistanceType());
-				delete params;
+				vocabulary_.clear();
+				QMultiMap<int, int> words = vocabulary_.addWords(descriptors, -1, Settings::getGeneral_incrementalVocabulary());
+				if(!Settings::getGeneral_incrementalVocabulary())
+				{
+					vocabulary_.update();
+				}
+				ui_->imageView_source->setWords(words);
 				ui_->label_timeIndexing->setNum(time.restart());
-				ui_->label_vocabularySize->setNum(descriptors.rows);
+				ui_->label_vocabularySize->setNum(vocabulary_.size());
 			}
 
 			if(Settings::getGeneral_invertedSearch() || Settings::getGeneral_threads() == 1)
@@ -1147,14 +1251,14 @@ void MainWindow::update(const cv::Mat & image)
 					//match objects to scene
 					results = cv::Mat(objectsDescriptors_[0].rows, k, CV_32SC1); // results index
 					dists = cv::Mat(objectsDescriptors_[0].rows, k, CV_32FC1); // Distance results are CV_32FC1
-					flannIndex_.knnSearch(objectsDescriptors_[0], results, dists, k, Settings::getFlannSearchParams() ); // maximum number of leafs checked
+					vocabulary_.search(objectsDescriptors_[0], results, dists, k);
 				}
 				else
 				{
 					//match scene to objects
 					results = cv::Mat(descriptors.rows, k, CV_32SC1); // results index
 					dists = cv::Mat(descriptors.rows, k, CV_32FC1); // Distance results are CV_32FC1
-					flannIndex_.knnSearch(descriptors, results, dists, k, Settings::getFlannSearchParams() ); // maximum number of leafs checked
+					vocabulary_.search(descriptors, results, dists, k);
 				}
 
 				// PROCESS RESULTS
@@ -1181,6 +1285,10 @@ void MainWindow::update(const cv::Mat & image)
 							matched = false;
 						}
 					}
+					if(!matched && !Settings::getNearestNeighbor_3nndrRatioUsed() && !Settings::getNearestNeighbor_5minDistanceUsed())
+					{
+						matched = true; // no criterion, match to the nearest descriptor
+					}
 					if(minMatchedDistance == -1 || minMatchedDistance > dists.at<float>(i,0))
 					{
 						minMatchedDistance = dists.at<float>(i,0);
@@ -1194,11 +1302,16 @@ void MainWindow::update(const cv::Mat & image)
 					{
 						if(Settings::getGeneral_invertedSearch())
 						{
-							QMap<int, int>::iterator iter = dataRange_.lowerBound(results.at<int>(i,0));
-							int objectIndex = iter.value();
-							int previousDescriptorIndex = (iter == dataRange_.begin())?0:(--iter).key()+1;
-							int objectDescriptorIndex = results.at<int>(i,0) - previousDescriptorIndex;
-							matches[objectIndex].insert(objectDescriptorIndex, i);
+							int wordId = results.at<int>(i,0);
+							QList<int> objIndexes = vocabulary_.wordToObjects().values(wordId);
+							for(int j=0; j<objIndexes.size(); ++j)
+							{
+								// just add unique matches
+								if(vocabulary_.wordToObjects().count(wordId, objIndexes[j]) == 1)
+								{
+									matches[objIndexes[j]].insert(objects_.at(objIndexes[j])->words().value(wordId), i);
+								}
+							}
 						}
 						else
 						{
@@ -1206,7 +1319,12 @@ void MainWindow::update(const cv::Mat & image)
 							int objectIndex = iter.value();
 							int fisrtObjectDescriptorIndex = (iter == dataRange_.begin())?0:(--iter).key()+1;
 							int objectDescriptorIndex = i - fisrtObjectDescriptorIndex;
-							matches[objectIndex].insert(objectDescriptorIndex, results.at<int>(i,0));
+
+							int wordId = results.at<int>(i,0);
+							if(ui_->imageView_source->words().count(wordId) == 1)
+							{
+								matches[objectIndex].insert(objectDescriptorIndex, ui_->imageView_source->words().value(wordId));
+							}
 						}
 					}
 				}
@@ -1225,7 +1343,7 @@ void MainWindow::update(const cv::Mat & image)
 
 					for(unsigned int k=j; k<j+threadCounts && k<objectsDescriptors_.size(); ++k)
 					{
-						threads.push_back(new SearchThread(&flannIndex_, k, &objectsDescriptors_[k]));
+						threads.push_back(new SearchThread(&vocabulary_, k, &objectsDescriptors_[k], ui_->imageView_source));
 						threads.back()->start();
 					}
 
@@ -1251,11 +1369,11 @@ void MainWindow::update(const cv::Mat & image)
 			ui_->label_timeMatching->setNum(time.restart());
 
 			// GUI: Homographies and color
-			QMap<int, float> scores;
 			int maxScoreId = -1;
 			int maxScore = 0;
 			QMultiMap<int, QPair<QRect, QTransform> > objectsDetected;
 
+			QMap<int, float> inliersScores;
 			if(Settings::getHomography_homographyComputed())
 			{
 				// HOMOGRAHPY
@@ -1264,6 +1382,7 @@ void MainWindow::update(const cv::Mat & image)
 				{
 					threadCounts = matches.size();
 				}
+
 				for(int i=0; i<matches.size(); i+=threadCounts)
 				{
 					QVector<HomographyThread*> threads;
@@ -1282,11 +1401,12 @@ void MainWindow::update(const cv::Mat & image)
 						int index = threads[j]->getObjectIndex();
 
 						// COLORIZE (should be done in the GUI thread)
-						int nColor = index % 11 + 7;
-						QColor color((Qt::GlobalColor)(nColor==Qt::yellow?Qt::gray:nColor));
+						int nColor = index % 10 + 7;
+						QColor color((Qt::GlobalColor)(nColor==Qt::yellow?Qt::darkYellow:nColor));
 						QLabel * label = ui_->dockWidget_objects->findChild<QLabel*>(QString("%1detection").arg(objects_.at(index)->id()));
 						if(!threads[j]->getHomography().empty())
 						{
+							inliersScores.insert(objects_.at(index)->id(), (float)threads[j]->getInliers());
 							if(threads[j]->getInliers() >= Settings::getHomography_minimumInliers())
 							{
 								const cv::Mat & H = threads[j]->getHomography();
@@ -1337,7 +1457,7 @@ void MainWindow::update(const cv::Mat & image)
 											}
 											else if(!objectsDetected.contains(objects_.at(index)->id()))
 											{
-												objects_.at(index)->setKptColor(threads[j]->getIndexesA().at(k), QColor(0,0,0));
+												objects_.at(index)->setKptColor(threads[j]->getIndexesA().at(k), Qt::black);
 											}
 										}
 									}
@@ -1362,10 +1482,14 @@ void MainWindow::update(const cv::Mat & image)
 										}
 										QPen rectPen(color);
 										rectPen.setWidth(4);
-										QGraphicsRectItem * rectItem = new QGraphicsRectItem(rect);
-										rectItem->setPen(rectPen);
-										rectItem->setTransform(hTransform);
-										ui_->imageView_source->addRect(rectItem);
+										QGraphicsRectItem * rectItemScene = new QGraphicsRectItem(rect);
+										rectItemScene->setPen(rectPen);
+										rectItemScene->setTransform(hTransform);
+										ui_->imageView_source->addRect(rectItemScene);
+
+										QGraphicsRectItem * rectItemObj = new QGraphicsRectItem(rect);
+										rectItemObj->setPen(rectPen);
+										objects_.at(index)->addRect(rectItemObj);
 									}
 								}
 							}
@@ -1376,6 +1500,7 @@ void MainWindow::update(const cv::Mat & image)
 						}
 						else if(this->isVisible() && objectsDetected.count(objects_.at(index)->id()) == 0)
 						{
+							inliersScores.insert(objects_.at(index)->id(), 0.0f);
 							if(threads[j]->getInliers() >= Settings::getHomography_minimumInliers())
 							{
 								label->setText(QString("Ignored, all inliers (%1 in %2 out)").arg(matches[index].size()).arg(threads[j]->getOutliers()));
@@ -1402,10 +1527,12 @@ void MainWindow::update(const cv::Mat & image)
 					}
 					QLabel * label = ui_->dockWidget_objects->findChild<QLabel*>(QString("%1detection").arg(objects_.at(i)->id()));
 					label->setText(QString("%1 matches").arg(matches[i].size()));
+					inliersScores.insert(objects_.at(i)->id(), 0.0f);
 				}
 			}
 
 			//scores
+			QMap<int, float> scores;
 			for(int i=0; i<matches.size(); ++i)
 			{
 				int objectIndex = matchesId.at(i) >= 0? matchesId.at(i): i;
@@ -1413,15 +1540,21 @@ void MainWindow::update(const cv::Mat & image)
 				{
 					scores.insert(objects_.at(objectIndex)->id(), matches[i].size());
 				}
-				if(maxScoreId == -1 || maxScore < matches[i].size())
+				// If objects detected, set max score to one detected with the most
+				// matches. Otherwise select any objects with the most matches.
+				if(objectsDetected.empty() || objectsDetected.contains(objects_.at(objectIndex)->id()))
 				{
-					maxScoreId = objects_.at(objectIndex)->id();
-					maxScore = matches[i].size();
+					if(maxScoreId == -1 || maxScore < matches[i].size())
+					{
+						maxScoreId = objects_.at(objectIndex)->id();
+						maxScore = matches[i].size();
+					}
 				}
 			}
 
 			//update likelihood plot
 			likelihoodCurve_->setData(scores, QMap<int, int>());
+			inliersCurve_->setData(inliersScores, QMap<int, int>());
 			if(ui_->likelihoodPlot->isVisible())
 			{
 				ui_->likelihoodPlot->update();
@@ -1431,7 +1564,7 @@ void MainWindow::update(const cv::Mat & image)
 			ui_->label_maxMatchedDistance->setNum(maxMatchedDistance);
 
 			//Scroll objects slider to the best score
-			if(maxScoreId>=0)
+			if(maxScoreId>=0 && Settings::getGeneral_autoScroll())
 			{
 				QLabel * label = ui_->dockWidget_objects->findChild<QLabel*>(QString("%1title").arg(maxScoreId));
 				if(label)
@@ -1445,10 +1578,17 @@ void MainWindow::update(const cv::Mat & image)
 			{
 				emit objectsFound(objectsDetected);
 			}
+			ui_->label_objectsDetected->setNum(objectsDetected.size());
 		}
-		else if(this->isVisible())
+		else
 		{
-			ui_->imageView_source->setData(keypoints, cv::Mat(), image, Settings::currentDetectorType(), Settings::currentDescriptorType());
+			this->statusBar()->showMessage(tr("Cannot search, objects must be updated!"));
+			printf("Cannot search, objects must be updated!\n");
+			if(this->isVisible())
+			{
+				ui_->imageView_source->setData(keypoints, cv::Mat(), image, Settings::currentDetectorType(), Settings::currentDescriptorType());
+			}
+
 		}
 
 		if(this->isVisible())
@@ -1503,28 +1643,18 @@ void MainWindow::notifyParametersChanged(const QStringList & paramChanged)
 	//Selective update (to not update all objects for a simple camera's parameter modification)
 	bool detectorDescriptorParamsChanged = false;
 	bool nearestNeighborParamsChanged = false;
-	QString currentDetectorType = Settings::currentDetectorType();
-	QString currentDescriptorType = Settings::currentDescriptorType();
-	QString currentNNType = Settings::currentNearestNeighborType();
-	//printf("currentDescriptorType: %s\n", currentDescriptorType.toStdString().c_str());
-	//printf("currentNNType: %s\n", currentNNType.toStdString().c_str());
 	for(QStringList::const_iterator iter = paramChanged.begin(); iter!=paramChanged.end(); ++iter)
 	{
 		printf("Parameter changed: %s\n", iter->toStdString().c_str());
-		if(!detectorDescriptorParamsChanged &&
-		   ( iter->contains(currentDetectorType) ||
-		     iter->contains(currentDescriptorType) ||
-		     iter->compare(Settings::kFeature2D_1Detector()) == 0 ||
-		     iter->compare(Settings::kFeature2D_2Descriptor()) == 0 ))
+		if(!detectorDescriptorParamsChanged && iter->contains("Feature2D"))
 		{
 			detectorDescriptorParamsChanged = true;
 		}
 		else if(!nearestNeighborParamsChanged &&
-			    ( iter->contains(currentNNType) ||
+			    ( (iter->contains("NearestNeighbor") && Settings::getGeneral_invertedSearch()) ||
 			      iter->compare(Settings::kGeneral_invertedSearch()) == 0 ||
-			      iter->compare(Settings::kGeneral_threads()) == 0 ||
-			      iter->compare(Settings::kNearestNeighbor_1Strategy()) == 0 ||
-			      iter->compare(Settings::kNearestNeighbor_2Distance_type()) == 0))
+			      (iter->compare(Settings::kGeneral_incrementalVocabulary()) == 0 && Settings::getGeneral_invertedSearch()) ||
+			      (iter->compare(Settings::kGeneral_threads()) == 0 && !Settings::getGeneral_invertedSearch()) ))
 		{
 			nearestNeighborParamsChanged = true;
 		}
@@ -1548,7 +1678,7 @@ void MainWindow::notifyParametersChanged(const QStringList & paramChanged)
 			this->updateData();
 		}
 	}
-	else if(objects_.size())
+	else if(objects_.size() && (detectorDescriptorParamsChanged || nearestNeighborParamsChanged))
 	{
 		this->statusBar()->showMessage(tr("A parameter has changed... \"Update objects\" may be required."));
 	}

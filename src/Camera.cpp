@@ -63,7 +63,6 @@ int Camera::getCurrentFrameIndex()
 
 void Camera::moveToFrame(int frame)
 {
-	printf("Moved to frame %d.\n", frame);
 	if(frame < images_.size())
 	{
 		currentImageIndex_ = frame;

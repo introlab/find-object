@@ -267,6 +267,12 @@ void ObjWidget::setData(const std::vector<cv::KeyPoint> & keypoints,
 	label_->setVisible(image.empty());
 }
 
+void ObjWidget::setWords(const QMultiMap<int, int> & words)
+{
+	Q_ASSERT(words.size() == keypoints_.size());
+	words_ = words;
+}
+
 void ObjWidget::resetKptsColor()
 {
 	for(int i=0; i<kptColors_.size(); ++i)

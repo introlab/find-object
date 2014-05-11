@@ -7,6 +7,7 @@
 
 #include <opencv2/features2d/features2d.hpp>
 #include <QtGui/QWidget>
+#include <QtCore/QMultiMap>
 
 class KeypointItem;
 class ImageKptsView;
@@ -39,6 +40,7 @@ public:
 			const cv::Mat & image,
 			const QString & detectorType,
 			const QString & descriptorType);
+	void setWords(const QMultiMap<int, int> & words);
 	void setTextLabel(const QString & text);
 	void resetKptsColor();
 	void setKptColor(int index, const QColor & color);
@@ -53,6 +55,7 @@ public:
 	void addRect(QGraphicsRectItem * rect);
 	void clearRoiSelection() {mousePressedPos_ = mouseCurrentPos_ = QPoint();update();}
 
+	const QMultiMap<int, int> & words() const {return words_;}
 	const std::vector<cv::KeyPoint> & keypoints() const {return keypoints_;}
 	const cv::Mat & descriptors() const {return descriptors_;}
 	const QPixmap & pixmap() const {return pixmap_;}
@@ -97,6 +100,7 @@ private:
 private:
 	std::vector<cv::KeyPoint> keypoints_;
 	cv::Mat descriptors_;
+	QMultiMap<int, int> words_; // <word id, keypoint indexes>
 	QPixmap pixmap_;
 	cv::Mat cvImage_;
 	QList<KeypointItem*> keypointItems_;

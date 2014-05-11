@@ -16,6 +16,8 @@
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/imgproc/imgproc_c.h>
 
+#include "Vocabulary.h"
+
 class Ui_mainWindow;
 class ObjWidget;
 class Camera;
@@ -89,10 +91,11 @@ private:
 	Camera * camera_;
 	QString settings_;
 	rtabmap::PdfPlotCurve * likelihoodCurve_;
+	rtabmap::PdfPlotCurve * inliersCurve_;
 	AboutDialog * aboutDialog_;
 	QList<ObjWidget*> objects_;
 	std::vector<cv::Mat> objectsDescriptors_;
-	cv::flann::Index flannIndex_;
+	Vocabulary vocabulary_;
 	QMap<int, int> dataRange_; // <last id of object's descriptor, id>
 	QTime updateRate_;
 	QTime refreshStartTime_;

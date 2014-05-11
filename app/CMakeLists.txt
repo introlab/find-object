@@ -46,6 +46,7 @@ SET(SRC_FILES
 	../src/ObjWidget.cpp
 	../src/AboutDialog.cpp
 	../src/TcpServer.cpp
+	../src/Vocabulary.cpp
 	../src/utilite/UPlot.cpp
 	../src/utilite/UDirectory.cpp
 	../src/utilite/UFile.cpp
