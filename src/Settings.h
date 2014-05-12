@@ -176,8 +176,9 @@ class Settings
 	PARAMETER(General, multiDetection, bool, false, "Multiple detection of the same object.");
 	PARAMETER(General, multiDetectionRadius, int, 30, "Ignore detection of the same object in X pixels radius of the previous detections.");
 	PARAMETER(General, port, int, 0, "Port on objects detected are published. If port=0, a port is chosen automatically.")
-	PARAMETER(General, incrementalVocabulary, bool, false, "The vocabulary is created incrementally. When new objects are added, their descriptors are compared to those already in vocabulary to find if the visual word already exist or not. \"NearestNeighbor/nndrRatio\" is used to compare descriptors.");
 	PARAMETER(General, autoScroll, bool, true, "Auto scroll to detected object in Objects panel.");
+	PARAMETER(General, vocabularyIncremental, bool, false, "The vocabulary is created incrementally. When new objects are added, their descriptors are compared to those already in vocabulary to find if the visual word already exist or not. \"NearestNeighbor/nndrRatio\" is used to compare descriptors.");
+	PARAMETER(General, vocabularyUpdateMinWords, int, 2000, "When the vocabulary is incremental (see \"General/vocabularyIncremental\"), after X words added to vocabulary, the internal index is updated with new words. This parameter lets avoiding to reconstruct the whole nearest neighbor index after each time descriptors of an object are added to vocabulary.");
 
 	PARAMETER(Homography, homographyComputed, bool, true, "Compute homography? On ROS, this is required to publish objects detected.");
 	PARAMETER(Homography, method, QString, "1:LMEDS;RANSAC", "Type of the robust estimation algorithm: least-median algorithm or RANSAC algorithm.");

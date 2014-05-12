@@ -20,8 +20,10 @@ Vocabulary::~Vocabulary()
 
 void Vocabulary::clear()
 {
-	descriptors_ = cv::Mat();
+	indexedDescriptors_ = cv::Mat();
+	notIndexedDescriptors_ = cv::Mat();
 	wordToObjects_.clear();
+	notIndexedWordIds_.clear();
 }
 
 QMultiMap<int, int> Vocabulary::addWords(const cv::Mat & descriptors, int objectIndex, bool incremental)
@@ -35,43 +37,84 @@ QMultiMap<int, int> Vocabulary::addWords(const cv::Mat & descriptors, int object
 	if(incremental)
 	{
 		int k = 2;
-		cv::Mat results(descriptors.rows, k, CV_32SC1); // results index
-		cv::Mat	dists(descriptors.rows, k, CV_32FC1); // Distance results are CV_32FC1
+		cv::Mat results;
+		cv::Mat	dists;
 
 		bool globalSearch = false;
-		if(!descriptors_.empty() && descriptors_.rows >= (int)k)
+		if(!indexedDescriptors_.empty() && indexedDescriptors_.rows >= (int)k)
 		{
+			Q_ASSERT(indexedDescriptors_.type() == descriptors.type() && indexedDescriptors_.cols == descriptors.cols);
 			flannIndex_.knnSearch(descriptors, results, dists, k, Settings::getFlannSearchParams() );
+
+			if( dists.type() == CV_32S )
+			{
+				cv::Mat temp;
+				dists.convertTo(temp, CV_32F);
+				dists = temp;
+			}
+
 			globalSearch = true;
 		}
 
-		QVector<int> newWordsId; // index global
-		cv::Mat newWords;
+		QVector<int> newWordIds = notIndexedWordIds_; // index global
+		cv::Mat newWords = notIndexedDescriptors_;
 		int matches = 0;
 		for(int i = 0; i < descriptors.rows; ++i)
 		{
 			QMap<float, int> fullResults; // nearest descriptors sorted by distance
 			if(newWords.rows)
 			{
+				Q_ASSERT(newWords.type() == descriptors.type() && newWords.cols == descriptors.cols);
+
 				// Check if this descriptor matches with a word not already added to the vocabulary
-				cv::flann::Index tmpIndex;
-				cv::flann::IndexParams * params;
+				// Do linear search only
+				cv::Mat tmpResults;
+				cv::Mat	tmpDists;
 				if(descriptors.type()==CV_8U)
 				{
-					params = Settings::createFlannIndexParams(); // should be LSH
+					//normType – One of NORM_L1, NORM_L2, NORM_HAMMING, NORM_HAMMING2. L1 and L2 norms are
+					//			 preferable choices for SIFT and SURF descriptors, NORM_HAMMING should be
+					// 			 used with ORB, BRISK and BRIEF, NORM_HAMMING2 should be used with ORB
+					// 			 when WTA_K==3 or 4 (see ORB::ORB constructor description).
+					int normType = cv::NORM_HAMMING;
+					if(Settings::currentDescriptorType().compare("ORB") &&
+						(Settings::getFeature2D_ORB_WTA_K()==3 || Settings::getFeature2D_ORB_WTA_K()==4))
+					{
+						normType = cv::NORM_HAMMING2;
+					}
+
+					cv::batchDistance( descriptors.row(i),
+									newWords,
+									tmpDists,
+									CV_32S,
+									tmpResults,
+									normType,
+									newWords.rows>=k?k:1,
+									cv::Mat(),
+									0,
+									false);
 				}
 				else
 				{
-					params = new cv::flann::LinearIndexParams(); // faster
+					cv::flann::Index tmpIndex;
+					tmpIndex.build(newWords, cv::flann::LinearIndexParams(), Settings::getFlannDistanceType());
+					tmpIndex.knnSearch(descriptors.row(i), tmpResults, tmpDists, newWords.rows>1?k:1, Settings::getFlannSearchParams());
 				}
-				tmpIndex.build(newWords, *params, Settings::getFlannDistanceType());
-				delete params;
-				cv::Mat tmpResults(1, newWords.rows>1?k:1, CV_32SC1); // results index
-				cv::Mat	tmpDists(1, newWords.rows>1?k:1, CV_32FC1); // Distance results are CV_32FC1
-				tmpIndex.knnSearch(descriptors.row(i), tmpResults, tmpDists, newWords.rows>1?k:1, Settings::getFlannSearchParams());
-				for(int j = 0; j < (newWords.rows>1?k:1); ++j)
+
+				if( tmpDists.type() == CV_32S )
 				{
-					fullResults.insert(tmpDists.at<float>(0,j), newWordsId.at(tmpResults.at<int>(0,j)));
+					cv::Mat temp;
+					tmpDists.convertTo(temp, CV_32F);
+					tmpDists = temp;
+				}
+
+				for(int j = 0; j < (newWords.rows>=k?k:1); ++j)
+				{
+					if(tmpResults.at<int>(0,j) >= 0)
+					{
+						//printf("local i=%d, j=%d, tmpDist=%f tmpResult=%d\n", i ,j, tmpDists.at<float>(0,j), tmpResults.at<int>(0,j));
+						fullResults.insert(tmpDists.at<float>(0,j), newWordIds.at(tmpResults.at<int>(0,j)));
+					}
 				}
 			}
 
@@ -79,7 +122,11 @@ QMultiMap<int, int> Vocabulary::addWords(const cv::Mat & descriptors, int object
 			{
 				for(int j=0; j<k; ++j)
 				{
-					fullResults.insert(dists.at<float>(i,j), results.at<int>(i,j));
+					if(results.at<int>(i,j) >= 0)
+					{
+						//printf("global i=%d, j=%d, dist=%f\n", i ,j, dists.at<float>(i,j));
+						fullResults.insert(dists.at<float>(i,j), results.at<int>(i,j));
+					}
 				}
 			}
 
@@ -107,49 +154,39 @@ QMultiMap<int, int> Vocabulary::addWords(const cv::Mat & descriptors, int object
 				}
 				cv::Mat dest(tmp, cv::Range(newWords.rows, newWords.rows+1));
 				descriptors.row(i).copyTo(dest);
-				newWordsId.push_back(descriptors_.rows + newWords.rows);
+				newWordIds.push_back(indexedDescriptors_.rows + newWords.rows);
 				newWords = tmp;
-				words.insert(newWordsId.back(), i);
-				wordToObjects_.insert(newWordsId.back(), objectIndex);
+				words.insert(newWordIds.back(), i);
+				wordToObjects_.insert(newWordIds.back(), objectIndex);
 			}
 		}
-		//printf("matches = %d\n", matches);
 
 		//concatenate new words
 		if(newWords.rows)
 		{
-			cv::Mat tmp(descriptors_.rows+newWords.rows, descriptors.cols, descriptors.type());
-			if(descriptors_.rows)
-			{
-				cv::Mat dest(tmp, cv::Range(0, descriptors_.rows));
-				descriptors_.copyTo(dest);
-			}
-			cv::Mat dest(tmp, cv::Range(descriptors_.rows, descriptors_.rows+newWords.rows));
-			newWords.copyTo(dest);
-			descriptors_ = tmp;
+			notIndexedWordIds_ = newWordIds;
+			notIndexedDescriptors_ = newWords;
 		}
-
-		//update
-		this->update();
 	}
 	else
 	{
 		for(int i = 0; i < descriptors.rows; ++i)
 		{
-			wordToObjects_.insert(descriptors_.rows+i, objectIndex);
-			words.insert(descriptors_.rows+i, i);
+			wordToObjects_.insert(indexedDescriptors_.rows + notIndexedDescriptors_.rows+i, objectIndex);
+			words.insert(indexedDescriptors_.rows + notIndexedDescriptors_.rows+i, i);
+			notIndexedWordIds_.push_back(indexedDescriptors_.rows + notIndexedDescriptors_.rows+i);
 		}
 
 		//just concatenate descriptors
-		cv::Mat tmp(descriptors_.rows+descriptors.rows, descriptors.cols, descriptors.type());
-		if(descriptors_.rows)
+		cv::Mat tmp(notIndexedDescriptors_.rows+descriptors.rows, descriptors.cols, descriptors.type());
+		if(notIndexedDescriptors_.rows)
 		{
-			cv::Mat dest(tmp, cv::Range(0, descriptors_.rows));
-			descriptors_.copyTo(dest);
+			cv::Mat dest(tmp, cv::Range(0, notIndexedDescriptors_.rows));
+			notIndexedDescriptors_.copyTo(dest);
 		}
-		cv::Mat dest(tmp, cv::Range(descriptors_.rows, descriptors_.rows+descriptors.rows));
+		cv::Mat dest(tmp, cv::Range(notIndexedDescriptors_.rows, notIndexedDescriptors_.rows+descriptors.rows));
 		descriptors.copyTo(dest);
-		descriptors_ = tmp;
+		notIndexedDescriptors_ = tmp;
 	}
 
 	return words;
@@ -157,18 +194,46 @@ QMultiMap<int, int> Vocabulary::addWords(const cv::Mat & descriptors, int object
 
 void Vocabulary::update()
 {
-	if(!descriptors_.empty())
+	if(!notIndexedDescriptors_.empty())
+	{
+		Q_ASSERT(indexedDescriptors_.cols == notIndexedDescriptors_.cols &&
+				 indexedDescriptors_.type() == notIndexedDescriptors_.type() );
+
+		//concatenate descriptors
+		cv::Mat tmp(indexedDescriptors_.rows+notIndexedDescriptors_.rows, notIndexedDescriptors_.cols, notIndexedDescriptors_.type());
+		cv::Mat dest(tmp, cv::Range(0, indexedDescriptors_.rows));
+		indexedDescriptors_.copyTo(dest);
+		dest = cv::Mat(tmp, cv::Range(indexedDescriptors_.rows, indexedDescriptors_.rows+notIndexedDescriptors_.rows));
+		notIndexedDescriptors_.copyTo(dest);
+		indexedDescriptors_ = tmp;
+
+		notIndexedDescriptors_ = cv::Mat();
+		notIndexedWordIds_.clear();
+	}
+
+	if(!indexedDescriptors_.empty())
 	{
 		cv::flann::IndexParams * params = Settings::createFlannIndexParams();
-		flannIndex_.build(descriptors_, *params, Settings::getFlannDistanceType());
+		flannIndex_.build(indexedDescriptors_, *params, Settings::getFlannDistanceType());
 		delete params;
 	}
 }
 
 void Vocabulary::search(const cv::Mat & descriptors, cv::Mat & results, cv::Mat & dists, int k)
 {
-	if(!descriptors_.empty())
+	Q_ASSERT(notIndexedDescriptors_.empty() && notIndexedWordIds_.size() == 0);
+
+	if(!indexedDescriptors_.empty())
 	{
+		Q_ASSERT(descriptors.type() == indexedDescriptors_.type() && descriptors.cols == indexedDescriptors_.cols);
+
 		flannIndex_.knnSearch(descriptors, results, dists, k, Settings::getFlannSearchParams());
+
+		if( dists.type() == CV_32S )
+		{
+			cv::Mat temp;
+			dists.convertTo(temp, CV_32F);
+			dists = temp;
+		}
 	}
 }

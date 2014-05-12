@@ -689,6 +689,9 @@ void MainWindow::updateObjects()
 {
 	if(objects_.size())
 	{
+		this->statusBar()->showMessage(tr("Updating %1 objects...").arg(objects_.size()));
+		QApplication::processEvents();
+
 		int threadCounts = Settings::getGeneral_threads();
 		if(threadCounts == 0)
 		{
@@ -788,6 +791,8 @@ void MainWindow::updateData()
 	// Copy data
 	if(count)
 	{
+		this->statusBar()->showMessage(tr("Updating objects data (%1 descriptors)...").arg(count));
+		QApplication::processEvents();
 		printf("Updating global descriptors matrix: Objects=%d, total descriptors=%d, dim=%d, type=%d\n", (int)objects_.size(), count, dim, type);
 		if(Settings::getGeneral_invertedSearch() || Settings::getGeneral_threads() == 1)
 		{
@@ -812,7 +817,7 @@ void MainWindow::updateData()
 			{
 				QTime time;
 				time.start();
-				bool incremental = Settings::getGeneral_incrementalVocabulary();
+				bool incremental = Settings::getGeneral_vocabularyIncremental();
 				if(incremental)
 				{
 					printf("Creating incremental vocabulary...\n");
@@ -823,18 +828,29 @@ void MainWindow::updateData()
 				}
 				QTime localTime;
 				localTime.start();
+				int updateVocabularyMinWords = Settings::getGeneral_vocabularyUpdateMinWords();
+				int addedWords = 0;
 				for(int i=0; i<objects_.size(); ++i)
 				{
 					QMultiMap<int, int> words = vocabulary_.addWords(objects_[i]->descriptors(), i, incremental);
 					objects_[i]->setWords(words);
-					printf("Object %d, %d words from %d descriptors (%d words, %d ms)\n",
+					addedWords += words.uniqueKeys().size();
+					bool updated = false;
+					if(incremental && addedWords > updateVocabularyMinWords)
+					{
+						vocabulary_.update();
+						addedWords = 0;
+						updated = true;
+					}
+					printf("Object %d, %d words from %d descriptors (%d words, %d ms) %s\n",
 							objects_[i]->id(),
 							words.uniqueKeys().size(),
 							objects_[i]->descriptors().rows,
 							vocabulary_.size(),
-							localTime.restart());
+							localTime.restart(),
+							updated?"updated":"");
 				}
-				if(!incremental)
+				if(addedWords)
 				{
 					vocabulary_.update();
 				}
@@ -857,6 +873,7 @@ void MainWindow::updateData()
 				objectsDescriptors_.push_back(objects_.at(i)->descriptors());
 			}
 		}
+		this->statusBar()->clearMessage();
 	}
 }
 
@@ -1230,8 +1247,8 @@ void MainWindow::update(const cv::Mat & image)
 				// CREATE INDEX for the scene
 				//printf("Creating FLANN index (%s)\n", Settings::currentNearestNeighborType().toStdString().c_str());
 				vocabulary_.clear();
-				QMultiMap<int, int> words = vocabulary_.addWords(descriptors, -1, Settings::getGeneral_incrementalVocabulary());
-				if(!Settings::getGeneral_incrementalVocabulary())
+				QMultiMap<int, int> words = vocabulary_.addWords(descriptors, -1, Settings::getGeneral_vocabularyIncremental());
+				if(!Settings::getGeneral_vocabularyIncremental())
 				{
 					vocabulary_.update();
 				}
@@ -1653,7 +1670,7 @@ void MainWindow::notifyParametersChanged(const QStringList & paramChanged)
 		else if(!nearestNeighborParamsChanged &&
 			    ( (iter->contains("NearestNeighbor") && Settings::getGeneral_invertedSearch()) ||
 			      iter->compare(Settings::kGeneral_invertedSearch()) == 0 ||
-			      (iter->compare(Settings::kGeneral_incrementalVocabulary()) == 0 && Settings::getGeneral_invertedSearch()) ||
+			      (iter->compare(Settings::kGeneral_vocabularyIncremental()) == 0 && Settings::getGeneral_invertedSearch()) ||
 			      (iter->compare(Settings::kGeneral_threads()) == 0 && !Settings::getGeneral_invertedSearch()) ))
 		{
 			nearestNeighborParamsChanged = true;

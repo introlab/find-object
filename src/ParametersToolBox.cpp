@@ -471,14 +471,18 @@ void ParametersToolBox::changeParameter(const int & value)
 					QMessageBox::warning(this,
 							tr("Warning"),
 							tr("Current selected descriptor type (\"%1\") is binary while nearest neighbor strategy is not (\"%2\").\n"
-							   "Falling back to \"Lsh\" nearest neighbor strategy (by default).")
+							   "Falling back to \"Lsh\" nearest neighbor strategy with Hamming distance (by default).")
 							   .arg(descriptorBox->currentText())
 							   .arg(nnBox->currentText()));
 					QString tmp = Settings::getNearestNeighbor_1Strategy();
-					*tmp.begin() = '5'; // set index
+					*tmp.begin() = '5'; // set LSH
 					Settings::setNearestNeighbor_1Strategy(tmp);
+					tmp = Settings::getNearestNeighbor_2Distance_type();
+					*tmp.begin() = '8'; // set HAMMING
+					Settings::setNearestNeighbor_2Distance_type(tmp);
 					nnBox->blockSignals(true);
 					this->updateParameter(Settings::kNearestNeighbor_1Strategy());
+					this->updateParameter(Settings::kNearestNeighbor_2Distance_type());
 					nnBox->blockSignals(false);
 					if(sender() == nnBox)
 					{
@@ -493,14 +497,18 @@ void ParametersToolBox::changeParameter(const int & value)
 					QMessageBox::warning(this,
 							tr("Warning"),
 							tr("Current selected descriptor type (\"%1\") is not binary while nearest neighbor strategy is (\"%2\").\n"
-							   "Falling back to \"KDTree\" nearest neighbor strategy (by default).")
+							   "Falling back to \"KDTree\" nearest neighbor strategy with Euclidean_L2 distance (by default).")
 							   .arg(descriptorBox->currentText())
 							   .arg(nnBox->currentText()));
 					QString tmp = Settings::getNearestNeighbor_1Strategy();
-					*tmp.begin() = '1'; // set index
+					*tmp.begin() = '1'; // set KDTree
 					Settings::setNearestNeighbor_1Strategy(tmp);
+					tmp = Settings::getNearestNeighbor_2Distance_type();
+					*tmp.begin() = '0'; // set EUCLIDEAN_L2
+					Settings::setNearestNeighbor_2Distance_type(tmp);
 					nnBox->blockSignals(true);
 					this->updateParameter(Settings::kNearestNeighbor_1Strategy());
+					this->updateParameter(Settings::kNearestNeighbor_2Distance_type());
 					nnBox->blockSignals(false);
 					if(sender() == nnBox)
 					{
