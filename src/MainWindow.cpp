@@ -7,6 +7,7 @@
 #include "ui_mainWindow.h"
 #include "QtOpenCV.h"
 #include "KeypointItem.h"
+#include "RectItem.h"
 #include "ObjWidget.h"
 #include "Camera.h"
 #include "Settings.h"
@@ -634,6 +635,34 @@ void MainWindow::showObject(ObjWidget * obj)
 	}
 }
 
+std::vector<cv::KeyPoint> limitKeypoints(const std::vector<cv::KeyPoint> & keypoints, int maxKeypoints)
+{
+	std::vector<cv::KeyPoint> kptsKept;
+	if(maxKeypoints > 0 && (int)keypoints.size() > maxKeypoints)
+	{
+		// Sort words by response
+		std::multimap<float, int> reponseMap; // <response,id>
+		for(unsigned int i = 0; i <keypoints.size(); ++i)
+		{
+			//Keep track of the data, to be easier to manage the data in the next step
+			reponseMap.insert(std::pair<float, int>(fabs(keypoints[i].response), i));
+		}
+
+		// Remove them
+		std::multimap<float, int>::reverse_iterator iter = reponseMap.rbegin();
+		kptsKept.resize(maxKeypoints);
+		for(unsigned int k=0; k < kptsKept.size() && iter!=reponseMap.rend(); ++k, ++iter)
+		{
+			kptsKept[k] = keypoints[iter->second];
+		}
+	}
+	else
+	{
+		kptsKept = keypoints;
+	}
+	return kptsKept;
+}
+
 class ExtractFeaturesThread : public QThread
 {
 public:
@@ -663,6 +692,14 @@ protected:
 
 		if(keypoints_.size())
 		{
+			int maxFeatures = Settings::getFeature2D_3MaxFeatures();
+			if(maxFeatures > 0 && (int)keypoints_.size() > maxFeatures)
+			{
+				int previousCount = keypoints_.size();
+				keypoints_ = limitKeypoints(keypoints_, maxFeatures);
+				printf("obj=%d, %d keypoints removed, (kept %d), min/max response=%f/%f\n", objectId_, previousCount-(int)keypoints_.size(), (int)keypoints_.size(), keypoints_.size()?keypoints_.back().response:0.0f, keypoints_.size()?keypoints_.front().response:0.0f);
+			}
+
 			cv::DescriptorExtractor * extractor = Settings::createDescriptorsExtractor();
 			extractor->compute(image_, keypoints_, descriptors_);
 			delete extractor;
@@ -839,7 +876,7 @@ void MainWindow::updateData()
 					objects_[i]->setWords(words);
 					addedWords += words.uniqueKeys().size();
 					bool updated = false;
-					if(incremental && addedWords > updateVocabularyMinWords)
+					if(incremental && addedWords && addedWords >= updateVocabularyMinWords)
 					{
 						vocabulary_.update();
 						addedWords = 0;
@@ -980,6 +1017,18 @@ void MainWindow::moveCameraFrame(int frame)
 		if(!camera_->isRunning())
 		{
 			camera_->takeImage();
+		}
+	}
+}
+
+void MainWindow::rectHovered(int objId)
+{
+	if(objId>=0 && Settings::getGeneral_autoScroll())
+	{
+		QLabel * label = ui_->dockWidget_objects->findChild<QLabel*>(QString("%1title").arg(objId));
+		if(label)
+		{
+			ui_->objects_area->verticalScrollBar()->setValue(label->pos().y());
 		}
 	}
 }
@@ -1209,6 +1258,14 @@ void MainWindow::update(const cv::Mat & image)
 		cv::Mat descriptors;
 		if(keypoints.size())
 		{
+			int maxFeatures = Settings::getFeature2D_3MaxFeatures();
+			if(maxFeatures > 0 && (int)keypoints.size() > maxFeatures)
+			{
+				//int previousCount = (int)keypoints.size();
+				keypoints = limitKeypoints(keypoints, maxFeatures);
+				//printf("%d keypoints removed, (kept %d), min/max response=%f/%f\n", previousCount-(int)keypoints.size(), (int)keypoints.size(), keypoints.size()?keypoints.back().response:0.0f, keypoints.size()?keypoints.front().response:0.0f);
+			}
+
 			// EXTRACT DESCRIPTORS
 			cv::DescriptorExtractor * extractor = Settings::createDescriptorsExtractor();
 			extractor->compute(grayscaleImg, keypoints, descriptors);
@@ -1502,7 +1559,8 @@ void MainWindow::update(const cv::Mat & image)
 										}
 										QPen rectPen(color);
 										rectPen.setWidth(4);
-										QGraphicsRectItem * rectItemScene = new QGraphicsRectItem(rect);
+										RectItem * rectItemScene = new RectItem(objects_.at(index)->id(), rect);
+										connect(rectItemScene, SIGNAL(hovered(int)), this, SLOT(rectHovered(int)));
 										rectItemScene->setPen(rectPen);
 										rectItemScene->setTransform(hTransform);
 										ui_->imageView_source->addRect(rectItemScene);

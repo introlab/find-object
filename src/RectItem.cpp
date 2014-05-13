@@ -2,30 +2,27 @@
  * Copyright (C) 2011, Mathieu Labbe - IntRoLab - Universite de Sherbrooke
  */
 
-#include "KeypointItem.h"
+#include "RectItem.h"
 
 #include <QtGui/QPen>
 #include <QtGui/QBrush>
 #include <QtGui/QGraphicsScene>
 
-KeypointItem::KeypointItem(int id, qreal x, qreal y, int r, const QString & info, const QColor & color, QGraphicsItem * parent) :
-	QGraphicsEllipseItem(x, y, r, r, parent),
-	info_(info),
+RectItem::RectItem(int id, const QRectF &rect, QGraphicsItem * parent) :
+	QGraphicsRectItem(rect, parent),
 	placeHolder_(0),
 	id_(id)
 {
-	this->setPen(QPen(color));
-	this->setBrush(QBrush(color));
 	this->setAcceptsHoverEvents(true);
 	this->setFlag(QGraphicsItem::ItemIsFocusable, true);
 	this->setFlag(QGraphicsItem::ItemIsSelectable, true);
 }
 
-KeypointItem::~KeypointItem()
+RectItem::~RectItem()
 {
 }
 
-void KeypointItem::setColor(const QColor & color)
+void RectItem::setColor(const QColor & color)
 {
 	this->setPen(QPen(color));
 	this->setBrush(QBrush(color));
@@ -39,7 +36,7 @@ void KeypointItem::setColor(const QColor & color)
 	}
 }
 
-void KeypointItem::showDescription()
+void RectItem::showDescription()
 {
 	if(!placeHolder_ || !placeHolder_->isVisible())
 	{
@@ -51,7 +48,7 @@ void KeypointItem::showDescription()
 			placeHolder_->setBrush(QBrush(QColor ( 0, 0, 0, 170 ))); // Black transparent background
 			QGraphicsTextItem * text = new QGraphicsTextItem(placeHolder_);
 			text->setDefaultTextColor(this->pen().color().rgb());
-			text->setPlainText(info_);
+			text->setPlainText(tr("Object=%1").arg(id_));
 			placeHolder_->setRect(text->boundingRect());
 		}
 
@@ -59,12 +56,14 @@ void KeypointItem::showDescription()
 		QPen pen = this->pen();
 		this->setPen(QPen(pen.color(), pen.width()+2));
 		placeHolder_->setZValue(this->zValue()+1);
-		placeHolder_->setPos(this->mapToScene(0,0));
+		placeHolder_->setPos(0,0);
 		placeHolder_->setVisible(true);
+
+		emit hovered(id_);
 	}
 }
 
-void KeypointItem::hideDescription()
+void RectItem::hideDescription()
 {
 	if(placeHolder_ && placeHolder_->isVisible())
 	{
@@ -73,29 +72,29 @@ void KeypointItem::hideDescription()
 	}
 }
 
-void KeypointItem::hoverEnterEvent ( QGraphicsSceneHoverEvent * event )
+void RectItem::hoverEnterEvent ( QGraphicsSceneHoverEvent * event )
 {
 	this->showDescription();
-	QGraphicsEllipseItem::hoverEnterEvent(event);
+	QGraphicsRectItem::hoverEnterEvent(event);
 }
 
-void KeypointItem::hoverLeaveEvent ( QGraphicsSceneHoverEvent * event )
+void RectItem::hoverLeaveEvent ( QGraphicsSceneHoverEvent * event )
 {
 	if(!this->hasFocus())
 	{
 		this->hideDescription();
 	}
-	QGraphicsEllipseItem::hoverEnterEvent(event);
+	QGraphicsRectItem::hoverEnterEvent(event);
 }
 
-void KeypointItem::focusInEvent ( QFocusEvent * event )
+void RectItem::focusInEvent ( QFocusEvent * event )
 {
 	this->showDescription();
-	QGraphicsEllipseItem::focusInEvent(event);
+	QGraphicsRectItem::focusInEvent(event);
 }
 
-void KeypointItem::focusOutEvent ( QFocusEvent * event )
+void RectItem::focusOutEvent ( QFocusEvent * event )
 {
 	this->hideDescription();
-	QGraphicsEllipseItem::focusOutEvent(event);
+	QGraphicsRectItem::focusOutEvent(event);
 }

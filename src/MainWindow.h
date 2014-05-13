@@ -75,6 +75,7 @@ private slots:
 	void updateObjects();
 	void notifyParametersChanged(const QStringList & param);
 	void moveCameraFrame(int frame);
+	void rectHovered(int objId);
 
 signals:
 	void objectsFound(const QMultiMap<int, QPair<QRect, QTransform> > &);

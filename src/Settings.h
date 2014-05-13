@@ -64,6 +64,7 @@ class Settings
 	//List format : [Index:item0;item1;item3;...]
 	PARAMETER(Feature2D, 1Detector, QString, "7:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK" , "Keypoint detector.");
 	PARAMETER(Feature2D, 2Descriptor, QString, "3:Brief;ORB;SIFT;SURF;BRISK;FREAK", "Keypoint descriptor.");
+	PARAMETER(Feature2D, 3MaxFeatures, int, 0, "Maximum features per image. If the number of features extracted is over this threshold, only X features with the highest response are kept. 0 means all features are kept.");
 
 	PARAMETER(Feature2D, Brief_bytes, int, 32, "Bytes is a length of descriptor in bytes. It can be equal 16, 32 or 64 bytes.");
 
@@ -178,7 +179,7 @@ class Settings
 	PARAMETER(General, port, int, 0, "Port on objects detected are published. If port=0, a port is chosen automatically.")
 	PARAMETER(General, autoScroll, bool, true, "Auto scroll to detected object in Objects panel.");
 	PARAMETER(General, vocabularyIncremental, bool, false, "The vocabulary is created incrementally. When new objects are added, their descriptors are compared to those already in vocabulary to find if the visual word already exist or not. \"NearestNeighbor/nndrRatio\" is used to compare descriptors.");
-	PARAMETER(General, vocabularyUpdateMinWords, int, 2000, "When the vocabulary is incremental (see \"General/vocabularyIncremental\"), after X words added to vocabulary, the internal index is updated with new words. This parameter lets avoiding to reconstruct the whole nearest neighbor index after each time descriptors of an object are added to vocabulary.");
+	PARAMETER(General, vocabularyUpdateMinWords, int, 2000, "When the vocabulary is incremental (see \"General/vocabularyIncremental\"), after X words added to vocabulary, the internal index is updated with new words. This parameter lets avoiding to reconstruct the whole nearest neighbor index after each time descriptors of an object are added to vocabulary. 0 means no incremental update.");
 
 	PARAMETER(Homography, homographyComputed, bool, true, "Compute homography? On ROS, this is required to publish objects detected.");
 	PARAMETER(Homography, method, QString, "1:LMEDS;RANSAC", "Type of the robust estimation algorithm: least-median algorithm or RANSAC algorithm.");

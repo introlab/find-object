@@ -2,22 +2,27 @@
  * Copyright (C) 2011, Mathieu Labbe - IntRoLab - Universite de Sherbrooke
  */
 
-#ifndef KEYPOINTITEM_H_
-#define KEYPOINTITEM_H_
+#ifndef RECTITEM_H_
+#define RECTITEM_H_
 
-#include <QtGui/QGraphicsEllipseItem>
+#include <QtGui/QGraphicsRectItem>
 #include <QtGui/QGraphicsTextItem>
 #include <QtGui/QPen>
 #include <QtGui/QBrush>
 
-class KeypointItem : public QGraphicsEllipseItem
+class RectItem : public QObject, public QGraphicsRectItem
 {
+	Q_OBJECT;
+
 public:
-	KeypointItem(int id, qreal x, qreal y, int r, const QString & info, const QColor & color = Qt::green, QGraphicsItem * parent = 0);
-	virtual ~KeypointItem();
+	RectItem(int id, const QRectF &rect, QGraphicsItem * parent = 0);
+	virtual ~RectItem();
 
 	void setColor(const QColor & color);
 	int id() const {return id_;}
+
+signals:
+	void hovered(int);
 
 protected:
 	virtual void hoverEnterEvent ( QGraphicsSceneHoverEvent * event );
@@ -30,10 +35,9 @@ private:
 	void hideDescription();
 
 private:
-	QString info_;
 	QGraphicsRectItem * placeHolder_;
 	int id_;
 };
 
 
-#endif /* KEYPOINTITEM_H_ */
+#endif /* RECTITEM_H_ */

@@ -315,7 +315,7 @@ void ObjWidget::addRect(QGraphicsRectItem * rect)
 	{
 		graphicsView_->scene()->addItem(rect);
 	}
-	rect->setZValue(2);
+	rect->setZValue(1);
 	QPen pen = rect->pen();
 	QColor color = pen.color();
 	color.setAlpha(alpha_);
@@ -723,7 +723,7 @@ void ObjWidget::drawKeypoints(QPainter * painter)
 			// YELLOW = NEW and multiple times
 			item = new KeypointItem(i+1, r.pt.x-radius, r.pt.y-radius, radius*2, info, color);
 			item->setVisible(this->isFeaturesShown());
-			item->setZValue(1);
+			item->setZValue(2);
 			graphicsView_->scene()->addItem(item);
 			keypointItems_.append(item);
 		}

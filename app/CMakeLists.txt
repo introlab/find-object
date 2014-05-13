@@ -9,6 +9,7 @@ SET(headers_ui
 	../src/ParametersToolBox.h
 	../src/AboutDialog.h
 	../src/TcpServer.h
+	../src/RectItem.h
 	../src/utilite/UPlot.h
 	../src/rtabmap/PdfPlot.h
 )
@@ -39,6 +40,7 @@ SET(SRC_FILES
 	../src/MainWindow.cpp
 	../src/AddObjectDialog.cpp
 	../src/KeypointItem.cpp
+	../src/RectItem.cpp
 	../src/QtOpenCV.cpp
 	../src/Camera.cpp
 	../src/ParametersToolBox.cpp
