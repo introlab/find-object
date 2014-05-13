@@ -56,13 +56,13 @@ QMultiMap<int, int> Vocabulary::addWords(const cv::Mat & descriptors, int object
 			globalSearch = true;
 		}
 
-		QVector<int> newWordIds = notIndexedWordIds_; // index global
-		cv::Mat newWords = notIndexedDescriptors_;
+		notIndexedWordIds_.reserve(notIndexedWordIds_.size() + descriptors.rows);
+		notIndexedDescriptors_.reserve(notIndexedDescriptors_.rows + descriptors.rows);
 		int matches = 0;
 		for(int i = 0; i < descriptors.rows; ++i)
 		{
 			QMap<float, int> fullResults; // nearest descriptors sorted by distance
-			if(newWords.rows)
+			if(notIndexedDescriptors_.rows)
 			{
 				Q_ASSERT(newWords.type() == descriptors.type() && newWords.cols == descriptors.cols);
 
@@ -84,12 +84,12 @@ QMultiMap<int, int> Vocabulary::addWords(const cv::Mat & descriptors, int object
 					}
 
 					cv::batchDistance( descriptors.row(i),
-									newWords,
+									notIndexedDescriptors_,
 									tmpDists,
 									CV_32S,
 									tmpResults,
 									normType,
-									newWords.rows>=k?k:1,
+									notIndexedDescriptors_.rows>=k?k:1,
 									cv::Mat(),
 									0,
 									false);
@@ -97,8 +97,8 @@ QMultiMap<int, int> Vocabulary::addWords(const cv::Mat & descriptors, int object
 				else
 				{
 					cv::flann::Index tmpIndex;
-					tmpIndex.build(newWords, cv::flann::LinearIndexParams(), Settings::getFlannDistanceType());
-					tmpIndex.knnSearch(descriptors.row(i), tmpResults, tmpDists, newWords.rows>1?k:1, Settings::getFlannSearchParams());
+					tmpIndex.build(notIndexedDescriptors_, cv::flann::LinearIndexParams(), Settings::getFlannDistanceType());
+					tmpIndex.knnSearch(descriptors.row(i), tmpResults, tmpDists, notIndexedDescriptors_.rows>1?k:1, Settings::getFlannSearchParams());
 				}
 
 				if( tmpDists.type() == CV_32S )
@@ -108,12 +108,12 @@ QMultiMap<int, int> Vocabulary::addWords(const cv::Mat & descriptors, int object
 					tmpDists = temp;
 				}
 
-				for(int j = 0; j < (newWords.rows>=k?k:1); ++j)
+				for(int j = 0; j < tmpResults.cols; ++j)
 				{
 					if(tmpResults.at<int>(0,j) >= 0)
 					{
 						//printf("local i=%d, j=%d, tmpDist=%f tmpResult=%d\n", i ,j, tmpDists.at<float>(0,j), tmpResults.at<int>(0,j));
-						fullResults.insert(tmpDists.at<float>(0,j), newWordIds.at(tmpResults.at<int>(0,j)));
+						fullResults.insert(tmpDists.at<float>(0,j), notIndexedWordIds_.at(tmpResults.at<int>(0,j)));
 					}
 				}
 			}
@@ -146,26 +146,12 @@ QMultiMap<int, int> Vocabulary::addWords(const cv::Mat & descriptors, int object
 			}
 			else
 			{
-				cv::Mat tmp(newWords.rows+1, descriptors.cols, descriptors.type());
-				if(newWords.rows)
-				{
-					cv::Mat dest(tmp, cv::Range(0, newWords.rows));
-					newWords.copyTo(dest);
-				}
-				cv::Mat dest(tmp, cv::Range(newWords.rows, newWords.rows+1));
-				descriptors.row(i).copyTo(dest);
-				newWordIds.push_back(indexedDescriptors_.rows + newWords.rows);
-				newWords = tmp;
-				words.insert(newWordIds.back(), i);
-				wordToObjects_.insert(newWordIds.back(), objectIndex);
+				//concatenate new words
+				notIndexedWordIds_.push_back(indexedDescriptors_.rows + notIndexedDescriptors_.rows);
+				notIndexedDescriptors_.push_back(descriptors.row(i));
+				words.insert(notIndexedWordIds_.back(), i);
+				wordToObjects_.insert(notIndexedWordIds_.back(), objectIndex);
 			}
-		}
-
-		//concatenate new words
-		if(newWords.rows)
-		{
-			notIndexedWordIds_ = newWordIds;
-			notIndexedDescriptors_ = newWords;
 		}
 	}
 	else
@@ -178,15 +164,7 @@ QMultiMap<int, int> Vocabulary::addWords(const cv::Mat & descriptors, int object
 		}
 
 		//just concatenate descriptors
-		cv::Mat tmp(notIndexedDescriptors_.rows+descriptors.rows, descriptors.cols, descriptors.type());
-		if(notIndexedDescriptors_.rows)
-		{
-			cv::Mat dest(tmp, cv::Range(0, notIndexedDescriptors_.rows));
-			notIndexedDescriptors_.copyTo(dest);
-		}
-		cv::Mat dest(tmp, cv::Range(notIndexedDescriptors_.rows, notIndexedDescriptors_.rows+descriptors.rows));
-		descriptors.copyTo(dest);
-		notIndexedDescriptors_ = tmp;
+		notIndexedDescriptors_.push_back(descriptors);
 	}
 
 	return words;
@@ -200,12 +178,7 @@ void Vocabulary::update()
 				 indexedDescriptors_.type() == notIndexedDescriptors_.type() );
 
 		//concatenate descriptors
-		cv::Mat tmp(indexedDescriptors_.rows+notIndexedDescriptors_.rows, notIndexedDescriptors_.cols, notIndexedDescriptors_.type());
-		cv::Mat dest(tmp, cv::Range(0, indexedDescriptors_.rows));
-		indexedDescriptors_.copyTo(dest);
-		dest = cv::Mat(tmp, cv::Range(indexedDescriptors_.rows, indexedDescriptors_.rows+notIndexedDescriptors_.rows));
-		notIndexedDescriptors_.copyTo(dest);
-		indexedDescriptors_ = tmp;
+		indexedDescriptors_.push_back(notIndexedDescriptors_);
 
 		notIndexedDescriptors_ = cv::Mat();
 		notIndexedWordIds_.clear();

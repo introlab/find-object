@@ -801,15 +801,18 @@ void MainWindow::updateData()
 			int row = 0;
 			for(int i=0; i<objects_.size(); ++i)
 			{
-				cv::Mat dest(objectsDescriptors_[0], cv::Range(row, row+objects_.at(i)->descriptors().rows));
-				objects_.at(i)->descriptors().copyTo(dest);
-				row += objects_.at(i)->descriptors().rows;
-				// dataRange contains the upper_bound for each
-				// object (the last descriptors position in the
-				// global object descriptors matrix)
 				if(objects_.at(i)->descriptors().rows)
 				{
-					dataRange_.insert(row-1, i);
+					cv::Mat dest(objectsDescriptors_[0], cv::Range(row, row+objects_.at(i)->descriptors().rows));
+					objects_.at(i)->descriptors().copyTo(dest);
+					row += objects_.at(i)->descriptors().rows;
+					// dataRange contains the upper_bound for each
+					// object (the last descriptors position in the
+					// global object descriptors matrix)
+					if(objects_.at(i)->descriptors().rows)
+					{
+						dataRange_.insert(row-1, i);
+					}
 				}
 			}
 
