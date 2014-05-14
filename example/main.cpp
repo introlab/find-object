@@ -96,17 +96,15 @@ int main(int argc, char * argv[])
 		cv::Mat results;
 		cv::Mat dists;
 		std::vector<std::vector<cv::DMatch> > matches;
-		bool isBinaryDescriptors;
 		int k=2; // find the 2 nearest neighbors
-		bool useBFMatcher = false; // SET TO TRUE TO USE BRUTE FORCE MATCHER (may give better results with binary descriptors)
+		bool useBFMatcher = false; // SET TO TRUE TO USE BRUTE FORCE MATCHER
 		if(objectDescriptors.type()==CV_8U)
 		{
 			// Binary descriptors detected (from ORB, Brief, BRISK, FREAK)
 			printf("Binary descriptors detected...\n");
-			isBinaryDescriptors = true;
 			if(useBFMatcher)
 			{
-				cv::BFMatcher matcher(cv::NORM_HAMMING);
+				cv::BFMatcher matcher(cv::NORM_HAMMING); // use cv::NORM_HAMMING2 for ORB descriptor with WTA_K == 3 or 4 (see ORB constructor)
 				matcher.knnMatch(objectDescriptors, sceneDescriptors, matches, k);
 			}
 			else
@@ -114,8 +112,6 @@ int main(int argc, char * argv[])
 				// Create Flann LSH index
 				cv::flann::Index flannIndex(sceneDescriptors, cv::flann::LshIndexParams(12, 20, 2), cvflann::FLANN_DIST_HAMMING);
 				printf("Time creating FLANN LSH index = %d ms\n", time.restart());
-				results = cv::Mat(objectDescriptors.rows, k, CV_32SC1); // Results index
-				dists = cv::Mat(objectDescriptors.rows, k, CV_32FC1); // Distance results are CV_32FC1 ?!?!? NOTE OpenCV doc is not clear about that...
 
 				// search (nearest neighbor)
 				flannIndex.knnSearch(objectDescriptors, results, dists, k, cv::flann::SearchParams() );
@@ -125,7 +121,6 @@ int main(int argc, char * argv[])
 		{
 			// assume it is CV_32F
 			printf("Float descriptors detected...\n");
-			isBinaryDescriptors = false;
 			if(useBFMatcher)
 			{
 				cv::BFMatcher matcher(cv::NORM_L2);
@@ -136,8 +131,6 @@ int main(int argc, char * argv[])
 				// Create Flann KDTree index
 				cv::flann::Index flannIndex(sceneDescriptors, cv::flann::KDTreeIndexParams(), cvflann::FLANN_DIST_EUCLIDEAN);
 				printf("Time creating FLANN KDTree index = %d ms\n", time.restart());
-				results = cv::Mat(objectDescriptors.rows, k, CV_32SC1); // Results index
-				dists = cv::Mat(objectDescriptors.rows, k, CV_32FC1); // Distance results are CV_32FC1
 
 				// search (nearest neighbor)
 				flannIndex.knnSearch(objectDescriptors, results, dists, k, cv::flann::SearchParams() );
@@ -145,8 +138,13 @@ int main(int argc, char * argv[])
 		}
 		printf("Time nearest neighbor search = %d ms\n", time.restart());
 
-
-
+		// Conversion to CV_32F if needed
+		if(dists.type() == CV_32S)
+		{
+			cv::Mat temp;
+			dists.convertTo(temp, CV_32F);
+			dists = temp;
+		}
 
 
 		////////////////////////////
@@ -157,7 +155,7 @@ int main(int argc, char * argv[])
 		sceneWidget.setData(sceneKeypoints, sceneDescriptors, sceneImg, "", "");
 
 		// Find correspondences by NNDR (Nearest Neighbor Distance Ratio)
-		float nndrRatio = 0.6;
+		float nndrRatio = 0.8;
 		std::vector<cv::Point2f> mpts_1, mpts_2; // Used for homography
 		std::vector<int> indexes_1, indexes_2; // Used for homography
 		std::vector<uchar> outlier_mask;  // Used for homography
@@ -168,7 +166,7 @@ int main(int argc, char * argv[])
 			{
 				// Apply NNDR
 				//printf("q=%d dist1=%f dist2=%f\n", i, dists.at<float>(i,0), dists.at<float>(i,1));
-				if(isBinaryDescriptors || //Binary, just take the nearest
+				if(results.at<int>(i,0) >= 0 && results.at<int>(i,1) >= 0 &&
 				   dists.at<float>(i,0) <= nndrRatio * dists.at<float>(i,1))
 				{
 					mpts_1.push_back(objectKeypoints.at(i).pt);
@@ -185,7 +183,7 @@ int main(int argc, char * argv[])
 			{
 				// Apply NNDR
 				//printf("q=%d dist1=%f dist2=%f\n", matches.at(i).at(0).queryIdx, matches.at(i).at(0).distance, matches.at(i).at(1).distance);
-				if(isBinaryDescriptors || //Binary, just take the nearest
+				if(matches.at(i).size() == 2 &&
 				   matches.at(i).at(0).distance <= nndrRatio * matches.at(i).at(1).distance)
 				{
 					mpts_1.push_back(objectKeypoints.at(matches.at(i).at(0).queryIdx).pt);
