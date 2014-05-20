@@ -88,6 +88,7 @@ MainWindow::MainWindow(Camera * camera, const QString & settings, QWidget * pare
 	Settings::loadSettings(settings_, &geometry, &state);
 	this->restoreGeometry(geometry);
 	this->restoreState(state);
+	lastObjectsUpdateParameters_ = Settings::getParameters();
 
 	ui_->toolBox->setupUi();
 	connect((QDoubleSpinBox*)ui_->toolBox->getParameterWidget(Settings::kCamera_4imageRate()),
@@ -915,6 +916,7 @@ void MainWindow::updateData()
 		}
 		this->statusBar()->clearMessage();
 	}
+	lastObjectsUpdateParameters_ = Settings::getParameters();
 }
 
 void MainWindow::startProcessing()
@@ -1720,24 +1722,26 @@ void MainWindow::update(const cv::Mat & image)
 
 void MainWindow::notifyParametersChanged(const QStringList & paramChanged)
 {
-
 	//Selective update (to not update all objects for a simple camera's parameter modification)
 	bool detectorDescriptorParamsChanged = false;
 	bool nearestNeighborParamsChanged = false;
 	for(QStringList::const_iterator iter = paramChanged.begin(); iter!=paramChanged.end(); ++iter)
 	{
 		printf("Parameter changed: %s\n", iter->toStdString().c_str());
-		if(!detectorDescriptorParamsChanged && iter->contains("Feature2D"))
+		if(lastObjectsUpdateParameters_.value(*iter) != Settings::getParameter(*iter))
 		{
-			detectorDescriptorParamsChanged = true;
-		}
-		else if(!nearestNeighborParamsChanged &&
-			    ( (iter->contains("NearestNeighbor") && Settings::getGeneral_invertedSearch()) ||
-			      iter->compare(Settings::kGeneral_invertedSearch()) == 0 ||
-			      (iter->compare(Settings::kGeneral_vocabularyIncremental()) == 0 && Settings::getGeneral_invertedSearch()) ||
-			      (iter->compare(Settings::kGeneral_threads()) == 0 && !Settings::getGeneral_invertedSearch()) ))
-		{
-			nearestNeighborParamsChanged = true;
+			if(!detectorDescriptorParamsChanged && iter->contains("Feature2D"))
+			{
+				detectorDescriptorParamsChanged = true;
+			}
+			else if(!nearestNeighborParamsChanged &&
+					( (iter->contains("NearestNeighbor") && Settings::getGeneral_invertedSearch()) ||
+					  iter->compare(Settings::kGeneral_invertedSearch()) == 0 ||
+					  (iter->compare(Settings::kGeneral_vocabularyIncremental()) == 0 && Settings::getGeneral_invertedSearch()) ||
+					  (iter->compare(Settings::kGeneral_threads()) == 0 && !Settings::getGeneral_invertedSearch()) ))
+			{
+				nearestNeighborParamsChanged = true;
+			}
 		}
 
 		if(iter->compare(Settings::kGeneral_port()) == 0 &&

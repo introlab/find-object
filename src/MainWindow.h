@@ -104,6 +104,7 @@ private:
 	bool objectsModified_;
 	QMap<int, QByteArray> imagesMap_;
 	TcpServer * tcpServer_;
+	QMap<QString, QVariant> lastObjectsUpdateParameters_; // ParametersMap
 };
 
 #endif /* MainWindow_H_ */
