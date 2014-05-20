@@ -1660,8 +1660,11 @@ void MainWindow::update(const cv::Mat & image)
 		}
 		else
 		{
-			this->statusBar()->showMessage(tr("Cannot search, objects must be updated!"));
-			printf("Cannot search, objects must be updated!\n");
+			if(!objectsDescriptors_.empty() && keypoints.size())
+			{
+				this->statusBar()->showMessage(tr("Cannot search, objects must be updated!"));
+				printf("Cannot search, objects must be updated!\n");
+			}
 			if(this->isVisible())
 			{
 				ui_->imageView_source->setData(keypoints, cv::Mat(), image, Settings::currentDetectorType(), Settings::currentDescriptorType());
