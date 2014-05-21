@@ -37,6 +37,7 @@
 #include <QtGui/QCloseEvent>
 #include <QtGui/QCheckBox>
 #include <QtGui/QScrollBar>
+#include <QtGui/QInputDialog>
 
 #include "utilite/UDirectory.h"
 
@@ -136,6 +137,7 @@ MainWindow::MainWindow(Camera * camera, const QString & settings, QWidget * pare
 	connect(ui_->actionLoad_objects, SIGNAL(triggered()), this, SLOT(loadObjects()));
 	connect(ui_->actionCamera_from_video_file, SIGNAL(triggered()), this, SLOT(setupCameraFromVideoFile()));
 	connect(ui_->actionCamera_from_directory_of_images, SIGNAL(triggered()), this, SLOT(setupCameraFromImagesDirectory()));
+	connect(ui_->actionCamera_from_TCP_IP, SIGNAL(triggered()), this, SLOT(setupCameraFromTcpIp()));
 	connect(ui_->actionAbout, SIGNAL(triggered()), aboutDialog_ , SLOT(exec()));
 	connect(ui_->actionRestore_all_default_settings, SIGNAL(triggered()), ui_->toolBox, SLOT(resetAllPages()));
 	connect(ui_->actionRemove_all_objects, SIGNAL(triggered()), this, SLOT(removeAllObjects()));
@@ -149,7 +151,7 @@ MainWindow::MainWindow(Camera * camera, const QString & settings, QWidget * pare
 	connect(ui_->horizontalSlider_frames, SIGNAL(valueChanged(int)), ui_->label_frame, SLOT(setNum(int)));
 	ui_->pushButton_play->setVisible(true);
 	ui_->pushButton_pause->setVisible(false);
-	ui_->pushButton_stop->setEnabled(true);
+	ui_->pushButton_stop->setEnabled(false);
 	ui_->horizontalSlider_frames->setEnabled(false);
 	ui_->label_frame->setVisible(false);
 
@@ -162,6 +164,7 @@ MainWindow::MainWindow(Camera * camera, const QString & settings, QWidget * pare
 
 	ui_->actionCamera_from_video_file->setChecked(!Settings::getCamera_5mediaPath().isEmpty() && !UDirectory::exists(Settings::getCamera_5mediaPath().toStdString()));
 	ui_->actionCamera_from_directory_of_images->setChecked(!Settings::getCamera_5mediaPath().isEmpty() && UDirectory::exists(Settings::getCamera_5mediaPath().toStdString()));
+	ui_->actionCamera_from_TCP_IP->setChecked(Settings::getCamera_6useTcpCamera());
 
 	ui_->label_ipAddress->setTextInteractionFlags(Qt::TextSelectableByMouse);
 	ui_->label_port->setTextInteractionFlags(Qt::TextSelectableByMouse);
@@ -554,6 +557,7 @@ void MainWindow::setupCameraFromVideoFile()
 	}
 	ui_->actionCamera_from_video_file->setChecked(!Settings::getCamera_5mediaPath().isEmpty());
 	ui_->actionCamera_from_directory_of_images->setChecked(false);
+	ui_->actionCamera_from_TCP_IP->setChecked(false);
 }
 
 void MainWindow::setupCameraFromImagesDirectory()
@@ -581,6 +585,42 @@ void MainWindow::setupCameraFromImagesDirectory()
 	}
 	ui_->actionCamera_from_directory_of_images->setChecked(!Settings::getCamera_5mediaPath().isEmpty());
 	ui_->actionCamera_from_video_file->setChecked(false);
+	ui_->actionCamera_from_TCP_IP->setChecked(false);
+}
+
+void MainWindow::setupCameraFromTcpIp()
+{
+	if(!ui_->actionCamera_from_TCP_IP->isChecked())
+	{
+		Settings::setCamera_6useTcpCamera(false);
+		ui_->toolBox->updateParameter(Settings::kCamera_6useTcpCamera());
+	}
+	else
+	{
+		QString ip = QInputDialog::getText(this, tr("Server IP..."), "IP: ", QLineEdit::Normal, Settings::getCamera_7IP());
+		if(!ip.isEmpty())
+		{
+			int port = QInputDialog::getInteger(this, tr("Server port..."), "Port: ", Settings::getCamera_8port());
+
+			if(port > 0)
+			{
+				Settings::setCamera_6useTcpCamera(true);
+				ui_->toolBox->updateParameter(Settings::kCamera_6useTcpCamera());
+				Settings::setCamera_7IP(ip);
+				ui_->toolBox->updateParameter(Settings::kCamera_7IP());
+				Settings::setCamera_8port(port);
+				ui_->toolBox->updateParameter(Settings::kCamera_8port());
+				if(camera_->isRunning())
+				{
+					this->stopProcessing();
+				}
+				this->startProcessing();
+			}
+		}
+	}
+	ui_->actionCamera_from_directory_of_images->setChecked(false);
+	ui_->actionCamera_from_video_file->setChecked(false);
+	ui_->actionCamera_from_TCP_IP->setChecked(Settings::getCamera_6useTcpCamera());
 }
 
 void MainWindow::showObject(ObjWidget * obj)
@@ -936,6 +976,7 @@ void MainWindow::startProcessing()
 		ui_->actionLoad_scene_from_file->setEnabled(false);
 		ui_->actionCamera_from_directory_of_images->setEnabled(false);
 		ui_->actionCamera_from_video_file->setEnabled(false);
+		ui_->actionCamera_from_TCP_IP->setEnabled(false);
 		ui_->label_timeRefreshRate->setVisible(true);
 
 		//update control bar
@@ -963,7 +1004,14 @@ void MainWindow::startProcessing()
 		}
 		if(this->isVisible())
 		{
-			QMessageBox::critical(this, tr("Camera error"), tr("Camera initialization failed! (with device %1)").arg(Settings::getCamera_1deviceId()));
+			if(Settings::getCamera_6useTcpCamera())
+			{
+				QMessageBox::critical(this, tr("Camera error"), tr("Camera initialization failed! (with server %1:%2)").arg(Settings::getCamera_7IP()).arg(Settings::getCamera_8port()));
+			}
+			else
+			{
+				QMessageBox::critical(this, tr("Camera error"), tr("Camera initialization failed! (with device %1)").arg(Settings::getCamera_1deviceId()));
+			}
 		}
 		else
 		{
@@ -985,6 +1033,7 @@ void MainWindow::stopProcessing()
 	ui_->actionLoad_scene_from_file->setEnabled(true);
 	ui_->actionCamera_from_directory_of_images->setEnabled(true);
 	ui_->actionCamera_from_video_file->setEnabled(true);
+	ui_->actionCamera_from_TCP_IP->setEnabled(true);
 	ui_->pushButton_play->setVisible(true);
 	ui_->pushButton_pause->setVisible(false);
 	ui_->pushButton_stop->setEnabled(false);
@@ -1655,22 +1704,24 @@ void MainWindow::update(const cv::Mat & image)
 			}
 
 			// Emit homographies
-			if(objectsDetected.size())
+			if(objectsDetected.size() > 1)
 			{
-				if(objectsDetected.size() > 1)
-				{
-					printf("(%s) %d objects detected!\n",
-							QTime::currentTime().toString("HH:mm:ss.zzz").toStdString().c_str(),
-							(int)objectsDetected.size());
-				}
-				else
-				{
-					printf("(%s) Object %d detected!\n",
-							QTime::currentTime().toString("HH:mm:ss.zzz").toStdString().c_str(),
-							(int)objectsDetected.begin().key());
-				}
-				emit objectsFound(objectsDetected);
+				printf("(%s) %d objects detected!\n",
+						QTime::currentTime().toString("HH:mm:ss.zzz").toStdString().c_str(),
+						(int)objectsDetected.size());
 			}
+			else if(objectsDetected.size() == 1)
+			{
+				printf("(%s) Object %d detected!\n",
+						QTime::currentTime().toString("HH:mm:ss.zzz").toStdString().c_str(),
+						(int)objectsDetected.begin().key());
+			}
+			else
+			{
+				printf("(%s) No objects detected.\n",
+						QTime::currentTime().toString("HH:mm:ss.zzz").toStdString().c_str());
+			}
+			emit objectsFound(objectsDetected);
 			ui_->label_objectsDetected->setNum(objectsDetected.size());
 		}
 		else
@@ -1740,7 +1791,7 @@ void MainWindow::notifyParametersChanged(const QStringList & paramChanged)
 	bool nearestNeighborParamsChanged = false;
 	for(QStringList::const_iterator iter = paramChanged.begin(); iter!=paramChanged.end(); ++iter)
 	{
-		printf("Parameter changed: %s\n", iter->toStdString().c_str());
+		printf("Parameter changed: %s -> \"%s\"\n", iter->toStdString().c_str(), Settings::getParameter(*iter).toString().toStdString().c_str());
 		if(lastObjectsUpdateParameters_.value(*iter) != Settings::getParameter(*iter))
 		{
 			if(!detectorDescriptorParamsChanged && iter->contains("Feature2D"))
@@ -1788,5 +1839,5 @@ void MainWindow::notifyParametersChanged(const QStringList & paramChanged)
 
 	ui_->actionCamera_from_video_file->setChecked(!Settings::getCamera_5mediaPath().isEmpty() && !UDirectory::exists(Settings::getCamera_5mediaPath().toStdString()));
 	ui_->actionCamera_from_directory_of_images->setChecked(!Settings::getCamera_5mediaPath().isEmpty() && UDirectory::exists(Settings::getCamera_5mediaPath().toStdString()));
-
+	ui_->actionCamera_from_TCP_IP->setChecked(Settings::getCamera_6useTcpCamera());
 }

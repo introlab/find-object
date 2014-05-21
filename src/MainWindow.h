@@ -66,6 +66,7 @@ private slots:
 	void loadSceneFromFile();
 	void setupCameraFromVideoFile();
 	void setupCameraFromImagesDirectory();
+	void setupCameraFromTcpIp();
 	void removeObject(ObjWidget * object);
 	void removeAllObjects();
 	void updateObjectsSize();

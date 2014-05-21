@@ -60,6 +60,9 @@ class Settings
 	PARAMETER(Camera, 3imageHeight, int, 480, "Image height (0 means default height from camera).");
 	PARAMETER(Camera, 4imageRate, double, 2.0, "Image rate in Hz (0 Hz means as fast as possible)."); // Hz
 	PARAMETER(Camera, 5mediaPath, QString, "", "Video file or directory of images. If set, the camera is not used. See General->videoFormats and General->imageFormats for available formats.");
+	PARAMETER(Camera, 6useTcpCamera, bool, false, "Use TCP/IP input camera.");
+	PARAMETER(Camera, 7IP, QString, "127.0.0.1", "The images server's IP to connect when useTcpCamera is checked.");
+	PARAMETER(Camera, 8port, int, 5000, "The images server's port to connect when useTcpCamera is checked.");
 
 	//List format : [Index:item0;item1;item3;...]
 	PARAMETER(Feature2D, 1Detector, QString, "7:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK" , "Keypoint detector.");

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>826</width>
-    <height>689</height>
+    <height>713</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -228,6 +228,7 @@
     <addaction name="actionLoad_scene_from_file"/>
     <addaction name="actionCamera_from_directory_of_images"/>
     <addaction name="actionCamera_from_video_file"/>
+    <addaction name="actionCamera_from_TCP_IP"/>
     <addaction name="separator"/>
     <addaction name="actionStart_camera"/>
     <addaction name="actionPause_camera"/>
@@ -346,7 +347,7 @@
           <x>0</x>
           <y>0</y>
           <width>198</width>
-          <height>559</height>
+          <height>583</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_objects">
@@ -762,6 +763,14 @@
   <action name="actionLoad_settings">
    <property name="text">
     <string>Load settings...</string>
+   </property>
+  </action>
+  <action name="actionCamera_from_TCP_IP">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Camera from TCP/IP...</string>
    </property>
   </action>
  </widget>
