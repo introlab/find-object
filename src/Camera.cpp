@@ -135,10 +135,10 @@ bool Camera::start()
 			{
 				images_.append(path.toStdString() + UDirectory::separator() + *iter);
 			}
-			printf("Loaded %d filenames.\n", (int)images_.size());
+			printf("Camera: Reading %d images from directory \"%s\"...\n", (int)images_.size(), path.toStdString().c_str());
 			if(images_.isEmpty())
 			{
-				printf("WARNING: Directory \"%s\" is empty (no images matching the \"%s\" extensions). "
+				printf("[WARNING] Directory \"%s\" is empty (no images matching the \"%s\" extensions). "
 					   "If you want to disable loading automatically this directory, "
 					   "clear the Camera/mediaPath parameter. By default, webcam will be used instead of the directory.\n",
 					   path.toStdString().c_str(),
@@ -151,7 +151,11 @@ bool Camera::start()
 			capture_.open(path.toStdString().c_str());
 			if(!capture_.isOpened())
 			{
-				printf("WARNING: Cannot open file \"%s\". If you want to disable loading automatically this video file, clear the Camera/mediaPath parameter. By default, webcam will be used instead of the file.\n", path.toStdString().c_str());
+				printf("[WARNING] Cannot open file \"%s\". If you want to disable loading automatically this video file, clear the Camera/mediaPath parameter. By default, webcam will be used instead of the file.\n", path.toStdString().c_str());
+			}
+			else
+			{
+				printf("Camera: Reading from video file \"%s\"...\n", path.toStdString().c_str());
 			}
 		}
 		if(!capture_.isOpened() && images_.empty())
@@ -163,11 +167,12 @@ bool Camera::start()
 				capture_.set(CV_CAP_PROP_FRAME_WIDTH, double(Settings::getCamera_2imageWidth()));
 				capture_.set(CV_CAP_PROP_FRAME_HEIGHT, double(Settings::getCamera_3imageHeight()));
 			}
+			printf("Camera: Reading from camera device %d...\n", Settings::getCamera_1deviceId());
 		}
 	}
 	if(!capture_.isOpened() && images_.empty())
 	{
-		printf("Failed to open a capture object!\n");
+		printf("[ERROR] Failed to open a capture object!\n");
 		return false;
 	}
 

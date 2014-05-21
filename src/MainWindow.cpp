@@ -921,6 +921,7 @@ void MainWindow::updateData()
 
 void MainWindow::startProcessing()
 {
+	printf("Starting camera...\n");
 	bool updateStatusMessage = this->statusBar()->currentMessage().isEmpty();
 	if(updateStatusMessage)
 	{
@@ -966,7 +967,7 @@ void MainWindow::startProcessing()
 		}
 		else
 		{
-			printf("ERROR: Camera initialization failed! (with device %d)", Settings::getCamera_1deviceId());
+			printf("[ERROR] Camera initialization failed! (with device %d)\n", Settings::getCamera_1deviceId());
 		}
 	}
 }
@@ -1656,6 +1657,18 @@ void MainWindow::update(const cv::Mat & image)
 			// Emit homographies
 			if(objectsDetected.size())
 			{
+				if(objectsDetected.size() > 1)
+				{
+					printf("(%s) %d objects detected!\n",
+							QTime::currentTime().toString("HH:mm:ss.zzz").toStdString().c_str(),
+							(int)objectsDetected.size());
+				}
+				else
+				{
+					printf("(%s) Object %d detected!\n",
+							QTime::currentTime().toString("HH:mm:ss.zzz").toStdString().c_str(),
+							(int)objectsDetected.begin().key());
+				}
 				emit objectsFound(objectsDetected);
 			}
 			ui_->label_objectsDetected->setNum(objectsDetected.size());

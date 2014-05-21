@@ -10,6 +10,7 @@
 #include <opencv2/opencv.hpp>
 #include <QtGui/QTransform>
 #include <QtCore/QPointF>
+#include <QtCore/QTime>
 
 TcpClient::TcpClient(const QString & hostname, quint16 port, QObject *parent) :
 	QTcpSocket(parent),
@@ -65,7 +66,8 @@ void TcpClient::readData()
 		QPointF qtBottomLeft = qtHomography.map(QPointF(0,objectHeight));
 		QPointF qtBottomRight = qtHomography.map(QPointF(objectWidth,objectHeight));
 
-		printf("Object %d detected, Qt corners at (%f,%f) (%f,%f) (%f,%f) (%f,%f)\n",
+		printf("(%s) Object %d detected, Qt corners at (%f,%f) (%f,%f) (%f,%f) (%f,%f)\n",
+				QTime::currentTime().toString("HH:mm:ss.zzz").toStdString().c_str(),
 				id,
 				qtTopLeft.x(), qtTopLeft.y(),
 				qtTopRight.x(), qtTopRight.y(),
@@ -93,7 +95,8 @@ void TcpClient::readData()
 			inPts.push_back(cv::Point2f(objectWidth,objectHeight));
 			cv::perspectiveTransform(inPts, outPts, cvHomography);
 
-			printf("Object %d detected, CV corners at (%f,%f) (%f,%f) (%f,%f) (%f,%f)\n",
+			printf("(%s) Object %d detected, CV corners at (%f,%f) (%f,%f) (%f,%f) (%f,%f)\n",
+					QTime::currentTime().toString("HH:mm:ss.zzz").toStdString().c_str(),
 					id,
 					outPts.at(0).x, outPts.at(0).y,
 					outPts.at(1).x, outPts.at(1).y,

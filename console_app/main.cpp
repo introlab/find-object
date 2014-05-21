@@ -13,13 +13,12 @@ void showUsage()
 {
 	printf(
 	"\n"
-	"Return similarity between two images.\n"
+	"Return similarity between two images (the number of similar features between the images).\n"
 	"Usage :\n"
 	"  ./find_object-console [option] object.png scene.png\n"
 	"Options: \n"
-	"   -total              return total matches (default total)\n"
-	"   -inliers			return inliers percentage : inliers / (inliers + outliers)\n"
-	"   -quiet				don't show messages\n");
+	"   -inliers            return inliers percentage : inliers / (inliers + outliers)\n"
+	"   -quiet              don't show messages\n");
 
 	exit(-1);
 }
@@ -39,15 +38,11 @@ int main(int argc, char * argv[])
 	{
 		for(int i=1; i<argc-2; ++i)
 		{
-			if(std::string(argv[1]).compare("-total") == 0)
-			{
-				method = mTotal;
-			}
-			else if(std::string(argv[1]).compare("-inliers") == 0)
+			if(std::string(argv[i]).compare("-inliers") == 0)
 			{
 				method = mInliers;
 			}
-			else if(std::string(argv[1]).compare("-quiet") == 0)
+			else if(std::string(argv[i]).compare("-quiet") == 0)
 			{
 				quiet = true;
 			}
