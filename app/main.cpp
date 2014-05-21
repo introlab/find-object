@@ -7,7 +7,7 @@
 #include <signal.h>
 
 void my_handler(int s){
-	printf("Ctrl-C catch! Quitting application...\n");
+	printf("Ctrl-C caught! Quitting application...\n");
 	QApplication::closeAllWindows();
 	QApplication::quit();
 }
