@@ -54,40 +54,37 @@ quint16 TcpServer::getPort() const
 
 void TcpServer::publishObjects(const QMultiMap<int, QPair<QRect, QTransform> > & objects)
 {
-	if(objects.size())
+	QList<QTcpSocket*> clients = this->findChildren<QTcpSocket*>();
+	if(clients.size())
 	{
-		QList<QTcpSocket*> clients = this->findChildren<QTcpSocket*>();
-		if(clients.size())
+		QVector<float> data(objects.size()*12);
+		int i=0;
+		for(QMultiMap<int, QPair<QRect, QTransform> >::const_iterator iter=objects.constBegin(); iter!=objects.constEnd(); ++iter)
 		{
-			QVector<float> data(objects.size()*12);
-			int i=0;
-			for(QMultiMap<int, QPair<QRect, QTransform> >::const_iterator iter=objects.constBegin(); iter!=objects.constEnd(); ++iter)
-			{
-				data[i++] = iter.key();
-				data[i++] = iter.value().first.width();
-				data[i++] = iter.value().first.height();
-				data[i++] = iter.value().second.m11();
-				data[i++] = iter.value().second.m12();
-				data[i++] = iter.value().second.m13();
-				data[i++] = iter.value().second.m21();
-				data[i++] = iter.value().second.m22();
-				data[i++] = iter.value().second.m23();
-				data[i++] = iter.value().second.m31(); // dx
-				data[i++] = iter.value().second.m32(); // dy
-				data[i++] = iter.value().second.m33();
-			}
+			data[i++] = iter.key();
+			data[i++] = iter.value().first.width();
+			data[i++] = iter.value().first.height();
+			data[i++] = iter.value().second.m11();
+			data[i++] = iter.value().second.m12();
+			data[i++] = iter.value().second.m13();
+			data[i++] = iter.value().second.m21();
+			data[i++] = iter.value().second.m22();
+			data[i++] = iter.value().second.m23();
+			data[i++] = iter.value().second.m31(); // dx
+			data[i++] = iter.value().second.m32(); // dy
+			data[i++] = iter.value().second.m33();
+		}
 
-			for(QList<QTcpSocket*>::iterator iter = clients.begin(); iter!=clients.end(); ++iter)
-			{
-				QByteArray block;
-				QDataStream out(&block, QIODevice::WriteOnly);
-				out.setVersion(QDataStream::Qt_4_0);
-				out << (quint16)0;
-				out << data;
-				out.device()->seek(0);
-				out << (quint16)(block.size() - sizeof(quint16));
-				(*iter)->write(block);
-			}
+		for(QList<QTcpSocket*>::iterator iter = clients.begin(); iter!=clients.end(); ++iter)
+		{
+			QByteArray block;
+			QDataStream out(&block, QIODevice::WriteOnly);
+			out.setVersion(QDataStream::Qt_4_0);
+			out << (quint16)0;
+			out << data;
+			out.device()->seek(0);
+			out << (quint16)(block.size() - sizeof(quint16));
+			(*iter)->write(block);
 		}
 	}
 }

@@ -1716,12 +1716,16 @@ void MainWindow::update(const cv::Mat & image)
 						QTime::currentTime().toString("HH:mm:ss.zzz").toStdString().c_str(),
 						(int)objectsDetected.begin().key());
 			}
-			else
+			else if(Settings::getGeneral_sendNoObjDetectedEvents())
 			{
 				printf("(%s) No objects detected.\n",
 						QTime::currentTime().toString("HH:mm:ss.zzz").toStdString().c_str());
 			}
-			emit objectsFound(objectsDetected);
+
+			if(objectsDetected.size() > 0 || Settings::getGeneral_sendNoObjDetectedEvents())
+			{
+				emit objectsFound(objectsDetected);
+			}
 			ui_->label_objectsDetected->setNum(objectsDetected.size());
 		}
 		else
