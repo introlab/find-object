@@ -20,7 +20,7 @@ public:
 	bool isConnected() const {return connected_;}
 
 private slots:
-	void readData();
+	void readReceivedData();
 	void displayError(QAbstractSocket::SocketError socketError);
 	void connectionLost();
 

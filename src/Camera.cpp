@@ -14,7 +14,7 @@ CameraTcpClient::CameraTcpClient(QObject *parent) :
 	QTcpSocket(parent),
     blockSize_(0)
 {
-	connect(this, SIGNAL(readyRead()), this, SLOT(readData()));
+	connect(this, SIGNAL(readyRead()), this, SLOT(readReceivedData()));
 	connect(this, SIGNAL(error(QAbstractSocket::SocketError)), this, SLOT(displayError(QAbstractSocket::SocketError)));
 	connect(this, SIGNAL(disconnected()), this, SLOT(connectionLost()));
 }
@@ -26,7 +26,7 @@ cv::Mat CameraTcpClient::getImage()
 	return img;
 }
 
-void CameraTcpClient::readData()
+void CameraTcpClient::readReceivedData()
 {
 	QDataStream in(this);
 	in.setVersion(QDataStream::Qt_4_0);
