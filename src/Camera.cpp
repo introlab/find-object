@@ -76,7 +76,7 @@ void CameraTcpClient::displayError(QAbstractSocket::SocketError socketError)
 
 void CameraTcpClient::connectionLost()
 {
-	printf("[WARNING] CameraTcp: Connection lost!\n");
+	//printf("[WARNING] CameraTcp: Connection lost!\n");
 }
 
 Camera::Camera(QObject * parent) :

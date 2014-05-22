@@ -7,8 +7,7 @@
 #include <signal.h>
 
 void my_handler(int s){
-	printf("Ctrl-C caught! Quitting application...\n");
-	QApplication::closeAllWindows();
+	printf("\nCtrl-C caught! Quitting application...\n");
 	QApplication::quit();
 }
 
@@ -133,13 +132,15 @@ int main(int argc, char* argv[])
 		mainWindow.startProcessing();
 	}
 
-
-	// Catch ctrl-c to close the gui
-	struct sigaction sigIntHandler;
-	sigIntHandler.sa_handler = my_handler;
-	sigemptyset(&sigIntHandler.sa_mask);
-	sigIntHandler.sa_flags = 0;
-	sigaction(SIGINT, &sigIntHandler, NULL);
+	if(!guiMode)
+	{
+		// Catch ctrl-c to close the gui
+		struct sigaction sigIntHandler;
+		sigIntHandler.sa_handler = my_handler;
+		sigemptyset(&sigIntHandler.sa_mask);
+		sigIntHandler.sa_flags = 0;
+		sigaction(SIGINT, &sigIntHandler, NULL);
+	}
 
     return app.exec();
 }
