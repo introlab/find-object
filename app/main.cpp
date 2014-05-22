@@ -4,12 +4,25 @@
 #include "MainWindow.h"
 #include "Settings.h"
 
+#ifdef WIN32
+#include <windows.h> 
+BOOL WINAPI my_handler(DWORD signal)
+{
+    if (signal == CTRL_C_EVENT)
+	{
+        printf("\nCtrl-C caught! Quitting application...\n");
+		QApplication::quit();
+	}
+    return TRUE;
+}
+#else
 #include <signal.h>
-
-void my_handler(int s){
+void my_handler(int s)
+{
 	printf("\nCtrl-C caught! Quitting application...\n");
 	QApplication::quit();
 }
+#endif
 
 void showUsage()
 {
@@ -135,11 +148,19 @@ int main(int argc, char* argv[])
 	if(!guiMode)
 	{
 		// Catch ctrl-c to close the gui
+#ifdef WIN32
+		if (!SetConsoleCtrlHandler(my_handler, TRUE))
+		{
+			printf("\nERROR: Could not set control handler"); 
+			return 1;
+		}
+#else
 		struct sigaction sigIntHandler;
 		sigIntHandler.sa_handler = my_handler;
 		sigemptyset(&sigIntHandler.sa_mask);
 		sigIntHandler.sa_flags = 0;
 		sigaction(SIGINT, &sigIntHandler, NULL);
+#endif
 	}
 
     return app.exec();
