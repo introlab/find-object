@@ -330,7 +330,7 @@ void MainWindow::saveObjects(const QString & dirPath)
 	{
 		for(int i=0; i<objects_.size(); ++i)
 		{
-			objects_.at(i)->pixmap().save(QString("%1/%2.bmp").arg(dirPath).arg(objects_.at(i)->id()));
+			objects_.at(i)->pixmap().save(QString("%1/%2.png").arg(dirPath).arg(objects_.at(i)->id()));
 		}
 		objectsModified_ = false;
 	}
