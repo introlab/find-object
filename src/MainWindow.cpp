@@ -1610,7 +1610,7 @@ void MainWindow::update(const cv::Mat & image)
 											label->setText(QString("%1 in %2 out").arg(threads[j]->getInliers()).arg(threads[j]->getOutliers()));
 										}
 										QPen rectPen(color);
-										rectPen.setWidth(4);
+										rectPen.setWidth(Settings::getHomography_rectBorderWidth());
 										RectItem * rectItemScene = new RectItem(objects_.at(index)->id(), rect);
 										connect(rectItemScene, SIGNAL(hovered(int)), this, SLOT(rectHovered(int)));
 										rectItemScene->setPen(rectPen);

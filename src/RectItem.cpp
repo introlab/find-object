@@ -54,7 +54,7 @@ void RectItem::showDescription()
 
 
 		QPen pen = this->pen();
-		this->setPen(QPen(pen.color(), pen.width()+2));
+		this->setPen(QPen(pen.color(), pen.width()*2));
 		placeHolder_->setZValue(this->zValue()+1);
 		placeHolder_->setPos(0,0);
 		placeHolder_->setVisible(true);
@@ -68,7 +68,7 @@ void RectItem::hideDescription()
 	if(placeHolder_ && placeHolder_->isVisible())
 	{
 		placeHolder_->setVisible(false);
-		this->setPen(QPen(pen().color(), pen().width()-2));
+		this->setPen(QPen(pen().color(), pen().width()/2));
 	}
 }
 
