@@ -16,14 +16,14 @@ TcpClient::TcpClient(const QString & hostname, quint16 port, QObject *parent) :
 	QTcpSocket(parent),
     blockSize_(0)
 {
-	connect(this, SIGNAL(readyRead()), this, SLOT(readData()));
+	connect(this, SIGNAL(readyRead()), this, SLOT(readReceivedData()));
 	connect(this, SIGNAL(error(QAbstractSocket::SocketError)), this, SLOT(displayError(QAbstractSocket::SocketError)));
 	connect(this, SIGNAL(disconnected()), this, SLOT(connectionLost()));
 
 	this->connectToHost(hostname, port);
 }
 
-void TcpClient::readData()
+void TcpClient::readReceivedData()
 {
 	QDataStream in(this);
 	in.setVersion(QDataStream::Qt_4_0);

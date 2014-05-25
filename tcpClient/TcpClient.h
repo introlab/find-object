@@ -17,7 +17,7 @@ public:
 	TcpClient(const QString & hostname, quint16 port, QObject * parent = 0);
 
 private slots:
-	void readData();
+	void readReceivedData();
 	void displayError(QAbstractSocket::SocketError socketError);
 	void connectionLost();
 
