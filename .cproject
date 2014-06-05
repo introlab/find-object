@@ -199,8 +199,13 @@
 			</target>
 		</buildTargets>
 	</storageModule>
-	<storageModule moduleId="refreshScope" versionNumber="1">
-		<resource resourceType="PROJECT" workspacePath="/find_object"/>
+	<storageModule moduleId="refreshScope" versionNumber="2">
+		<configuration configurationName="Windows">
+			<resource resourceType="PROJECT" workspacePath="/find_object"/>
+		</configuration>
+		<configuration configurationName="Unix">
+			<resource resourceType="PROJECT" workspacePath="/find_object"/>
+		</configuration>
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
 	<storageModule moduleId="scannerConfiguration">
@@ -212,4 +217,5 @@
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfileC"/>
 		</scannerConfigBuildInfo>
 	</storageModule>
+	<storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
 </cproject>

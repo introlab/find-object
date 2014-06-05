@@ -174,7 +174,7 @@ class Settings
 	PARAMETER(General, imageFormats, QString, "*.png *.jpg *.bmp *.tiff *.ppm", "Image formats supported.");
 	PARAMETER(General, videoFormats, QString, "*.avi *.m4v *.mp4", "Video formats supported.");
 	PARAMETER(General, mirrorView, bool, true, "Flip the camera image horizontally (like all webcam applications).");
-	PARAMETER(General, invertedSearch, bool, false, "In contrast to classic Find-Object usage (where we match descriptors from the objects to those in a vocabulary created with descriptors extracted from the scene), we create a vocabulary from all the objects' descriptors and we match scene's descriptors to this vocabulary. It is the inverted search mode.");
+	PARAMETER(General, invertedSearch, bool, true, "Instead of matching descriptors from the objects to those in a vocabulary created with descriptors extracted from the scene, we create a vocabulary from all the objects' descriptors and we match scene's descriptors to this vocabulary. It is the inverted search mode.");
 	PARAMETER(General, controlsShown, bool, false, "Show play/image seek controls (useful with video file and directory of images modes).");
 	PARAMETER(General, threads, int, 1, "Number of threads used for objects matching and homography computation. 0 means as many threads as objects. On InvertedSearch mode, multi-threading has only effect on homography computation.");
 	PARAMETER(General, multiDetection, bool, false, "Multiple detection of the same object.");
