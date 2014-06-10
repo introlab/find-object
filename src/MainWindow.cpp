@@ -65,15 +65,6 @@ MainWindow::MainWindow(Camera * camera, const QString & settings, QWidget * pare
 	ui_->likelihoodPlot->addCurve(inliersCurve_, false);
 	ui_->likelihoodPlot->setGraphicsView(true);
 
-	if(!camera_)
-	{
-		camera_ = new Camera(this);
-	}
-	else
-	{
-		camera_->setParent(this);
-	}
-
 	ui_->dockWidget_statistics->setVisible(false);
 	ui_->dockWidget_parameters->setVisible(false);
 	ui_->dockWidget_plot->setVisible(false);
@@ -92,6 +83,28 @@ MainWindow::MainWindow(Camera * camera, const QString & settings, QWidget * pare
 	lastObjectsUpdateParameters_ = Settings::getParameters();
 
 	ui_->toolBox->setupUi();
+
+	if(!camera_)
+	{
+		camera_ = new Camera(this);
+	}
+	else
+	{
+		camera_->setParent(this);
+		ui_->toolBox->getParameterWidget(Settings::kCamera_1deviceId())->setEnabled(false);
+		ui_->toolBox->getParameterWidget(Settings::kCamera_2imageWidth())->setEnabled(false);
+		ui_->toolBox->getParameterWidget(Settings::kCamera_3imageHeight())->setEnabled(false);
+		ui_->toolBox->getParameterWidget(Settings::kCamera_4imageRate())->setEnabled(false);
+		ui_->toolBox->getParameterWidget(Settings::kCamera_5mediaPath())->setEnabled(false);
+		ui_->toolBox->getParameterWidget(Settings::kCamera_6useTcpCamera())->setEnabled(false);
+		ui_->toolBox->getParameterWidget(Settings::kCamera_7IP())->setEnabled(false);
+		ui_->toolBox->getParameterWidget(Settings::kCamera_8port())->setEnabled(false);
+		ui_->actionCamera_from_video_file->setVisible(false);
+		ui_->actionCamera_from_TCP_IP->setVisible(false);
+		ui_->actionCamera_from_directory_of_images->setVisible(false);
+		ui_->actionLoad_scene_from_file->setVisible(false);
+	}
+
 	connect((QDoubleSpinBox*)ui_->toolBox->getParameterWidget(Settings::kCamera_4imageRate()),
 			SIGNAL(editingFinished()),
 			camera_,
@@ -231,11 +244,6 @@ void MainWindow::setupTCPServer()
 	ui_->label_port->setNum(tcpServer_->getPort());
 	printf("IP: %s\nport: %d\n",
 			tcpServer_->getHostAddress().toString().toStdString().c_str(), tcpServer_->getPort());
-}
-
-ParametersToolBox * MainWindow::parametersToolBox() const
-{
-	return ui_->toolBox;
 }
 
 void MainWindow::setSourceImageText(const QString & text)

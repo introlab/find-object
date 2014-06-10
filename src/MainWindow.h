@@ -45,7 +45,6 @@ public:
 	int loadObjects(const QString & dirPath);
 	void saveObjects(const QString & dirPath);
 
-	ParametersToolBox * parametersToolBox() const;
 	void setSourceImageText(const QString & text);
 
 protected:
