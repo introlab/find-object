@@ -125,6 +125,7 @@ class Settings
 	PARAMETER(Feature2D, SURF_nOctaveLayers, int, 2, "Number of octave layers within each octave.");
 	PARAMETER(Feature2D, SURF_extended, bool, true, "Extended descriptor flag (true - use extended 128-element descriptors; false - use 64-element descriptors).");
 	PARAMETER(Feature2D, SURF_upright, bool, false, "Up-right or rotated features flag (true - do not compute orientation of features; false - compute orientation).");
+	PARAMETER(Feature2D, SURF_gpu, bool, false, "GPU-SURF: Use GPU version of SURF. This option is enabled only if OpenCV is built with CUDA and GPUs are detected.");
 
 	PARAMETER(Feature2D, BRISK_thresh, int, 30, "FAST/AGAST detection threshold score.");
 	PARAMETER(Feature2D, BRISK_octaves, int, 3, "Detection octaves. Use 0 to do single scale.");

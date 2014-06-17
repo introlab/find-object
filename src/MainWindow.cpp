@@ -21,6 +21,7 @@
 
 #include "opencv2/calib3d/calib3d.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/gpu/gpu.hpp"
 
 #include <QtCore/QTextStream>
 #include <QtCore/QFile>
@@ -103,6 +104,13 @@ MainWindow::MainWindow(Camera * camera, const QString & settings, QWidget * pare
 		ui_->actionCamera_from_TCP_IP->setVisible(false);
 		ui_->actionCamera_from_directory_of_images->setVisible(false);
 		ui_->actionLoad_scene_from_file->setVisible(false);
+	}
+
+	if(cv::gpu::getCudaEnabledDeviceCount() == 0)
+	{
+		Settings::setFeature2D_SURF_gpu(false);
+		ui_->toolBox->updateParameter(Settings::kFeature2D_SURF_gpu());
+		ui_->toolBox->getParameterWidget(Settings::kFeature2D_SURF_gpu())->setEnabled(false);
 	}
 
 	connect((QDoubleSpinBox*)ui_->toolBox->getParameterWidget(Settings::kCamera_4imageRate()),

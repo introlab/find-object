@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <opencv2/nonfree/features2d.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
+#include <opencv2/nonfree/gpu.hpp>
 
 #define VERBOSE 0
 
@@ -116,6 +117,76 @@ void Settings::saveSettings(const QString & fileName, const QByteArray & windowG
 	}
 	printf("Settings saved to %s\n", path.toStdString().c_str());
 }
+
+class GPUSURF : public cv::Feature2D
+{
+public:
+	GPUSURF(double hessianThreshold,
+            int nOctaves=4, int nOctaveLayers=2,
+            bool extended=true, bool upright=false) :
+		hessianThreshold_(hessianThreshold),
+		nOctaves_(nOctaves),
+		nOctaveLayers_(nOctaveLayers),
+		extended_(extended),
+		upright_(upright)
+	{
+	}
+	virtual ~GPUSURF() {}
+
+	void operator()(cv::InputArray img, cv::InputArray mask,
+	                    std::vector<cv::KeyPoint>& keypoints,
+	                    cv::OutputArray descriptors,
+	                    bool useProvidedKeypoints=false) const
+	{
+		printf("GPUSURF:operator() Don't call this directly!\n");
+		exit(-1);
+	}
+	int descriptorSize() const
+	{
+		return extended_ ? 128 : 64;
+	}
+	int descriptorType() const
+	{
+		return CV_32F;
+	}
+
+protected:
+    void detectImpl( const cv::Mat& image, std::vector<cv::KeyPoint>& keypoints, const cv::Mat& mask=cv::Mat() ) const
+    {
+    	cv::gpu::GpuMat imgGpu(image);
+    	cv::gpu::GpuMat maskGpu(mask);
+		cv::gpu::GpuMat keypointsGpu;
+		cv::gpu::SURF_GPU surfGpu(hessianThreshold_, nOctaves_, nOctaveLayers_, extended_, 0.01f, upright_);
+		surfGpu(imgGpu, maskGpu, keypointsGpu);
+		surfGpu.downloadKeypoints(keypointsGpu, keypoints);
+    }
+
+    void computeImpl( const cv::Mat& image, std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors ) const
+    {
+    	std::vector<float> d;
+		cv::gpu::GpuMat imgGpu(image);
+		cv::gpu::GpuMat descriptorsGpu;
+		cv::gpu::GpuMat keypointsGpu;
+		cv::gpu::SURF_GPU surfGpu(hessianThreshold_, nOctaves_, nOctaveLayers_, extended_, 0.01f, upright_);
+		surfGpu.uploadKeypoints(keypoints, keypointsGpu);
+		surfGpu(imgGpu, cv::gpu::GpuMat(), keypointsGpu, descriptorsGpu, true);
+		surfGpu.downloadDescriptors(descriptorsGpu, d);
+		unsigned int dim = extended_?128:64;
+		descriptors = cv::Mat(d.size()/dim, dim, CV_32F);
+		for(int i=0; i<descriptors.rows; ++i)
+		{
+			float * rowFl = descriptors.ptr<float>(i);
+			memcpy(rowFl, &d[i*dim], dim*sizeof(float));
+		}
+    }
+
+private:
+    double hessianThreshold_;
+    int nOctaves_;
+    int nOctaveLayers_;
+    bool extended_;
+    bool upright_;
+};
 
 cv::FeatureDetector * Settings::createFeaturesDetector()
 {
@@ -227,12 +298,24 @@ cv::FeatureDetector * Settings::createFeaturesDetector()
 				case 7:
 					if(strategies.at(index).compare("SURF") == 0)
 					{
-						detector = new cv::SURF(
+						if(getFeature2D_SURF_gpu() && cv::gpu::getCudaEnabledDeviceCount())
+						{
+							detector = new GPUSURF(
+									getFeature2D_SURF_hessianThreshold(),
+									getFeature2D_SURF_nOctaves(),
+									getFeature2D_SURF_nOctaveLayers(),
+									getFeature2D_SURF_extended(),
+									getFeature2D_SURF_upright());
+						}
+						else
+						{
+							detector = new cv::SURF(
 								getFeature2D_SURF_hessianThreshold(),
 								getFeature2D_SURF_nOctaves(),
 								getFeature2D_SURF_nOctaveLayers(),
 								getFeature2D_SURF_extended(),
 								getFeature2D_SURF_upright());
+						}
 						if(VERBOSE)printf("Settings::createFeaturesDetector() type=%s\n", "SURF");
 					}
 					break;
@@ -314,12 +397,24 @@ cv::DescriptorExtractor * Settings::createDescriptorsExtractor()
 				case 3:
 					if(strategies.at(index).compare("SURF") == 0)
 					{
-						extractor = new cv::SURF(
-								getFeature2D_SURF_hessianThreshold(),
-								getFeature2D_SURF_nOctaves(),
-								getFeature2D_SURF_nOctaveLayers(),
-								getFeature2D_SURF_extended(),
-								getFeature2D_SURF_upright());
+						if(getFeature2D_SURF_gpu() && cv::gpu::getCudaEnabledDeviceCount())
+						{
+							extractor = new GPUSURF(
+									getFeature2D_SURF_hessianThreshold(),
+									getFeature2D_SURF_nOctaves(),
+									getFeature2D_SURF_nOctaveLayers(),
+									getFeature2D_SURF_extended(),
+									getFeature2D_SURF_upright());
+						}
+						else
+						{
+							extractor = new cv::SURF(
+									getFeature2D_SURF_hessianThreshold(),
+									getFeature2D_SURF_nOctaves(),
+									getFeature2D_SURF_nOctaveLayers(),
+									getFeature2D_SURF_extended(),
+									getFeature2D_SURF_upright());
+						}
 						if(VERBOSE)printf("Settings::createDescriptorsExtractor() type=%s\n", "SURF");
 					}
 					break;
