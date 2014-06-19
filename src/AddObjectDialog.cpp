@@ -27,6 +27,10 @@ AddObjectDialog::AddObjectDialog(Camera * camera, const cv::Mat & image, bool mi
 	ui_ = new Ui_addObjectDialog();
 	ui_->setupUi(this);
 
+	detector_ = Settings::createFeaturesDetector();
+	extractor_ = Settings::createDescriptorsExtractor();
+	Q_ASSERT(detector_ != 0 && extractor_ != 0);
+
 	connect(ui_->pushButton_cancel, SIGNAL(clicked()), this, SLOT(cancel()));
 	connect(ui_->pushButton_back, SIGNAL(clicked()), this, SLOT(back()));
 	connect(ui_->pushButton_next, SIGNAL(clicked()), this, SLOT(next()));
@@ -50,6 +54,8 @@ AddObjectDialog::AddObjectDialog(Camera * camera, const cv::Mat & image, bool mi
 
 AddObjectDialog::~AddObjectDialog()
 {
+	delete detector_;
+	delete extractor_;
 	if(object_)
 	{
 		delete object_;
@@ -272,9 +278,7 @@ void AddObjectDialog::setState(int state)
 			{
 				// Extract keypoints
 				selectedKeypoints.clear();
-				cv::FeatureDetector * detector = Settings::createFeaturesDetector();
-				detector->detect(imgRoi, selectedKeypoints);
-				delete detector;
+				detector_->detect(imgRoi, selectedKeypoints);
 			}
 			ui_->objectView->setData(selectedKeypoints, cv::Mat(), imgRoi, Settings::currentDetectorType(), "");
 			ui_->objectView->setMinimumSize(roi.width, roi.height);
@@ -298,9 +302,7 @@ void AddObjectDialog::setState(int state)
 			if(keypoints.size())
 			{
 				// Extract descriptors
-				cv::DescriptorExtractor * extractor = Settings::createDescriptorsExtractor();
-				extractor->compute(ui_->objectView->cvImage(), keypoints, descriptors);
-				delete extractor;
+				extractor_->compute(ui_->objectView->cvImage(), keypoints, descriptors);
 
 				if(keypoints.size() != (unsigned int)descriptors.rows)
 				{
@@ -336,10 +338,8 @@ void AddObjectDialog::update(const cv::Mat & image)
 		}
 
 		// Extract keypoints
-		cv::FeatureDetector * detector = Settings::createFeaturesDetector();
 		cv::vector<cv::KeyPoint> keypoints;
-		detector->detect(cvImage_, keypoints);
-		delete detector;
+		detector_->detect(cvImage_, keypoints);
 
 		ui_->cameraView->setData(keypoints, cv::Mat(), cvImage_, Settings::currentDetectorType(), "");
 		ui_->cameraView->update();

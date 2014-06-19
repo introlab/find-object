@@ -51,7 +51,9 @@ MainWindow::MainWindow(Camera * camera, const QString & settings, QWidget * pare
 	inliersCurve_(0),
 	lowestRefreshRate_(99),
 	objectsModified_(false),
-	tcpServer_(0)
+	tcpServer_(0),
+	detector_(0),
+	extractor_(0)
 {
 	ui_ = new Ui_mainWindow();
 	ui_->setupUi(this);
@@ -112,6 +114,10 @@ MainWindow::MainWindow(Camera * camera, const QString & settings, QWidget * pare
 		ui_->toolBox->updateParameter(Settings::kFeature2D_SURF_gpu());
 		ui_->toolBox->getParameterWidget(Settings::kFeature2D_SURF_gpu())->setEnabled(false);
 	}
+
+	detector_ = Settings::createFeaturesDetector();
+	extractor_ = Settings::createDescriptorsExtractor();
+	Q_ASSERT(detector_ != 0 && extractor_ != 0);
 
 	connect((QDoubleSpinBox*)ui_->toolBox->getParameterWidget(Settings::kCamera_4imageRate()),
 			SIGNAL(editingFinished()),
@@ -202,6 +208,8 @@ MainWindow::~MainWindow()
 {
 	disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
 	camera_->stop();
+	delete detector_;
+	delete extractor_;
 	objectsDescriptors_.clear();
 	qDeleteAll(objects_.begin(), objects_.end());
 	objects_.clear();
@@ -1302,9 +1310,6 @@ void MainWindow::update(const cv::Mat & image)
 
 	if(!image.empty())
 	{
-		QTime time;
-		time.start();
-
 		//Convert to grayscale
 		cv::Mat grayscaleImg;
 		if(image.channels() != 1 || image.depth() != CV_8U)
@@ -1316,11 +1321,12 @@ void MainWindow::update(const cv::Mat & image)
 			grayscaleImg =  image;
 		}
 
+		QTime time;
+		time.start();
+
 		// EXTRACT KEYPOINTS
-		cv::FeatureDetector * detector = Settings::createFeaturesDetector();
 		std::vector<cv::KeyPoint> keypoints;
-		detector->detect(grayscaleImg, keypoints);
-		delete detector;
+		detector_->detect(grayscaleImg, keypoints);
 		ui_->label_timeDetection->setNum(time.restart());
 
 		cv::Mat descriptors;
@@ -1335,9 +1341,7 @@ void MainWindow::update(const cv::Mat & image)
 			}
 
 			// EXTRACT DESCRIPTORS
-			cv::DescriptorExtractor * extractor = Settings::createDescriptorsExtractor();
-			extractor->compute(grayscaleImg, keypoints, descriptors);
-			delete extractor;
+			extractor_->compute(grayscaleImg, keypoints, descriptors);
 			if((int)keypoints.size() != descriptors.rows)
 			{
 				printf("ERROR : kpt=%d != descriptors=%d\n", (int)keypoints.size(), descriptors.rows);
@@ -1658,6 +1662,7 @@ void MainWindow::update(const cv::Mat & image)
 						}
 					}
 				}
+				ui_->label_timeHomographies->setNum(time.restart());
 			}
 			else
 			{
@@ -1769,7 +1774,6 @@ void MainWindow::update(const cv::Mat & image)
 
 		ui_->label_nfeatures->setNum((int)keypoints.size());
 		ui_->imageView_source->update();
-		ui_->label_timeGui->setNum(time.restart());
 	}
 	ui_->label_detectorDescriptorType->setText(QString("%1/%2").arg(Settings::currentDetectorType()).arg(Settings::currentDescriptorType()));
 
@@ -1834,6 +1838,16 @@ void MainWindow::notifyParametersChanged(const QStringList & paramChanged)
 		{
 			setupTCPServer();
 		}
+	}
+
+	if(detectorDescriptorParamsChanged)
+	{
+		//Re-init detector and extractor
+		delete detector_;
+		delete extractor_;
+		detector_ = Settings::createFeaturesDetector();
+		extractor_ = Settings::createDescriptorsExtractor();
+		Q_ASSERT(detector_ != 0 && extractor_ != 0);
 	}
 
 	if(Settings::getGeneral_autoUpdateObjects())

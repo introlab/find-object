@@ -47,6 +47,8 @@ private:
 	Camera * camera_;
 	ObjWidget * object_;
 	cv::Mat cvImage_;
+	cv::FeatureDetector * detector_;
+	cv::DescriptorExtractor * extractor_;
 
 	enum State{kTakePicture, kSelectFeatures, kVerifySelection, kClosing};
 	int state_;

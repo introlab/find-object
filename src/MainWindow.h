@@ -105,6 +105,8 @@ private:
 	QMap<int, QByteArray> imagesMap_;
 	TcpServer * tcpServer_;
 	QMap<QString, QVariant> lastObjectsUpdateParameters_; // ParametersMap
+	cv::FeatureDetector * detector_;
+	cv::DescriptorExtractor * extractor_;
 };
 
 #endif /* MainWindow_H_ */
