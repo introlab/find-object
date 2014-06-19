@@ -38,7 +38,6 @@ cv::Mat cvtQImage2CvMat(const QImage & image)
 		int channels = 3;
 		cvImage = cv::Mat(image.height(), image.width(), CV_8UC3);
 		unsigned char * data = cvImage.data;
-		const IplImage test = cvImage;
 		for(int y = 0; y < image.height(); ++y, data+=cvImage.cols*cvImage.elemSize())
 		{
 			for(int x = 0; x < image.width(); ++x)
