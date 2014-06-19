@@ -111,8 +111,15 @@ MainWindow::MainWindow(Camera * camera, const QString & settings, QWidget * pare
 	if(cv::gpu::getCudaEnabledDeviceCount() == 0)
 	{
 		Settings::setFeature2D_SURF_gpu(false);
+		Settings::setFeature2D_Fast_gpu(false);
+		Settings::setFeature2D_ORB_gpu(false);
 		ui_->toolBox->updateParameter(Settings::kFeature2D_SURF_gpu());
+		ui_->toolBox->updateParameter(Settings::kFeature2D_Fast_gpu());
+		ui_->toolBox->updateParameter(Settings::kFeature2D_ORB_gpu());
 		ui_->toolBox->getParameterWidget(Settings::kFeature2D_SURF_gpu())->setEnabled(false);
+		ui_->toolBox->getParameterWidget(Settings::kFeature2D_Fast_gpu())->setEnabled(false);
+		ui_->toolBox->getParameterWidget(Settings::kFeature2D_Fast_keypointsRatio())->setEnabled(false);
+		ui_->toolBox->getParameterWidget(Settings::kFeature2D_ORB_gpu())->setEnabled(false);
 	}
 
 	detector_ = Settings::createFeaturesDetector();

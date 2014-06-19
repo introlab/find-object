@@ -80,7 +80,9 @@ class Settings
 	PARAMETER(Feature2D, Dense_varyImgBoundWithScale, bool, false, "");
 
 	PARAMETER(Feature2D, Fast_threshold, int, 10, "Threshold on difference between intensity of the central pixel and pixels of a circle around this pixel.");
-	PARAMETER(Feature2D, Fast_nonmaxSuppression, bool, true, " If true, non-maximum suppression is applied to detected corners (keypoints).");
+	PARAMETER(Feature2D, Fast_nonmaxSuppression, bool, true, "If true, non-maximum suppression is applied to detected corners (keypoints).");
+	PARAMETER(Feature2D, Fast_gpu, bool, false, "GPU-FAST: Use GPU version of FAST. This option is enabled only if OpenCV is built with CUDA and GPUs are detected.");
+	PARAMETER(Feature2D, Fast_keypointsRatio, double, 0.05, "Used with FAST GPU.");
 
 	PARAMETER(Feature2D, GFTT_maxCorners, int, 1000, "");
 	PARAMETER(Feature2D, GFTT_qualityLevel, double, 0.01, "");
@@ -95,8 +97,9 @@ class Settings
 	PARAMETER(Feature2D, ORB_edgeThreshold, int, 31, "This is size of the border where the features are not detected. It should roughly match the patchSize parameter.");
 	PARAMETER(Feature2D, ORB_firstLevel, int, 0, "It should be 0 in the current implementation.");
 	PARAMETER(Feature2D, ORB_WTA_K, int, 2, "The number of points that produce each element of the oriented BRIEF descriptor. The default value 2 means the BRIEF where we take a random point pair and compare their brightnesses, so we get 0/1 response. Other possible values are 3 and 4. For example, 3 means that we take 3 random points (of course, those point coordinates are random, but they are generated from the pre-defined seed, so each element of BRIEF descriptor is computed deterministically from the pixel rectangle), find point of maximum brightness and output index of the winner (0, 1 or 2). Such output will occupy 2 bits, and therefore it will need a special variant of Hamming distance, denoted as NORM_HAMMING2 (2 bits per bin). When WTA_K=4, we take 4 random points to compute each bin (that will also occupy 2 bits with possible values 0, 1, 2 or 3).");
-	PARAMETER(Feature2D, ORB_scoreType, int, 0, "The default HARRIS_SCORE means that Harris algorithm is used to rank features (the score is written to KeyPoint::score and is used to retain best nfeatures features); FAST_SCORE is alternative value of the parameter that produces slightly less stable keypoints, but it is a little faster to compute.");
+	PARAMETER(Feature2D, ORB_scoreType, int, 0, "The default HARRIS_SCORE=0 means that Harris algorithm is used to rank features (the score is written to KeyPoint::score and is used to retain best nfeatures features); FAST_SCORE=1 is alternative value of the parameter that produces slightly less stable keypoints, but it is a little faster to compute.");
 	PARAMETER(Feature2D, ORB_patchSize, int, 31, "size of the patch used by the oriented BRIEF descriptor. Of course, on smaller pyramid layers the perceived image area covered by a feature will be larger.");
+	PARAMETER(Feature2D, ORB_gpu, bool, false, "GPU-ORB: Use GPU version of ORB. This option is enabled only if OpenCV is built with CUDA and GPUs are detected.");
 
 	PARAMETER(Feature2D, MSER_delta, int, 5, "");
 	PARAMETER(Feature2D, MSER_minArea, int, 60, "");
