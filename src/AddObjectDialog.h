@@ -14,6 +14,8 @@ class Ui_addObjectDialog;
 class ObjWidget;
 class Camera;
 class KeypointItem;
+class KeypointDetector;
+class DescriptorExtractor;
 
 class AddObjectDialog : public QDialog {
 
@@ -47,8 +49,8 @@ private:
 	Camera * camera_;
 	ObjWidget * object_;
 	cv::Mat cvImage_;
-	cv::FeatureDetector * detector_;
-	cv::DescriptorExtractor * extractor_;
+	KeypointDetector * detector_;
+	DescriptorExtractor * extractor_;
 
 	enum State{kTakePicture, kSelectFeatures, kVerifySelection, kClosing};
 	int state_;

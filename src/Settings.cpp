@@ -11,6 +11,7 @@
 #include <opencv2/nonfree/features2d.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
 #include <opencv2/nonfree/gpu.hpp>
+#include <opencv2/gpu/gpu.hpp>
 
 #define VERBOSE 0
 
@@ -118,56 +119,77 @@ void Settings::saveSettings(const QString & fileName, const QByteArray & windowG
 	printf("Settings saved to %s\n", path.toStdString().c_str());
 }
 
-class GPUSURF : public cv::Feature2D
+class GPUFeature2D
+{
+public:
+	GPUFeature2D() {}
+	virtual ~GPUFeature2D() {}
+
+	virtual void detectKeypoints(const cv::Mat & image,
+			std::vector<cv::KeyPoint> & keypoints) = 0;
+
+	virtual void computeDescriptors(const cv::Mat & image,
+			std::vector<cv::KeyPoint> & keypoints,
+			cv::Mat & descriptors) = 0;
+};
+
+class GPUSURF : public GPUFeature2D
 {
 public:
 	GPUSURF(double hessianThreshold,
-            int nOctaves = Settings::defaultFeature2D_SURF_nOctaves(),
-            int nOctaveLayers = Settings::defaultFeature2D_SURF_nOctaveLayers(),
-            bool extended = Settings::defaultFeature2D_SURF_extended(),
-            bool upright = Settings::defaultFeature2D_SURF_upright()) :
-		hessianThreshold_(hessianThreshold),
-		nOctaves_(nOctaves),
-		nOctaveLayers_(nOctaveLayers),
-		extended_(extended),
-		upright_(upright)
+            int nOctaves,
+            int nOctaveLayers,
+            bool extended,
+            float keypointsRatio,
+            bool upright) :
+	surf_(hessianThreshold,
+		  nOctaves,
+		  nOctaveLayers,
+		  extended,
+		  keypointsRatio,
+		  upright)
 	{
 	}
 	virtual ~GPUSURF() {}
 
-	void operator()(cv::InputArray img, cv::InputArray mask,
-	                    std::vector<cv::KeyPoint>& keypoints,
-	                    cv::OutputArray descriptors,
-	                    bool useProvidedKeypoints=false) const
-	{
-		printf("GPUSURF:operator() Don't call this directly!\n");
-		exit(-1);
-	}
-	int descriptorSize() const
-	{
-		return extended_ ? 128 : 64;
-	}
-	int descriptorType() const
-	{
-		return CV_32F;
-	}
-
-protected:
-    void detectImpl( const cv::Mat& image, std::vector<cv::KeyPoint>& keypoints, const cv::Mat& mask=cv::Mat() ) const
+    void detectKeypoints(const cv::Mat & image, std::vector<cv::KeyPoint> & keypoints)
     {
     	cv::gpu::GpuMat imgGpu(image);
-    	cv::gpu::GpuMat maskGpu(mask);
-		cv::gpu::SURF_GPU surfGpu(hessianThreshold_, nOctaves_, nOctaveLayers_, extended_, 0.01f, upright_);
-		surfGpu(imgGpu, maskGpu, keypoints);
+		try
+		{
+			surf_(imgGpu, cv::gpu::GpuMat(), keypoints);
+		}
+		catch(cv::Exception &e)
+		{
+			printf("GPUSURF error: %s \n(If something about layer_rows, parameter nOctaves=%d of SURF is too high for the size of the image (%d,%d).)\n",
+					e.msg.c_str(),
+					surf_.nOctaves,
+					image.cols,
+					image.rows);
+			printf("img.size().area()=%d surf.keypointsRatio=%d\n", imgGpu.size().area(), surf_.keypointsRatio);
+		}
     }
 
-    void computeImpl( const cv::Mat& image, std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors ) const
+    void computeDescriptors( const cv::Mat& image,
+    		std::vector<cv::KeyPoint>& keypoints,
+    		cv::Mat& descriptors)
     {
     	std::vector<float> d;
 		cv::gpu::GpuMat imgGpu(image);
-		cv::gpu::SURF_GPU surfGpu(hessianThreshold_, nOctaves_, nOctaveLayers_, extended_, 0.01f, upright_);
 		cv::gpu::GpuMat descriptorsGPU;
-		surfGpu(imgGpu, cv::gpu::GpuMat(), keypoints, descriptorsGPU, true);
+		try
+		{
+			surf_(imgGpu, cv::gpu::GpuMat(), keypoints, descriptorsGPU, true);
+    	}
+		catch(cv::Exception &e)
+		{
+			printf("GPUSURF error: %s \n(If something about layer_rows, parameter nOctaves=%d of SURF is too high for the size of the image (%d,%d).)\n",
+					e.msg.c_str(),
+					surf_.nOctaves,
+					image.cols,
+					image.rows);
+			printf("img.size().area()=%d surf.keypointsRatio=%d\n", imgGpu.size().area(), surf_.keypointsRatio);
+		}
 
 		// Download descriptors
 		if (descriptorsGPU.empty())
@@ -179,44 +201,41 @@ protected:
 			descriptorsGPU.download(descriptors);
 		}
     }
-
 private:
-    double hessianThreshold_;
-    int nOctaves_;
-    int nOctaveLayers_;
-    bool extended_;
-    bool upright_;
+    cv::gpu::SURF_GPU surf_; // HACK: static because detectImpl() is const!
 };
 
-class GPUFAST : public cv::FeatureDetector
+class GPUFAST : public GPUFeature2D
 {
 public:
 	GPUFAST(int threshold=Settings::defaultFeature2D_Fast_threshold(),
 			bool nonmaxSuppression=Settings::defaultFeature2D_Fast_nonmaxSuppression(),
 			double keypointsRatio=Settings::defaultFeature2D_Fast_keypointsRatio()) :
-		threshold_(threshold),
-		nonmaxSuppression_(nonmaxSuppression),
-		keypointsRatio_(keypointsRatio)
+		fast_(threshold,
+			  nonmaxSuppression,
+			  keypointsRatio)
 	{
 	}
 	virtual ~GPUFAST() {}
 
 protected:
-    void detectImpl( const cv::Mat& image, std::vector<cv::KeyPoint>& keypoints, const cv::Mat& mask=cv::Mat() ) const
+	void detectKeypoints(const cv::Mat & image, std::vector<cv::KeyPoint> & keypoints)
     {
     	cv::gpu::GpuMat imgGpu(image);
-    	cv::gpu::GpuMat maskGpu(mask);
-		cv::gpu::FAST_GPU fastGpu(threshold_, nonmaxSuppression_, keypointsRatio_);
-		fastGpu(imgGpu, maskGpu, keypoints);
+    	fast_(imgGpu, cv::gpu::GpuMat(), keypoints);
     }
+	void computeDescriptors( const cv::Mat& image,
+		std::vector<cv::KeyPoint>& keypoints,
+		cv::Mat& descriptors)
+	{
+		printf("GPUFAST:computeDescriptors() Should not be used!\n");
+	}
 
 private:
-    int threshold_;
-    bool nonmaxSuppression_;
-    double keypointsRatio_;
+    cv::gpu::FAST_GPU fast_;
 };
 
-class GPUORB : public cv::Feature2D
+class GPUORB : public GPUFeature2D
 {
 public:
 	GPUORB(int nFeatures = Settings::defaultFeature2D_ORB_nFeatures(),
@@ -229,56 +248,54 @@ public:
             int patchSize = Settings::defaultFeature2D_ORB_patchSize(),
             int fastThreshold = Settings::defaultFeature2D_Fast_threshold(),
             bool fastNonmaxSupression = Settings::defaultFeature2D_Fast_nonmaxSuppression()) :
-		nFeatures_(nFeatures),
-		scaleFactor_(scaleFactor),
-		nLevels_(nLevels),
-		edgeThreshold_(edgeThreshold),
-		firstLevel_(firstLevel),
-		WTA_K_(WTA_K),
-		scoreType_(scoreType),
-		patchSize_(patchSize),
-		fastThreshold_(fastThreshold),
-		fastNonmaxSupression_(fastNonmaxSupression)
+		orb_(nFeatures,
+			 scaleFactor,
+			 nLevels,
+			 edgeThreshold ,
+			 firstLevel,
+			 WTA_K,
+			 scoreType,
+			 patchSize)
 	{
+		orb_.setFastParams(fastThreshold, fastNonmaxSupression);
 	}
 	virtual ~GPUORB() {}
 
-	void operator()(cv::InputArray img, cv::InputArray mask,
-						std::vector<cv::KeyPoint>& keypoints,
-						cv::OutputArray descriptors,
-						bool useProvidedKeypoints=false) const
-	{
-		printf("GPUSURF:operator() Don't call this directly!\n");
-		exit(-1);
-	}
-	int descriptorSize() const
-	{
-		return cv::ORB::kBytes;
-	}
-	int descriptorType() const
-	{
-		return CV_8U;
-	}
-
 protected:
-    void detectImpl( const cv::Mat& image, std::vector<cv::KeyPoint>& keypoints, const cv::Mat& mask=cv::Mat() ) const
+	void detectKeypoints(const cv::Mat & image, std::vector<cv::KeyPoint> & keypoints)
     {
     	cv::gpu::GpuMat imgGpu(image);
-    	cv::gpu::GpuMat maskGpu(mask);
-		cv::gpu::ORB_GPU orbGPU(nFeatures_, scaleFactor_, nLevels_, edgeThreshold_ ,firstLevel_, WTA_K_, scoreType_, patchSize_);
-		orbGPU.setFastParams(fastThreshold_, fastNonmaxSupression_);
-		orbGPU(imgGpu, maskGpu, keypoints);
+    	try
+    	{
+    		orb_(imgGpu, cv::gpu::GpuMat(), keypoints);
+    	}
+    	catch(cv::Exception &e)
+		{
+			printf("GPUORB error: %s \n(If something about matrix size, the image/object may be too small (%d,%d).)\n",
+					e.msg.c_str(),
+					image.cols,
+					image.rows);
+		}
     }
 
-    void computeImpl( const cv::Mat& image, std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors ) const
+    void computeDescriptors( const cv::Mat& image,
+        		std::vector<cv::KeyPoint>& keypoints,
+        		cv::Mat& descriptors)
 	{
 		std::vector<float> d;
 		cv::gpu::GpuMat imgGpu(image);
-		cv::gpu::ORB_GPU orbGPU(nFeatures_, scaleFactor_, nLevels_, edgeThreshold_ ,firstLevel_, WTA_K_, scoreType_, patchSize_);
-		orbGPU.setFastParams(fastThreshold_, fastNonmaxSupression_);
 		cv::gpu::GpuMat descriptorsGPU;
-		orbGPU(imgGpu, cv::gpu::GpuMat(), keypoints, descriptorsGPU); // No option to use provided keypoints!?
-
+		try
+		{
+			orb_(imgGpu, cv::gpu::GpuMat(), keypoints, descriptorsGPU); // No option to use provided keypoints!?
+		}
+		catch(cv::Exception &e)
+		{
+			printf("GPUORB error: %s \n(If something about matrix size, the image/object may be too small (%d,%d).)\n",
+					e.msg.c_str(),
+					image.cols,
+					image.rows);
+		}
 		// Download descriptors
 		if (descriptorsGPU.empty())
 			descriptors = cv::Mat();
@@ -289,24 +306,14 @@ protected:
 			descriptorsGPU.download(descriptors);
 		}
 	}
-
 private:
-    int nFeatures_;
-	float scaleFactor_;
-	int nLevels_;
-	int edgeThreshold_;
-	int firstLevel_;
-	int WTA_K_;
-	int scoreType_;
-	int patchSize_;
-	int fastThreshold_;
-	bool fastNonmaxSupression_;
+    cv::gpu::ORB_GPU orb_;
 };
 
-
-cv::FeatureDetector * Settings::createFeaturesDetector()
+KeypointDetector * Settings::createKeypointDetector()
 {
 	cv::FeatureDetector * detector = 0;
+	GPUFeature2D * detectorGPU = 0;
 	QString str = getFeature2D_1Detector();
 	QStringList split = str.split(':');
 	if(split.size()==2)
@@ -339,7 +346,7 @@ cv::FeatureDetector * Settings::createFeaturesDetector()
 					{
 						if(getFeature2D_Fast_gpu() && cv::gpu::getCudaEnabledDeviceCount())
 						{
-							detector = new GPUFAST(
+							detectorGPU = new GPUFAST(
 									getFeature2D_Fast_threshold(),
 									getFeature2D_Fast_nonmaxSuppression());
 							if(VERBOSE)printf("Settings::createFeaturesDetector() type=%s GPU\n", strategies.at(index).toStdString().c_str());
@@ -387,7 +394,7 @@ cv::FeatureDetector * Settings::createFeaturesDetector()
 					{
 						if(getFeature2D_ORB_gpu() && cv::gpu::getCudaEnabledDeviceCount())
 						{
-							detector = new GPUORB(
+							detectorGPU = new GPUORB(
 									getFeature2D_ORB_nFeatures(),
 									getFeature2D_ORB_scaleFactor(),
 									getFeature2D_ORB_nLevels(),
@@ -444,11 +451,12 @@ cv::FeatureDetector * Settings::createFeaturesDetector()
 					{
 						if(getFeature2D_SURF_gpu() && cv::gpu::getCudaEnabledDeviceCount())
 						{
-							detector = new GPUSURF(
+							detectorGPU = new GPUSURF(
 									getFeature2D_SURF_hessianThreshold(),
 									getFeature2D_SURF_nOctaves(),
 									getFeature2D_SURF_nOctaveLayers(),
 									getFeature2D_SURF_extended(),
+									getFeature2D_SURF_keypointsRatio(),
 									getFeature2D_SURF_upright());
 							if(VERBOSE)printf("Settings::createFeaturesDetector() type=%s (GPU)\n", strategies.at(index).toStdString().c_str());
 						}
@@ -480,17 +488,22 @@ cv::FeatureDetector * Settings::createFeaturesDetector()
 			}
 		}
 	}
-	if(!detector)
+
+	Q_ASSERT(detectorGPU!=0 || detector!=0);
+	if(detectorGPU)
 	{
-		printf("ERROR: detector strategy not found !? Using default SURF...\n");
-		detector = new cv::SURF();
+		return new KeypointDetector(detectorGPU);
 	}
-	return detector;
+	else
+	{
+		return new KeypointDetector(detector);
+	}
 }
 
-cv::DescriptorExtractor * Settings::createDescriptorsExtractor()
+DescriptorExtractor * Settings::createDescriptorExtractor()
 {
 	cv::DescriptorExtractor * extractor = 0;
+	GPUFeature2D * extractorGPU = 0;
 	QString str = getFeature2D_2Descriptor();
 	QStringList split = str.split(':');
 	if(split.size()==2)
@@ -517,7 +530,7 @@ cv::DescriptorExtractor * Settings::createDescriptorsExtractor()
 					{
 						if(getFeature2D_ORB_gpu() && cv::gpu::getCudaEnabledDeviceCount())
 						{
-							extractor = new GPUORB(
+							extractorGPU = new GPUORB(
 									getFeature2D_ORB_nFeatures(),
 									getFeature2D_ORB_scaleFactor(),
 									getFeature2D_ORB_nLevels(),
@@ -562,11 +575,12 @@ cv::DescriptorExtractor * Settings::createDescriptorsExtractor()
 					{
 						if(getFeature2D_SURF_gpu() && cv::gpu::getCudaEnabledDeviceCount())
 						{
-							extractor = new GPUSURF(
+							extractorGPU = new GPUSURF(
 									getFeature2D_SURF_hessianThreshold(),
 									getFeature2D_SURF_nOctaves(),
 									getFeature2D_SURF_nOctaveLayers(),
 									getFeature2D_SURF_extended(),
+									getFeature2D_SURF_keypointsRatio(),
 									getFeature2D_SURF_upright());
 							if(VERBOSE)printf("Settings::createDescriptorsExtractor() type=%s (GPU)\n", strategies.at(index).toStdString().c_str());
 						}
@@ -609,12 +623,16 @@ cv::DescriptorExtractor * Settings::createDescriptorsExtractor()
 			}
 		}
 	}
-	if(!extractor)
+
+	Q_ASSERT(extractorGPU!=0 || extractor!=0);
+	if(extractorGPU)
 	{
-		printf("ERROR: descriptor strategy not found !? Using default SURF...\n");
-		extractor = new cv::SURF();
+		return new DescriptorExtractor(extractorGPU);
 	}
-	return extractor;
+	else
+	{
+		return new DescriptorExtractor(extractor);
+	}
 }
 
 QString Settings::currentDetectorType()
@@ -807,4 +825,54 @@ int Settings::getHomographyMethod()
 	}
 	if(VERBOSE)printf("Settings::getHomographyMethod() method=%d\n", method);
 	return method;
+}
+
+KeypointDetector::KeypointDetector(cv::FeatureDetector * featureDetector) :
+	featureDetector_(featureDetector),
+	gpuFeature2D_(0)
+{
+	Q_ASSERT(featureDetector_!=0);
+}
+KeypointDetector::KeypointDetector(GPUFeature2D * gpuFeature2D) :
+	featureDetector_(0),
+	gpuFeature2D_(gpuFeature2D)
+{
+	Q_ASSERT(gpuFeature2D_!=0);
+}
+void KeypointDetector::detect(const cv::Mat & image, std::vector<cv::KeyPoint> & keypoints)
+{
+	if(featureDetector_)
+	{
+		featureDetector_->detect(image, keypoints);
+	}
+	else // assume GPU
+	{
+		gpuFeature2D_->detectKeypoints(image, keypoints);
+	}
+}
+
+DescriptorExtractor::DescriptorExtractor(cv::DescriptorExtractor * descriptorExtractor) :
+	descriptorExtractor_(descriptorExtractor),
+	gpuFeature2D_(0)
+{
+	Q_ASSERT(descriptorExtractor_!=0);
+}
+DescriptorExtractor::DescriptorExtractor(GPUFeature2D * gpuFeature2D) :
+	descriptorExtractor_(0),
+	gpuFeature2D_(gpuFeature2D)
+{
+	Q_ASSERT(gpuFeature2D_!=0);
+}
+void DescriptorExtractor::compute(const cv::Mat & image,
+		std::vector<cv::KeyPoint> & keypoints,
+		cv::Mat & descriptors)
+{
+	if(descriptorExtractor_)
+	{
+		descriptorExtractor_->compute(image, keypoints, descriptors);
+	}
+	else // assume GPU
+	{
+		gpuFeature2D_->computeDescriptors(image, keypoints, descriptors);
+	}
 }

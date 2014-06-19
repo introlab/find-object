@@ -10,7 +10,9 @@
 #include <QtCore/QByteArray>
 #include <opencv2/features2d/features2d.hpp>
 
-class Camera;
+class KeypointDetector;
+class DescriptorExtractor;
+class GPUFeature2D;
 
 typedef QMap<QString, QVariant> ParametersMap; // Key, value
 typedef QMap<QString, QString> ParametersType; // Key, type
@@ -129,6 +131,7 @@ class Settings
 	PARAMETER(Feature2D, SURF_extended, bool, true, "Extended descriptor flag (true - use extended 128-element descriptors; false - use 64-element descriptors).");
 	PARAMETER(Feature2D, SURF_upright, bool, false, "Up-right or rotated features flag (true - do not compute orientation of features; false - compute orientation).");
 	PARAMETER(Feature2D, SURF_gpu, bool, false, "GPU-SURF: Use GPU version of SURF. This option is enabled only if OpenCV is built with CUDA and GPUs are detected.");
+	PARAMETER(Feature2D, SURF_keypointsRatio, float, 0.01f, "Used with SURF GPU.");
 
 	PARAMETER(Feature2D, BRISK_thresh, int, 30, "FAST/AGAST detection threshold score.");
 	PARAMETER(Feature2D, BRISK_octaves, int, 3, "Detection octaves. Use 0 to do single scale.");
@@ -214,8 +217,8 @@ public:
 	static void resetParameter(const QString & key) {if(defaultParameters_.contains(key)) parameters_.insert(key, defaultParameters_.value(key));}
 	static QVariant getParameter(const QString & key) {return parameters_.value(key, QVariant());}
 
-	static cv::FeatureDetector * createFeaturesDetector();
-	static cv::DescriptorExtractor * createDescriptorsExtractor();
+	static KeypointDetector * createKeypointDetector();
+	static DescriptorExtractor * createDescriptorExtractor();
 
 	static QString currentDescriptorType();
 	static QString currentDetectorType();
@@ -238,5 +241,32 @@ private:
 	static Settings dummyInit_;
 };
 
+class KeypointDetector
+{
+public:
+	KeypointDetector(cv::FeatureDetector * featureDetector);
+	KeypointDetector(GPUFeature2D * gpuFeature2D);
+
+	void detect(const cv::Mat & image, std::vector<cv::KeyPoint> & keypoints);
+
+private:
+	cv::FeatureDetector * featureDetector_;
+	GPUFeature2D * gpuFeature2D_;
+};
+
+class DescriptorExtractor
+{
+public:
+	DescriptorExtractor(cv::DescriptorExtractor * descriptorExtractor);
+	DescriptorExtractor(GPUFeature2D * gpuFeature2D);
+
+	void compute(const cv::Mat & image,
+			std::vector<cv::KeyPoint> & keypoints,
+			cv::Mat & descriptors);
+
+private:
+	cv::DescriptorExtractor * descriptorExtractor_;
+	GPUFeature2D * gpuFeature2D_;
+};
 
 #endif /* SETTINGS_H_ */

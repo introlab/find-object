@@ -27,8 +27,8 @@ AddObjectDialog::AddObjectDialog(Camera * camera, const cv::Mat & image, bool mi
 	ui_ = new Ui_addObjectDialog();
 	ui_->setupUi(this);
 
-	detector_ = Settings::createFeaturesDetector();
-	extractor_ = Settings::createDescriptorsExtractor();
+	detector_ = Settings::createKeypointDetector();
+	extractor_ = Settings::createDescriptorExtractor();
 	Q_ASSERT(detector_ != 0 && extractor_ != 0);
 
 	connect(ui_->pushButton_cancel, SIGNAL(clicked()), this, SLOT(cancel()));

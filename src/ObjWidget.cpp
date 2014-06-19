@@ -247,7 +247,7 @@ void ObjWidget::setData(const std::vector<cv::KeyPoint> & keypoints,
 {
 	keypoints_ = keypoints;
 	descriptors_ = descriptors;
-	kptColors_ = QVector<QColor>(keypoints.size(), defaultColor());
+	kptColors_ = QVector<QColor>((int)keypoints.size(), defaultColor());
 	keypointItems_.clear();
 	rectItems_.clear();
 	graphicsView_->scene()->clear();

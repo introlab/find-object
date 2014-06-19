@@ -27,7 +27,6 @@ private slots:
 	void publishImage(const cv::Mat & image);
 
 private:
-	float hz_;
 	Camera camera_;
 };
 

@@ -15,6 +15,7 @@
 #include "AboutDialog.h"
 #include "TcpServer.h"
 #include "rtabmap/PdfPlot.h"
+#include "Vocabulary.h"
 
 #include <iostream>
 #include <stdio.h>
@@ -49,6 +50,7 @@ MainWindow::MainWindow(Camera * camera, const QString & settings, QWidget * pare
 	settings_(settings),
 	likelihoodCurve_(0),
 	inliersCurve_(0),
+	vocabulary_(new Vocabulary()),
 	lowestRefreshRate_(99),
 	objectsModified_(false),
 	tcpServer_(0),
@@ -117,13 +119,14 @@ MainWindow::MainWindow(Camera * camera, const QString & settings, QWidget * pare
 		ui_->toolBox->updateParameter(Settings::kFeature2D_Fast_gpu());
 		ui_->toolBox->updateParameter(Settings::kFeature2D_ORB_gpu());
 		ui_->toolBox->getParameterWidget(Settings::kFeature2D_SURF_gpu())->setEnabled(false);
+		ui_->toolBox->getParameterWidget(Settings::kFeature2D_SURF_keypointsRatio())->setEnabled(false);
 		ui_->toolBox->getParameterWidget(Settings::kFeature2D_Fast_gpu())->setEnabled(false);
 		ui_->toolBox->getParameterWidget(Settings::kFeature2D_Fast_keypointsRatio())->setEnabled(false);
 		ui_->toolBox->getParameterWidget(Settings::kFeature2D_ORB_gpu())->setEnabled(false);
 	}
 
-	detector_ = Settings::createFeaturesDetector();
-	extractor_ = Settings::createDescriptorsExtractor();
+	detector_ = Settings::createKeypointDetector();
+	extractor_ = Settings::createDescriptorExtractor();
 	Q_ASSERT(detector_ != 0 && extractor_ != 0);
 
 	connect((QDoubleSpinBox*)ui_->toolBox->getParameterWidget(Settings::kCamera_4imageRate()),
@@ -217,6 +220,7 @@ MainWindow::~MainWindow()
 	camera_->stop();
 	delete detector_;
 	delete extractor_;
+	delete vocabulary_;
 	objectsDescriptors_.clear();
 	qDeleteAll(objects_.begin(), objects_.end());
 	objects_.clear();
@@ -349,7 +353,7 @@ int MainWindow::loadObjects(const QString & dirPath)
 		{
 			this->updateObjects();
 		}
-		loadedObjects = names.size();
+		loadedObjects = (int)names.size();
 	}
 	return loadedObjects;
 }
@@ -756,7 +760,7 @@ protected:
 		QTime time;
 		time.start();
 		printf("Extracting descriptors from object %d...\n", objectId_);
-		cv::FeatureDetector * detector = Settings::createFeaturesDetector();
+		KeypointDetector * detector = Settings::createKeypointDetector();
 		keypoints_.clear();
 		descriptors_ = cv::Mat();
 		detector->detect(image_, keypoints_);
@@ -767,12 +771,12 @@ protected:
 			int maxFeatures = Settings::getFeature2D_3MaxFeatures();
 			if(maxFeatures > 0 && (int)keypoints_.size() > maxFeatures)
 			{
-				int previousCount = keypoints_.size();
+				int previousCount = (int)keypoints_.size();
 				keypoints_ = limitKeypoints(keypoints_, maxFeatures);
 				printf("obj=%d, %d keypoints removed, (kept %d), min/max response=%f/%f\n", objectId_, previousCount-(int)keypoints_.size(), (int)keypoints_.size(), keypoints_.size()?keypoints_.back().response:0.0f, keypoints_.size()?keypoints_.front().response:0.0f);
 			}
 
-			cv::DescriptorExtractor * extractor = Settings::createDescriptorsExtractor();
+			DescriptorExtractor * extractor = Settings::createDescriptorExtractor();
 			extractor->compute(image_, keypoints_, descriptors_);
 			delete extractor;
 			if((int)keypoints_.size() != descriptors_.rows)
@@ -858,7 +862,7 @@ void MainWindow::updateData()
 
 	objectsDescriptors_.clear();
 	dataRange_.clear();
-	vocabulary_.clear();
+	vocabulary_->clear();
 	int count = 0;
 	int dim = -1;
 	int type = -1;
@@ -944,13 +948,13 @@ void MainWindow::updateData()
 				int addedWords = 0;
 				for(int i=0; i<objects_.size(); ++i)
 				{
-					QMultiMap<int, int> words = vocabulary_.addWords(objects_[i]->descriptors(), i, incremental);
+					QMultiMap<int, int> words = vocabulary_->addWords(objects_[i]->descriptors(), i, incremental);
 					objects_[i]->setWords(words);
 					addedWords += words.uniqueKeys().size();
 					bool updated = false;
 					if(incremental && addedWords && addedWords >= updateVocabularyMinWords)
 					{
-						vocabulary_.update();
+						vocabulary_->update();
 						addedWords = 0;
 						updated = true;
 					}
@@ -958,23 +962,23 @@ void MainWindow::updateData()
 							objects_[i]->id(),
 							words.uniqueKeys().size(),
 							objects_[i]->descriptors().rows,
-							vocabulary_.size(),
+							vocabulary_->size(),
 							localTime.restart(),
 							updated?"updated":"");
 				}
 				if(addedWords)
 				{
-					vocabulary_.update();
+					vocabulary_->update();
 				}
 				ui_->label_timeIndexing->setNum(time.elapsed());
-				ui_->label_vocabularySize->setNum(vocabulary_.size());
+				ui_->label_vocabularySize->setNum(vocabulary_->size());
 				if(incremental)
 				{
-					printf("Creating incremental vocabulary... done! size=%d (%d ms)\n", vocabulary_.size(), time.elapsed());
+					printf("Creating incremental vocabulary... done! size=%d (%d ms)\n", vocabulary_->size(), time.elapsed());
 				}
 				else
 				{
-					printf("Creating vocabulary... done! size=%d (%d ms)\n", vocabulary_.size(), time.elapsed());
+					printf("Creating vocabulary... done! size=%d (%d ms)\n", vocabulary_->size(), time.elapsed());
 				}
 			}
 		}
@@ -1366,8 +1370,8 @@ void MainWindow::update(const cv::Mat & image)
 			ui_->imageView_source->setData(keypoints, cv::Mat(), image, Settings::currentDetectorType(), Settings::currentDescriptorType());
 		}
 
-		bool consistentNNData = (vocabulary_.size()!=0 && vocabulary_.wordToObjects().begin().value()!=-1 && Settings::getGeneral_invertedSearch()) ||
-								((vocabulary_.size()==0 || vocabulary_.wordToObjects().begin().value()==-1) && !Settings::getGeneral_invertedSearch());
+		bool consistentNNData = (vocabulary_->size()!=0 && vocabulary_->wordToObjects().begin().value()!=-1 && Settings::getGeneral_invertedSearch()) ||
+								((vocabulary_->size()==0 || vocabulary_->wordToObjects().begin().value()==-1) && !Settings::getGeneral_invertedSearch());
 
 		// COMPARE
 		if(!objectsDescriptors_.empty() &&
@@ -1385,15 +1389,15 @@ void MainWindow::update(const cv::Mat & image)
 			{
 				// CREATE INDEX for the scene
 				//printf("Creating FLANN index (%s)\n", Settings::currentNearestNeighborType().toStdString().c_str());
-				vocabulary_.clear();
-				QMultiMap<int, int> words = vocabulary_.addWords(descriptors, -1, Settings::getGeneral_vocabularyIncremental());
+				vocabulary_->clear();
+				QMultiMap<int, int> words = vocabulary_->addWords(descriptors, -1, Settings::getGeneral_vocabularyIncremental());
 				if(!Settings::getGeneral_vocabularyIncremental())
 				{
-					vocabulary_.update();
+					vocabulary_->update();
 				}
 				ui_->imageView_source->setWords(words);
 				ui_->label_timeIndexing->setNum(time.restart());
-				ui_->label_vocabularySize->setNum(vocabulary_.size());
+				ui_->label_vocabularySize->setNum(vocabulary_->size());
 			}
 
 			if(Settings::getGeneral_invertedSearch() || Settings::getGeneral_threads() == 1)
@@ -1407,14 +1411,14 @@ void MainWindow::update(const cv::Mat & image)
 					//match objects to scene
 					results = cv::Mat(objectsDescriptors_[0].rows, k, CV_32SC1); // results index
 					dists = cv::Mat(objectsDescriptors_[0].rows, k, CV_32FC1); // Distance results are CV_32FC1
-					vocabulary_.search(objectsDescriptors_[0], results, dists, k);
+					vocabulary_->search(objectsDescriptors_[0], results, dists, k);
 				}
 				else
 				{
 					//match scene to objects
 					results = cv::Mat(descriptors.rows, k, CV_32SC1); // results index
 					dists = cv::Mat(descriptors.rows, k, CV_32FC1); // Distance results are CV_32FC1
-					vocabulary_.search(descriptors, results, dists, k);
+					vocabulary_->search(descriptors, results, dists, k);
 				}
 
 				// PROCESS RESULTS
@@ -1459,11 +1463,11 @@ void MainWindow::update(const cv::Mat & image)
 						if(Settings::getGeneral_invertedSearch())
 						{
 							int wordId = results.at<int>(i,0);
-							QList<int> objIndexes = vocabulary_.wordToObjects().values(wordId);
+							QList<int> objIndexes = vocabulary_->wordToObjects().values(wordId);
 							for(int j=0; j<objIndexes.size(); ++j)
 							{
 								// just add unique matches
-								if(vocabulary_.wordToObjects().count(wordId, objIndexes[j]) == 1)
+								if(vocabulary_->wordToObjects().count(wordId, objIndexes[j]) == 1)
 								{
 									matches[objIndexes[j]].insert(objects_.at(objIndexes[j])->words().value(wordId), i);
 								}
@@ -1491,7 +1495,7 @@ void MainWindow::update(const cv::Mat & image)
 				unsigned int threadCounts = Settings::getGeneral_threads();
 				if(threadCounts == 0)
 				{
-					threadCounts = objectsDescriptors_.size();
+					threadCounts = (int)objectsDescriptors_.size();
 				}
 				for(unsigned int j=0; j<objectsDescriptors_.size(); j+=threadCounts)
 				{
@@ -1499,7 +1503,7 @@ void MainWindow::update(const cv::Mat & image)
 
 					for(unsigned int k=j; k<j+threadCounts && k<objectsDescriptors_.size(); ++k)
 					{
-						threads.push_back(new SearchThread(&vocabulary_, k, &objectsDescriptors_[k], ui_->imageView_source));
+						threads.push_back(new SearchThread(vocabulary_, k, &objectsDescriptors_[k], ui_->imageView_source));
 						threads.back()->start();
 					}
 
@@ -1823,6 +1827,9 @@ void MainWindow::notifyParametersChanged(const QStringList & paramChanged)
 	for(QStringList::const_iterator iter = paramChanged.begin(); iter!=paramChanged.end(); ++iter)
 	{
 		printf("Parameter changed: %s -> \"%s\"\n", iter->toStdString().c_str(), Settings::getParameter(*iter).toString().toStdString().c_str());
+		printf("lastObjectsUpdateParameters_.value(*iter)=%s, Settings::getParameter(*iter)=%s",
+				lastObjectsUpdateParameters_.value(*iter).toString().toStdString().c_str(),
+				Settings::getParameter(*iter).toString().toStdString().c_str());
 		if(lastObjectsUpdateParameters_.value(*iter) != Settings::getParameter(*iter))
 		{
 			if(!detectorDescriptorParamsChanged && iter->contains("Feature2D"))
@@ -1837,6 +1844,7 @@ void MainWindow::notifyParametersChanged(const QStringList & paramChanged)
 			{
 				nearestNeighborParamsChanged = true;
 			}
+			lastObjectsUpdateParameters_[*iter] = Settings::getParameter(*iter);
 		}
 
 		if(iter->compare(Settings::kGeneral_port()) == 0 &&
@@ -1852,8 +1860,8 @@ void MainWindow::notifyParametersChanged(const QStringList & paramChanged)
 		//Re-init detector and extractor
 		delete detector_;
 		delete extractor_;
-		detector_ = Settings::createFeaturesDetector();
-		extractor_ = Settings::createDescriptorsExtractor();
+		detector_ = Settings::createKeypointDetector();
+		extractor_ = Settings::createDescriptorExtractor();
 		Q_ASSERT(detector_ != 0 && extractor_ != 0);
 	}
 

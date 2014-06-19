@@ -66,7 +66,7 @@ void ImagesTcpServer::publishImage(const cv::Mat & image)
 			QDataStream out(&block, QIODevice::WriteOnly);
 			out.setVersion(QDataStream::Qt_4_0);
 			out << (quint64)0;
-			out.writeRawData((char*)buf.data(), buf.size());
+			out.writeRawData((char*)buf.data(), (int)buf.size());
 			out.device()->seek(0);
 			out << (quint64)(block.size() - sizeof(quint64));
 			(*iter)->write(block);

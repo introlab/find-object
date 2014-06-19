@@ -12,11 +12,7 @@
 #include <QtCore/QMap>
 #include <QtCore/QByteArray>
 
-#include <opencv2/core/core.hpp>
-#include <opencv2/features2d/features2d.hpp>
-#include <opencv2/imgproc/imgproc_c.h>
-
-#include "Vocabulary.h"
+#include <opencv2/opencv.hpp>
 
 class Ui_mainWindow;
 class ObjWidget;
@@ -25,6 +21,9 @@ class ParametersToolBox;
 class QLabel;
 class AboutDialog;
 class TcpServer;
+class KeypointDetector;
+class DescriptorExtractor;
+class Vocabulary;
 
 namespace rtabmap
 {
@@ -96,7 +95,7 @@ private:
 	AboutDialog * aboutDialog_;
 	QList<ObjWidget*> objects_;
 	std::vector<cv::Mat> objectsDescriptors_;
-	Vocabulary vocabulary_;
+	Vocabulary * vocabulary_;
 	QMap<int, int> dataRange_; // <last id of object's descriptor, id>
 	QTime updateRate_;
 	QTime refreshStartTime_;
@@ -105,8 +104,8 @@ private:
 	QMap<int, QByteArray> imagesMap_;
 	TcpServer * tcpServer_;
 	QMap<QString, QVariant> lastObjectsUpdateParameters_; // ParametersMap
-	cv::FeatureDetector * detector_;
-	cv::DescriptorExtractor * extractor_;
+	KeypointDetector * detector_;
+	DescriptorExtractor * extractor_;
 };
 
 #endif /* MainWindow_H_ */
