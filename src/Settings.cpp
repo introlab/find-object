@@ -166,7 +166,6 @@ public:
 					surf_.nOctaves,
 					image.cols,
 					image.rows);
-			printf("img.size().area()=%d surf.keypointsRatio=%d\n", imgGpu.size().area(), surf_.keypointsRatio);
 		}
     }
 
@@ -188,7 +187,6 @@ public:
 					surf_.nOctaves,
 					image.cols,
 					image.rows);
-			printf("img.size().area()=%d surf.keypointsRatio=%d\n", imgGpu.size().area(), surf_.keypointsRatio);
 		}
 
 		// Download descriptors
