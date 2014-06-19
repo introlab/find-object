@@ -462,6 +462,7 @@ void ParametersToolBox::changeParameter(const int & value)
 			{
 				QComboBox * descriptorBox = (QComboBox*)this->getParameterWidget(Settings::kFeature2D_2Descriptor());
 				QComboBox * nnBox = (QComboBox*)this->getParameterWidget(Settings::kNearestNeighbor_1Strategy());
+				QComboBox * distBox = (QComboBox*)this->getParameterWidget(Settings::kNearestNeighbor_2Distance_type());
 				bool isBinaryDescriptor = descriptorBox->currentText().compare("ORB") == 0 ||
 										  descriptorBox->currentText().compare("Brief") == 0 ||
 										  descriptorBox->currentText().compare("BRISK") == 0 ||
@@ -481,9 +482,11 @@ void ParametersToolBox::changeParameter(const int & value)
 					*tmp.begin() = '8'; // set HAMMING
 					Settings::setNearestNeighbor_2Distance_type(tmp);
 					nnBox->blockSignals(true);
+					distBox->blockSignals(true);
 					this->updateParameter(Settings::kNearestNeighbor_1Strategy());
 					this->updateParameter(Settings::kNearestNeighbor_2Distance_type());
 					nnBox->blockSignals(false);
+					distBox->blockSignals(false);
 					if(sender() == nnBox)
 					{
 						this->updateParametersVisibility();
@@ -491,6 +494,7 @@ void ParametersToolBox::changeParameter(const int & value)
 					}
 					nnStrategyChanged = true;
 					paramChanged.append(Settings::kNearestNeighbor_1Strategy());
+					paramChanged.append(Settings::kNearestNeighbor_2Distance_type());
 				}
 				else if(!isBinaryDescriptor && nnBox->currentText().compare("Lsh") == 0)
 				{
@@ -507,9 +511,11 @@ void ParametersToolBox::changeParameter(const int & value)
 					*tmp.begin() = '0'; // set EUCLIDEAN_L2
 					Settings::setNearestNeighbor_2Distance_type(tmp);
 					nnBox->blockSignals(true);
+					distBox->blockSignals(true);
 					this->updateParameter(Settings::kNearestNeighbor_1Strategy());
 					this->updateParameter(Settings::kNearestNeighbor_2Distance_type());
 					nnBox->blockSignals(false);
+					distBox->blockSignals(false);
 					if(sender() == nnBox)
 					{
 						this->updateParametersVisibility();
@@ -517,6 +523,7 @@ void ParametersToolBox::changeParameter(const int & value)
 					}
 					nnStrategyChanged = true;
 					paramChanged.append(Settings::kNearestNeighbor_1Strategy());
+					paramChanged.append(Settings::kNearestNeighbor_2Distance_type());
 				}
 			}
 

@@ -597,7 +597,7 @@ cvflann::flann_distance_t Settings::getFlannDistanceType()
 		if(ok)
 		{
 			QStringList strategies = split.last().split(';');
-			if(strategies.size() == 8 && index>=0 && index<8)
+			if(strategies.size() == 9 && index>=0 && index<=8)
 			{
 				distance = (cvflann::flann_distance_t)(index+1);
 			}
