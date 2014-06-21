@@ -61,7 +61,7 @@ QMultiMap<int, int> Vocabulary::addWords(const cv::Mat & descriptors, int object
 		int matches = 0;
 		for(int i = 0; i < descriptors.rows; ++i)
 		{
-			QMap<float, int> fullResults; // nearest descriptors sorted by distance
+			QMultiMap<float, int> fullResults; // nearest descriptors sorted by distance
 			if(notIndexedDescriptors_.rows)
 			{
 				Q_ASSERT(newWords.type() == descriptors.type() && newWords.cols == descriptors.cols);
