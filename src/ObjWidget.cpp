@@ -69,6 +69,7 @@ void ObjWidget::setupUi()
 
 	label_ = new QLabel();
 	label_->setAlignment(Qt::AlignCenter);
+	label_->setTextInteractionFlags(Qt::TextSelectableByMouse);
 
 	this->setLayout(new QVBoxLayout(this));
 	this->layout()->addWidget(graphicsView_);
