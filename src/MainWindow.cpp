@@ -99,7 +99,6 @@ MainWindow::MainWindow(Camera * camera, const QString & settings, QWidget * pare
 		ui_->toolBox->getParameterWidget(Settings::kCamera_1deviceId())->setEnabled(false);
 		ui_->toolBox->getParameterWidget(Settings::kCamera_2imageWidth())->setEnabled(false);
 		ui_->toolBox->getParameterWidget(Settings::kCamera_3imageHeight())->setEnabled(false);
-		ui_->toolBox->getParameterWidget(Settings::kCamera_4imageRate())->setEnabled(false);
 		ui_->toolBox->getParameterWidget(Settings::kCamera_5mediaPath())->setEnabled(false);
 		ui_->toolBox->getParameterWidget(Settings::kCamera_6useTcpCamera())->setEnabled(false);
 		ui_->toolBox->getParameterWidget(Settings::kCamera_7IP())->setEnabled(false);
