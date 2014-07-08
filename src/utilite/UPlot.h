@@ -142,7 +142,7 @@ public:
 	void getData(QVector<float> & x, QVector<float> & y) const; // only call in Qt MainThread
 	void draw(QPainter * painter);
 
-public slots:
+public Q_SLOTS:
 	/**
 	 *
 	 * Clear curve's values.
@@ -212,7 +212,7 @@ public slots:
 	void addValues(const std::vector<float> & ys); // for convenience
 	void addValues(const std::vector<int> & ys); // for convenience
 
-signals:
+Q_SIGNALS:
 	/**
 	 *
 	 *  emitted when data is changed.
@@ -261,7 +261,7 @@ public:
 	UPlotCurveThreshold(const QString & name, float thesholdValue, Qt::Orientation orientation = Qt::Horizontal, QObject * parent = 0);
 	virtual ~UPlotCurveThreshold();
 
-public slots:
+public Q_SLOTS:
 	/**
 	 * Set threshold value.
 	 */
@@ -345,7 +345,7 @@ public:
 	virtual ~UPlotLegendItem();
 	const UPlotCurve * curve() const {return _curve;}
 
-signals:
+Q_SIGNALS:
 	void legendItemRemoved(const UPlotCurve *);
 
 protected:
@@ -380,17 +380,17 @@ public:
 	QPixmap createSymbol(const QPen & pen, const QBrush & brush);
 	bool remove(const UPlotCurve * curve);
 
-public slots:
+public Q_SLOTS:
 	void removeLegendItem(const UPlotCurve * curve);
 
-signals:
+Q_SIGNALS:
 	void legendItemRemoved(const UPlotCurve * curve);
 	void legendItemToggled(const UPlotCurve * curve, bool toggled);
 
 protected:
 	virtual void contextMenuEvent(QContextMenuEvent * event);
 
-private slots:
+private Q_SLOTS:
 	void redirectToggled(bool);
 
 private:
@@ -508,7 +508,7 @@ public:
 	void setGraphicsView(bool on);
 	QRectF sceneRect() const;
 
-public slots:
+public Q_SLOTS:
 	/**
 	 *
 	 * Remove a curve. If UPlot is the parent of the curve, the curve is deleted.
@@ -522,7 +522,7 @@ public slots:
 	 */
 	void clearData();
 
-private slots:
+private Q_SLOTS:
 	void captureScreen();
 	void updateAxis(const UPlotCurve * curve);
 

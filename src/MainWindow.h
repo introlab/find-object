@@ -49,12 +49,12 @@ public:
 protected:
 	virtual void closeEvent(QCloseEvent * event);
 
-public slots:
+public Q_SLOTS:
 	void startProcessing();
 	void stopProcessing();
 	void pauseProcessing();
 
-private slots:
+private Q_SLOTS:
 	void loadSettings();
 	void saveSettings();
 	void loadObjects();
@@ -76,7 +76,7 @@ private slots:
 	void moveCameraFrame(int frame);
 	void rectHovered(int objId);
 
-signals:
+Q_SIGNALS:
 	void objectsFound(const QMultiMap<int, QPair<QRect, QTransform> > &);
 
 private:

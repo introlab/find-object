@@ -597,7 +597,7 @@ void ObjWidget::mouseReleaseEvent(QMouseEvent * event)
 			right = qAbs(l - pixmap_.width());
 		}
 
-		emit roiChanged(QRect(left, top, right-left, bottom-top));
+		Q_EMIT roiChanged(QRect(left, top, right-left, bottom-top));
 	}
 	QWidget::mouseReleaseEvent(event);
 }
@@ -640,7 +640,7 @@ void ObjWidget::contextMenuEvent(QContextMenuEvent * event)
 	}
 	else if(action == delete_)
 	{
-		emit removalTriggered(this);
+		Q_EMIT removalTriggered(this);
 	}
 	else if(action == graphicsViewMode_)
 	{

@@ -1756,7 +1756,7 @@ void MainWindow::update(const cv::Mat & image)
 
 			if(objectsDetected.size() > 0 || Settings::getGeneral_sendNoObjDetectedEvents())
 			{
-				emit objectsFound(objectsDetected);
+				Q_EMIT objectsFound(objectsDetected);
 			}
 			ui_->label_objectsDetected->setNum(objectsDetected.size());
 		}

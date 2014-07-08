@@ -188,15 +188,15 @@ void Camera::takeImage()
 		{
 			cv::Mat resampled;
 			cv::resize(img, resampled, cv::Size(Settings::getCamera_2imageWidth(), Settings::getCamera_3imageHeight()));
-			emit imageReceived(resampled);
+			Q_EMIT imageReceived(resampled);
 		}
 		else if(capture_.isOpened())
 		{
-			emit imageReceived(img.clone()); // clone required with VideoCapture::read()
+			Q_EMIT imageReceived(img.clone()); // clone required with VideoCapture::read()
 		}
 		else
 		{
-			emit imageReceived(img); // clone not required with cv::imread()
+			Q_EMIT imageReceived(img); // clone not required with cv::imread()
 		}
 	}
 }

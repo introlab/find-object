@@ -23,7 +23,7 @@ public:
 	quint16 getPort() const;
 
 
-private slots:
+private Q_SLOTS:
 	void addClient();
 	void publishObjects(const QMultiMap<int, QPair<QRect, QTransform> > & objects);
 };

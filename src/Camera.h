@@ -19,7 +19,7 @@ public:
 	cv::Mat getImage();
 	bool isConnected() const {return connected_;}
 
-private slots:
+private Q_SLOTS:
 	void readReceivedData();
 	void displayError(QAbstractSocket::SocketError socketError);
 	void connectionLost();
@@ -45,10 +45,10 @@ public:
 	int getCurrentFrameIndex();
 	void moveToFrame(int frame);
 
-signals:
+Q_SIGNALS:
 	void imageReceived(const cv::Mat & image);
 
-public slots:
+public Q_SLOTS:
 	virtual void updateImageRate();
 	virtual void takeImage();
 

@@ -30,10 +30,10 @@ private:
 	void addParameter(QVBoxLayout * layout, const QString & key, const bool & value);
 	void addParameter(QVBoxLayout * layout, const QString & name, QWidget * widget);
 
-signals:
+Q_SIGNALS:
 	void parametersChanged(const QStringList & name);
 
-private slots:
+private Q_SLOTS:
 	void changeParameter();
 	void changeParameter(const QString & value);
 	void changeParameter(const int & value);

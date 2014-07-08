@@ -94,7 +94,7 @@ void ParametersToolBox::resetCurrentPage()
 	this->blockSignals(true);
 	QStringList paramChanged = this->resetPage(this->currentIndex());
 	this->blockSignals(false);
-	emit parametersChanged(paramChanged);
+	Q_EMIT parametersChanged(paramChanged);
 }
 
 void ParametersToolBox::resetAllPages()
@@ -106,7 +106,7 @@ void ParametersToolBox::resetAllPages()
 		paramChanged.append(this->resetPage(i));
 	}
 	this->blockSignals(false);
-	emit parametersChanged(paramChanged);
+	Q_EMIT parametersChanged(paramChanged);
 }
 
 void ParametersToolBox::updateParametersVisibility()
@@ -407,7 +407,7 @@ void ParametersToolBox::changeParameter(const QString & value)
 		Settings::setParameter(sender()->objectName(), value);
 		QStringList paramChanged;
 		paramChanged.append(sender()->objectName());
-		emit parametersChanged(paramChanged);
+		Q_EMIT parametersChanged(paramChanged);
 	}
 }
 void ParametersToolBox::changeParameter()
@@ -442,7 +442,7 @@ void ParametersToolBox::changeParameter()
 		}
 		QStringList paramChanged;
 		paramChanged.append(sender()->objectName());
-		emit parametersChanged(paramChanged);
+		Q_EMIT parametersChanged(paramChanged);
 	}
 }
 
@@ -573,6 +573,6 @@ void ParametersToolBox::changeParameter(const int & value)
 		}
 
 		paramChanged.append(sender()->objectName());
-		emit parametersChanged(paramChanged);
+		Q_EMIT parametersChanged(paramChanged);
 	}
 }

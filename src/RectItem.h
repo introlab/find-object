@@ -21,7 +21,7 @@ public:
 	void setColor(const QColor & color);
 	int id() const {return id_;}
 
-signals:
+Q_SIGNALS:
 	void hovered(int);
 
 protected:

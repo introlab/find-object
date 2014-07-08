@@ -22,7 +22,7 @@ public:
 	quint16 getPort() const;
 
 
-private slots:
+private Q_SLOTS:
 	void addClient();
 	void publishImage(const cv::Mat & image);
 

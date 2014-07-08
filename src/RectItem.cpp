@@ -59,7 +59,7 @@ void RectItem::showDescription()
 		placeHolder_->setPos(0,0);
 		placeHolder_->setVisible(true);
 
-		emit hovered(id_);
+		Q_EMIT hovered(id_);
 	}
 }
 

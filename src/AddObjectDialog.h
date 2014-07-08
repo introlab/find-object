@@ -28,7 +28,7 @@ public:
 	// ownership transferred to caller
 	ObjWidget * retrieveObject() {ObjWidget * obj = object_; object_=0; return obj;}
 
-private slots:
+private Q_SLOTS:
 	void update(const cv::Mat &);
 	void next();
 	void back();

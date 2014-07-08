@@ -85,7 +85,7 @@ protected:
 	virtual void mouseMoveEvent(QMouseEvent * event);
 	virtual void mouseReleaseEvent(QMouseEvent * event);
 
-signals:
+Q_SIGNALS:
 	void removalTriggered(ObjWidget *);
 	void selectionChanged();
 	void roiChanged(const QRect &);

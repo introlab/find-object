@@ -419,7 +419,7 @@ void UPlotCurve::addValue(UPlotItem * data)
 	if(data)
 	{
 		this->_addValue(data);
-		emit dataChanged(this);
+		Q_EMIT dataChanged(this);
 	}
 }
 
@@ -464,7 +464,7 @@ void UPlotCurve::addValues(QVector<UPlotItem *> & data)
 	{
 		this->_addValue(data.at(i));
 	}
-	emit dataChanged(this);
+	Q_EMIT dataChanged(this);
 }
 
 void UPlotCurve::addValues(const QVector<float> & xs, const QVector<float> & ys)
@@ -474,7 +474,7 @@ void UPlotCurve::addValues(const QVector<float> & xs, const QVector<float> & ys)
 	{
 		this->_addValue(new UPlotItem(xs.at(i),ys.at(i),width));
 	}
-	emit dataChanged(this);
+	Q_EMIT dataChanged(this);
 }
 
 void UPlotCurve::addValues(const QVector<float> & ys)
@@ -494,7 +494,7 @@ void UPlotCurve::addValues(const QVector<float> & ys)
 		}
 		this->_addValue(new UPlotItem(x,ys.at(i),width));
 	}
-	emit dataChanged(this);
+	Q_EMIT dataChanged(this);
 }
 
 void UPlotCurve::addValues(const QVector<int> & ys)
@@ -514,7 +514,7 @@ void UPlotCurve::addValues(const QVector<int> & ys)
 		}
 		this->_addValue(new UPlotItem(x,ys.at(i),width));
 	}
-	emit dataChanged(this);
+	Q_EMIT dataChanged(this);
 }
 
 void UPlotCurve::addValues(const std::vector<int> & ys)
@@ -534,7 +534,7 @@ void UPlotCurve::addValues(const std::vector<int> & ys)
 		}
 		this->_addValue(new UPlotItem(x,ys.at(i),width));
 	}
-	emit dataChanged(this);
+	Q_EMIT dataChanged(this);
 }
 
 void UPlotCurve::addValues(const std::vector<float> & ys)
@@ -554,7 +554,7 @@ void UPlotCurve::addValues(const std::vector<float> & ys)
 		}
 		this->_addValue(new UPlotItem(x,ys.at(i),width));
 	}
-	emit dataChanged(this);
+	Q_EMIT dataChanged(this);
 }
 
 int UPlotCurve::removeItem(int index)
@@ -846,7 +846,7 @@ void UPlotCurve::setData(const QVector<float> & x, const QVector<float> & y)
 
 		//reset minMax, this will force the plot to update the axes
 		this->updateMinMax();
-		emit dataChanged(this);
+		Q_EMIT dataChanged(this);
 	}
 	else
 	{
@@ -883,7 +883,7 @@ void UPlotCurve::setData(const std::vector<float> & x, const std::vector<float> 
 
 		//reset minMax, this will force the plot to update the axes
 		this->updateMinMax();
-		emit dataChanged(this);
+		Q_EMIT dataChanged(this);
 	}
 	else
 	{
@@ -923,7 +923,7 @@ void UPlotCurve::setData(const std::vector<float> & y)
 
 	//reset minMax, this will force the plot to update the axes
 	this->updateMinMax();
-	emit dataChanged(this);
+	Q_EMIT dataChanged(this);
 }
 
 void UPlotCurve::getData(QVector<float> & x, QVector<float> & y) const
@@ -1309,7 +1309,7 @@ void UPlotLegendItem::contextMenuEvent(QContextMenuEvent * event)
 	}
 	else if(action == _aRemoveCurve)
 	{
-		emit legendItemRemoved(_curve);
+		Q_EMIT legendItemRemoved(_curve);
 	}
 	else if (action == _aCopyToClipboard)
 	{
@@ -1436,7 +1436,7 @@ void UPlotLegend::removeLegendItem(const UPlotCurve * curve)
 {
 	if(this->remove(curve))
 	{
-		emit legendItemRemoved(curve);
+		Q_EMIT legendItemRemoved(curve);
 	}
 }
 
@@ -1456,7 +1456,7 @@ void UPlotLegend::redirectToggled(bool toggled)
 		UPlotLegendItem * item = qobject_cast<UPlotLegendItem*>(sender());
 		if(item)
 		{
-			emit legendItemToggled(item->curve(), _flat?!toggled:toggled);
+			Q_EMIT legendItemToggled(item->curve(), _flat?!toggled:toggled);
 		}
 	}
 }
