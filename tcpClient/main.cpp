@@ -27,12 +27,12 @@ int main(int argc, char * argv[])
 
 	if(argc == 2)
 	{
-		port = std::atoi(argv[1]);
+		port = atoi(argv[1]);
 	}
 	else if(argc == 3)
 	{
 		ipAddress = argv[1];
-		port = std::atoi(argv[2]);
+		port = atoi(argv[2]);
 	}
 
 	if(ipAddress.isEmpty())
