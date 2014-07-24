@@ -487,7 +487,7 @@ void MainWindow::addObjectFromScene()
 	}
 	else
 	{
-		connect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
+		connect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)), Qt::UniqueConnection);
 		this->update(ui_->imageView_source->cvImage());
 	}
 	delete dialog;
@@ -1003,7 +1003,7 @@ void MainWindow::startProcessing()
 	}
 	if(camera_->start())
 	{
-		connect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
+		connect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)), Qt::UniqueConnection);
 		ui_->actionStop_camera->setEnabled(true);
 		ui_->actionPause_camera->setEnabled(true);
 		ui_->actionStart_camera->setEnabled(false);
