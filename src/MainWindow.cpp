@@ -1047,6 +1047,11 @@ void MainWindow::startProcessing()
 				QMessageBox::critical(this, tr("Camera error"), tr("Camera initialization failed! (with device %1)").arg(Settings::getCamera_1deviceId()));
 			}
 		}
+		else if(Settings::getCamera_6useTcpCamera())
+		{
+			printf("%s\n", tr("Camera initialization failed! (with server %1:%2) Trying again in 1 second...").arg(Settings::getCamera_7IP()).arg(Settings::getCamera_8port()).toStdString().c_str());
+			QTimer::singleShot(1000, this, SLOT(startProcessing()));
+		}
 		else
 		{
 			printf("[ERROR] Camera initialization failed! (with device %d)\n", Settings::getCamera_1deviceId());

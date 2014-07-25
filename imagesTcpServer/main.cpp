@@ -14,7 +14,8 @@ void showUsage()
 	printf("imagesTcpServer [options]\n"
 			"  Options:\n"
 			"    -hz #.#          Image rate (default 10 Hz).\n"
-			"    -p #             Set manually a port.\n");
+			"    -p #             Set manually a port to which the clients will connect.\n"
+			"    -path \"\"       Set a path of a directory of images or a video file.\n");
 	exit(-1);
 }
 
@@ -23,6 +24,7 @@ int main(int argc, char * argv[])
 	QString ipAddress;
 	float hz = 10.0f;
 	quint16 port = 0;
+	QString path;
 
 	for(int i=1; i<argc; ++i)
 	{
@@ -63,14 +65,32 @@ int main(int argc, char * argv[])
 			}
 			continue;
 		}
+		if(strcmp(argv[i], "-path") == 0)
+		{
+			++i;
+			if(i < argc)
+			{
+				path = argv[i];
+			}
+			else
+			{
+				showUsage();
+			}
+			continue;
+		}
 
 		printf("Unrecognized option: %s\n", argv[i]);
 		showUsage();
 	}
 
+	if(!path.isEmpty())
+	{
+		printf("Using images from path \"%s\"\n", path.toStdString().c_str());
+	}
+
 	QCoreApplication app(argc, argv);
 
-	ImagesTcpServer server(hz, port);
+	ImagesTcpServer server(hz, path);
 
 	if (!server.listen(QHostAddress::Any, port))
 	{

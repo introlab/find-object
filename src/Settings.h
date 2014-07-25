@@ -65,6 +65,7 @@ class Settings
 	PARAMETER(Camera, 6useTcpCamera, bool, false, "Use TCP/IP input camera.");
 	PARAMETER(Camera, 7IP, QString, "127.0.0.1", "The images server's IP to connect when useTcpCamera is checked.");
 	PARAMETER(Camera, 8port, int, 5000, "The images server's port to connect when useTcpCamera is checked.");
+	PARAMETER(Camera, 9queueSize, int, 1, "Maximum images buffered from TCP. If 0, all images are buffered.");
 
 	//List format : [Index:item0;item1;item3;...]
 	PARAMETER(Feature2D, 1Detector, QString, "7:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK" , "Keypoint detector.");

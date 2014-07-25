@@ -13,11 +13,12 @@
 #include "Settings.h"
 #include "QtOpenCV.h"
 
-ImagesTcpServer::ImagesTcpServer(float hz, quint16 port, QObject * parent) :
+ImagesTcpServer::ImagesTcpServer(float hz, const QString & path, QObject * parent) :
 	QTcpServer(parent)
 {
 	// Set camera parameters
 	Settings::setCamera_4imageRate(hz);
+	Settings::setCamera_5mediaPath(path);
 
 	connect(this, SIGNAL(newConnection()), this, SLOT(addClient()));
 	connect(&camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(publishImage(const cv::Mat &)));

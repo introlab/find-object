@@ -16,7 +16,7 @@ class ImagesTcpServer : public QTcpServer
 	Q_OBJECT
 
 public:
-	ImagesTcpServer(float hz = 10.0f, quint16 port = 0, QObject * parent = 0);
+	ImagesTcpServer(float hz = 10.0f, const QString & path = "", QObject * parent = 0);
 
 	QHostAddress getHostAddress() const;
 	quint16 getPort() const;

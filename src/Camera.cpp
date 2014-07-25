@@ -21,8 +21,19 @@ CameraTcpClient::CameraTcpClient(QObject *parent) :
 
 cv::Mat CameraTcpClient::getImage()
 {
-	cv::Mat img = image_;
-	image_ = cv::Mat();
+	cv::Mat img;
+	if(images_.size())
+	{
+		// if queue changed after tcp connection ended with images still in the buffer
+		int queue = Settings::getCamera_9queueSize();
+		while(queue > 0 && images_.size() > queue)
+		{
+			images_.pop_front();
+		}
+
+		img = images_.front();
+		images_.pop_front();
+	}
 	return img;
 }
 
@@ -48,7 +59,12 @@ void CameraTcpClient::readReceivedData()
 
 	std::vector<unsigned char> buf(blockSize_);
 	in.readRawData((char*)buf.data(), blockSize_);
-	image_ = cv::imdecode(buf, cv::IMREAD_UNCHANGED);
+	images_.push_back(cv::imdecode(buf, cv::IMREAD_UNCHANGED));
+	int queue = Settings::getCamera_9queueSize();
+	while(queue > 0 && images_.size() > queue)
+	{
+		images_.pop_front();
+	}
 	blockSize_ = 0;
 }
 
@@ -161,16 +177,24 @@ void Camera::takeImage()
 	else
 	{
 		img = cameraTcpClient_.getImage();
+		if(cameraTcpClient_.imagesBuffered() > 0 && Settings::getCamera_9queueSize() == 0)
+		{
+			printf("[Warning] %d images buffered so far...\n", cameraTcpClient_.imagesBuffered());
+		}
 		while(img.empty() && cameraTcpClient_.waitForReadyRead())
 		{
 			img = cameraTcpClient_.getImage();
 		}
-		if(!cameraTcpClient_.waitForConnected())
+		if(img.empty())
 		{
-			printf("Connection is lost, try reconnecting to server (%s:%d)...\n",
-					Settings::getCamera_7IP().toStdString().c_str(),
-					Settings::getCamera_8port());
-			cameraTcpClient_.connectToHost(Settings::getCamera_7IP(), Settings::getCamera_8port());
+			if(!cameraTcpClient_.waitForConnected())
+			{
+				printf("Connection is lost, trying to reconnect to server (%s:%d)... (at the rate of the camera: %d ms)\n",
+						Settings::getCamera_7IP().toStdString().c_str(),
+						Settings::getCamera_8port(),
+						cameraTimer_.interval());
+				cameraTcpClient_.connectToHost(Settings::getCamera_7IP(), Settings::getCamera_8port());
+			}
 		}
 	}
 

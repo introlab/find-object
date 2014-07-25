@@ -17,7 +17,7 @@ class CameraTcpClient : public QTcpSocket
 public:
 	CameraTcpClient(QObject * parent = 0);
 	cv::Mat getImage();
-	bool isConnected() const {return connected_;}
+	int imagesBuffered() const {return images_.size();}
 
 private Q_SLOTS:
 	void readReceivedData();
@@ -26,8 +26,7 @@ private Q_SLOTS:
 
 private:
 	quint64 blockSize_;
-	cv::Mat image_;
-	bool connected_;
+	QVector<cv::Mat> images_;
 };
 
 class Camera : public QObject {
