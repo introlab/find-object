@@ -112,7 +112,7 @@ int main(int argc, char* argv[])
 	}
 
 	printf("Options:\n");
-	printf("   GUI mode = %s\n", guiMode?"true":false);
+	printf("   GUI mode = %s\n", guiMode?"true":"false");
 	printf("   Objects path: \"%s\"\n", objectsPath.toStdString().c_str());
 	printf("   Settings path: \"%s\"\n", configPath.toStdString().c_str());
 
