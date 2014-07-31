@@ -32,6 +32,11 @@
 
 #include <stdarg.h>
 
+#if _MSC_VER
+	#undef min
+	#undef max
+#endif
+
 /**
  * \file ULogger.h
  * \brief ULogger class and convenient macros

@@ -46,8 +46,7 @@ void setupQuitSignal()
 #ifdef WIN32
 	if (!SetConsoleCtrlHandler(my_handler, TRUE))
 	{
-		printf("\nERROR: Could not set control handler");
-		return 1;
+		UERROR("Could not set control (ctrl-c) handler");
 	}
 #else
 	struct sigaction sigIntHandler;

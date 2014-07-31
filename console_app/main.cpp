@@ -101,7 +101,7 @@ int main(int argc, char * argv[])
 		////////////////////////////
 
 		// Find correspondences by NNDR (Nearest Neighbor Distance Ratio)
-		float nndrRatio = 0.6;
+		float nndrRatio = 0.6f;
 		std::vector<cv::Point2f> mpts_1, mpts_2; // Used for homography
 		std::vector<int> indexes_1, indexes_2; // Used for homography
 		std::vector<uchar> outlier_mask;  // Used for homography
