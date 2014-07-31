@@ -2,11 +2,12 @@
  * Copyright (C) 2011, Mathieu Labbe - IntRoLab - Universite de Sherbrooke
  */
 
-#include "ObjWidget.h"
+#include "find_object/Settings.h"
+#include "find_object/utilite/ULogger.h"
+#include "find_object/ObjWidget.h"
+#include "find_object/QtOpenCV.h"
+
 #include "KeypointItem.h"
-#include "QtOpenCV.h"
-#include "Settings.h"
-#include "utilite/ULogger.h"
 
 #include <opencv2/highgui/highgui.hpp>
 

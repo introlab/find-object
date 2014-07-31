@@ -5,6 +5,8 @@
 #ifndef OBJWIDGET_H_
 #define OBJWIDGET_H_
 
+#include "find_object/FindObjectExp.h" // DLL export/import defines
+
 #include <opencv2/features2d/features2d.hpp>
 #include <QtGui/QWidget>
 #include <QtCore/QMultiMap>
@@ -19,7 +21,7 @@ class QGraphicsRectItem;
 class QGraphicsItem;
 class QLabel;
 
-class ObjWidget : public QWidget
+class FINDOBJECT_EXP ObjWidget : public QWidget
 {
 	Q_OBJECT
 

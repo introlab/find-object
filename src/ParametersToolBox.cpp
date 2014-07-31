@@ -2,8 +2,9 @@
  * Copyright (C) 2011, Mathieu Labbe - IntRoLab - Universite de Sherbrooke
  */
 
+#include "find_object/Settings.h"
+
 #include "ParametersToolBox.h"
-#include "Settings.h"
 #include <QtGui/QComboBox>
 #include <QtGui/QDoubleSpinBox>
 #include <QtGui/QLineEdit>

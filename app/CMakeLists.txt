@@ -1,74 +1,8 @@
 
-
-### Qt Gui stuff ###
-SET(headers_ui 
-	../src/MainWindow.h
-	../src/AddObjectDialog.h
-	../src/ObjWidget.h
-	../src/FindObject.h
-	../src/Camera.h
-	../src/CameraTcpClient.h
-	../src/ParametersToolBox.h
-	../src/AboutDialog.h
-	../src/TcpServer.h
-	../src/RectItem.h
-	../src/utilite/UPlot.h
-	../src/rtabmap/PdfPlot.h
-)
-
-SET(uis
-    ../src/ui/mainWindow.ui
-    ../src/ui/addObjectDialog.ui
-    ../src/ui/aboutDialog.ui
-)
-
-SET(qrc 
-    ../src/resources.qrc
-)
-
-# generate rules for building source files from the resources
-QT4_ADD_RESOURCES(srcs_qrc ${qrc})
-
-#Generate .h files from the .ui files
-QT4_WRAP_UI(moc_uis ${uis})
-
-#This will generate moc_* for Qt
-QT4_WRAP_CPP(moc_srcs ${headers_ui})
-### Qt Gui stuff  end###
-
-
-SET(SRC_FILES 
-	./main.cpp
-	../src/MainWindow.cpp
-	../src/AddObjectDialog.cpp
-	../src/KeypointItem.cpp
-	../src/RectItem.cpp
-	../src/QtOpenCV.cpp
-	../src/Camera.cpp
-	../src/CameraTcpClient.cpp
-	../src/ParametersToolBox.cpp
-	../src/Settings.cpp
-	../src/ObjWidget.cpp
-	../src/FindObject.cpp
-	../src/AboutDialog.cpp
-	../src/TcpServer.cpp
-	../src/Vocabulary.cpp
-	../src/utilite/ULogger.cpp
-	../src/utilite/UPlot.cpp
-	../src/utilite/UDirectory.cpp
-	../src/utilite/UFile.cpp
-	../src/utilite/UConversion.cpp
-	../src/rtabmap/PdfPlot.cpp
-	${moc_srcs} 
-	${moc_uis} 
-	${srcs_qrc}
-)
-
 SET(INCLUDE_DIRS
-	${CMAKE_CURRENT_SOURCE_DIR}/../src
+	${CMAKE_CURRENT_SOURCE_DIR}/../include
 	${CMAKE_CURRENT_SOURCE_DIR}
 	${OpenCV_INCLUDE_DIRS}
-	${CMAKE_CURRENT_BINARY_DIR} # for qt ui generated in binary dir
 )
 
 INCLUDE(${QT_USE_FILE})
@@ -106,30 +40,30 @@ ENDIF(WIN32)
 
 # create an executable file
 IF(APPLE AND BUILD_AS_BUNDLE)
-  ADD_EXECUTABLE(find_object MACOSX_BUNDLE ${SRC_FILES})
+  ADD_EXECUTABLE(find_object_app MACOSX_BUNDLE main.cpp)
 ELSEIF(MINGW)
-  ADD_EXECUTABLE(find_object WIN32 ${SRC_FILES})
+  ADD_EXECUTABLE(find_object_app WIN32 main.cpp)
 ELSE()
-  ADD_EXECUTABLE(find_object ${SRC_FILES})
+  ADD_EXECUTABLE(find_object_app main.cpp)
 ENDIF()
 # Linking with Qt libraries
-TARGET_LINK_LIBRARIES(find_object ${LIBRARIES})
+TARGET_LINK_LIBRARIES(find_object_app find_object ${LIBRARIES})
 
 IF(APPLE AND BUILD_AS_BUNDLE)
-  SET_TARGET_PROPERTIES(find_object PROPERTIES
+  SET_TARGET_PROPERTIES(find_object_app PROPERTIES
     OUTPUT_NAME ${CMAKE_BUNDLE_NAME})
 ELSEIF(WIN32)
-  SET_TARGET_PROPERTIES(find_object PROPERTIES
+  SET_TARGET_PROPERTIES(find_object_app PROPERTIES
     OUTPUT_NAME ${PROJECT_NAME})
 ELSE()
-  SET_TARGET_PROPERTIES(find_object PROPERTIES
+  SET_TARGET_PROPERTIES(find_object_app PROPERTIES
     OUTPUT_NAME ${PROJECT_PREFIX})
 ENDIF()
 
 #---------------------------
 # Installation stuff
 #--------------------------- 
-INSTALL(TARGETS find_object
+INSTALL(TARGETS find_object_app
         RUNTIME DESTINATION bin COMPONENT runtime
         BUNDLE DESTINATION "${CMAKE_BUNDLE_LOCATION}" COMPONENT runtime)
         

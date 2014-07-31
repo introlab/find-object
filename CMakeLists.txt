@@ -13,7 +13,7 @@ ENDIF(NOT WIN32)
 #######################
 # VERSION
 #######################
-SET(PROJECT_VERSION "0.4.6")
+SET(PROJECT_VERSION "0.5.0")
 ADD_DEFINITIONS(-DPROJECT_VERSION="${PROJECT_VERSION}")
 
 STRING(REGEX MATCHALL "[0-9]" PROJECT_VERSION_PARTS "${PROJECT_VERSION}")
@@ -34,10 +34,45 @@ ENDIF(${CMAKE_GENERATOR} MATCHES ".*Makefiles")
 
 SET(CMAKE_DEBUG_POSTFIX "d")
 
+####### Build libraries as shared or static #######
+OPTION( BUILD_SHARED_LIBS "Set to OFF to build static libraries" ON )
+
+####### SET RPATH #########
+# When RPATH is activated (supported on most UNIX systems), 
+# the user doesn't need to change LD_LIBRARY_PATH
+
+# use, i.e. don't skip the full RPATH for the build tree
+SET(CMAKE_SKIP_BUILD_RPATH  FALSE)
+
+# when building, don't use the install RPATH already
+# (but later on when installing)
+SET(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE) 
+
+# the RPATH to be used when installing
+SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib/${PROJECT_PREFIX}-${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}")
+
+# add the automatically determined parts of the RPATH
+# which point to directories outside the build tree to the install RPATH
+SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
 ####### OUTPUT DIR #######
 SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 SET(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
+
+####### INSTALL DIR #######
+# Offer the user the choice of overriding the installation directories
+set(INSTALL_LIB_DIR lib/${PROJECT_PREFIX}-${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR} CACHE PATH "Installation directory for libraries")
+set(INSTALL_BIN_DIR bin CACHE PATH "Installation directory for executables")
+set(INSTALL_INCLUDE_DIR include/${PROJECT_PREFIX}-${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR} CACHE PATH
+  "Installation directory for header files")
+if(WIN32 AND NOT CYGWIN)
+  set(DEF_INSTALL_CMAKE_DIR CMake)
+else()
+  set(DEF_INSTALL_CMAKE_DIR lib/${PROJECT_PREFIX}-${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR})
+endif()
+set(INSTALL_CMAKE_DIR ${DEF_INSTALL_CMAKE_DIR} CACHE PATH
+  "Installation directory for CMake files")
 
 ####### DEPENDENCIES #######
 FIND_PACKAGE(OpenCV REQUIRED) # tested on 2.3.1
@@ -63,6 +98,7 @@ IF(APPLE AND BUILD_AS_BUNDLE)
 ENDIF(APPLE AND BUILD_AS_BUNDLE)
 
 ####### SOURCES (Projects) #######
+ADD_SUBDIRECTORY( src )
 ADD_SUBDIRECTORY( app )
 ADD_SUBDIRECTORY( example )
 ADD_SUBDIRECTORY( tcpClient )
@@ -81,6 +117,36 @@ CONFIGURE_FILE(
 
 ADD_CUSTOM_TARGET(uninstall
   "${CMAKE_COMMAND}" -P "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake")
+
+#######################
+# Setup FindObjectConfig.cmake
+#######################
+# Create the FindObjectConfig.cmake and FindObjectConfigVersion files
+file(RELATIVE_PATH REL_INCLUDE_DIR "${CMAKE_INSTALL_PREFIX}/${INSTALL_CMAKE_DIR}" "${CMAKE_INSTALL_PREFIX}/${INSTALL_INCLUDE_DIR}")
+file(RELATIVE_PATH REL_LIB_DIR "${CMAKE_INSTALL_PREFIX}/${INSTALL_CMAKE_DIR}" "${CMAKE_INSTALL_PREFIX}/${INSTALL_LIB_DIR}")
+   
+# ... for the build tree
+set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/include")
+set(CONF_LIB_DIR "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}")
+configure_file(FindObjectConfig.cmake.in
+  "${PROJECT_BINARY_DIR}/FindObjectConfig.cmake" @ONLY)
+  
+# ... for the install tree
+set(CONF_INCLUDE_DIRS "\${FindObject_CMAKE_DIR}/${REL_INCLUDE_DIR}")
+set(CONF_LIB_DIR "\${FindObject_CMAKE_DIR}/${REL_LIB_DIR}")
+configure_file(FindObjectConfig.cmake.in
+  "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/FindObjectConfig.cmake" @ONLY)
+  
+# ... for both
+configure_file(FindObjectConfigVersion.cmake.in
+  "${PROJECT_BINARY_DIR}/FindObjectConfigVersion.cmake" @ONLY)
+
+# Install the FindObjectConfig.cmake and FindObjectConfigVersion.cmake
+install(FILES
+  "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/FindObjectConfig.cmake"
+  "${PROJECT_BINARY_DIR}/FindObjectConfigVersion.cmake"
+  DESTINATION "${INSTALL_CMAKE_DIR}" COMPONENT devel)
+####
 
 #######################
 # CPACK (Packaging)

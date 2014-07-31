@@ -5,8 +5,9 @@
  *      Author: mathieu
  */
 
+#include "find_object/Settings.h"
+
 #include "Vocabulary.h"
-#include "Settings.h"
 #include <QtCore/QVector>
 #include <stdio.h>
 

@@ -2,7 +2,7 @@
  * Copyright (C) 2011, Mathieu Labbe - IntRoLab - Universite de Sherbrooke
  */
 
-#include "QtOpenCV.h"
+#include "find_object/QtOpenCV.h"
 #include <opencv2/core/core_c.h>
 #include <stdio.h>
 

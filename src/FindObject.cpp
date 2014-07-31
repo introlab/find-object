@@ -5,11 +5,12 @@
  *      Author: mathieu
  */
 
-#include "FindObject.h"
+#include "find_object/FindObject.h"
+#include "find_object/Settings.h"
+#include "find_object/utilite/ULogger.h"
+
 #include "ObjSignature.h"
-#include "Settings.h"
 #include "utilite/UDirectory.h"
-#include "utilite/ULogger.h"
 #include "Vocabulary.h"
 
 #include <QtCore/QThread>

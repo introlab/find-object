@@ -23,7 +23,7 @@
 #include <errno.h>
 
 #ifdef WIN32
-  #include "utilite/UWin32.h"
+  #include "find_object/utilite/UWin32.h"
 #else
   #include <pthread.h>
 #endif

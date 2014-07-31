@@ -5,9 +5,10 @@
  *      Author: mathieu
  */
 
+#include "find_object/Settings.h"
+#include "find_object/utilite/ULogger.h"
+
 #include "CameraTcpClient.h"
-#include "Settings.h"
-#include "utilite/ULogger.h"
 
 CameraTcpClient::CameraTcpClient(QObject *parent) :
 	QTcpSocket(parent),

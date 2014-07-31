@@ -1,12 +1,12 @@
 #include <QtGui/QApplication>
 #include <QtCore/QDir>
 #include <QtCore/QFile>
-#include "MainWindow.h"
-#include "Settings.h"
-#include "FindObject.h"
-#include "Camera.h"
-#include "TcpServer.h"
-#include "utilite/ULogger.h"
+#include "find_object/MainWindow.h"
+#include "find_object/Settings.h"
+#include "find_object/FindObject.h"
+#include "find_object/Camera.h"
+#include "find_object/TcpServer.h"
+#include "find_object/utilite/ULogger.h"
 
 bool running = true;
 

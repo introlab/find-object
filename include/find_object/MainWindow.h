@@ -5,6 +5,8 @@
 #ifndef MAINWINDOW_H_
 #define MAINWINDOW_H_
 
+#include "find_object/FindObjectExp.h" // DLL export/import defines
+
 #include <QtGui/QMainWindow>
 #include <QtCore/QSet>
 #include <QtCore/QTimer>
@@ -31,7 +33,7 @@ namespace rtabmap
 class PdfPlotCurve;
 }
 
-class MainWindow : public QMainWindow
+class FINDOBJECT_EXP MainWindow : public QMainWindow
 {
 	Q_OBJECT
 

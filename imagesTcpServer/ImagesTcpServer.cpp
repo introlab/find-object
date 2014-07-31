@@ -5,13 +5,14 @@
  *      Author: mathieu
  */
 
+#include "find_object/Settings.h"
+#include "find_object/QtOpenCV.h"
+
 #include "ImagesTcpServer.h"
 
 #include <QtNetwork/QNetworkInterface>
 #include <QtNetwork/QTcpSocket>
 #include <QtGui/QTransform>
-#include "Settings.h"
-#include "QtOpenCV.h"
 
 ImagesTcpServer::ImagesTcpServer(float hz, const QString & path, QObject * parent) :
 	QTcpServer(parent)

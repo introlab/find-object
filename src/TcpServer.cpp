@@ -5,8 +5,8 @@
  *      Author: mathieu
  */
 
-#include "TcpServer.h"
-#include "utilite/ULogger.h"
+#include "find_object/TcpServer.h"
+#include "find_object/utilite/ULogger.h"
 
 #include <QtNetwork/QNetworkInterface>
 #include <QtNetwork/QTcpSocket>

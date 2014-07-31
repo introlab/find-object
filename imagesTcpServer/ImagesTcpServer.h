@@ -8,7 +8,7 @@
 #ifndef TCPCLIENT_H_
 #define TCPCLIENT_H_
 
-#include "Camera.h"
+#include "find_object/Camera.h"
 #include <QtNetwork/QTcpServer>
 
 class ImagesTcpServer : public QTcpServer

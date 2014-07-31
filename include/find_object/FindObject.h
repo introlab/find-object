@@ -8,6 +8,8 @@
 #ifndef FINDOBJECT_H_
 #define FINDOBJECT_H_
 
+#include "find_object/FindObjectExp.h" // DLL export/import defines
+
 #include <QtCore/QObject>
 #include <QtCore/QString>
 #include <QtCore/QMap>
@@ -24,7 +26,7 @@ class Vocabulary;
 class KeypointDetector;
 class DescriptorExtractor;
 
-class FindObject : public QObject
+class FINDOBJECT_EXP FindObject : public QObject
 {
 	Q_OBJECT;
 

@@ -19,9 +19,9 @@
 #include <opencv2/nonfree/features2d.hpp>
 #include <opencv2/calib3d/calib3d.hpp> // for homography
 
-// From this project (see src folder)
-#include "ObjWidget.h"
-#include "QtOpenCV.h"
+// From this project
+#include "find_object/ObjWidget.h"
+#include "find_object/QtOpenCV.h"
 
 void showUsage()
 {

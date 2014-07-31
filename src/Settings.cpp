@@ -2,9 +2,10 @@
  * Copyright (C) 2011, Mathieu Labbe - IntRoLab - Universite de Sherbrooke
  */
 
-#include "Settings.h"
-#include "Camera.h"
-#include "utilite/ULogger.h"
+#include "find_object/Camera.h"
+#include "find_object/Settings.h"
+#include "find_object/utilite/ULogger.h"
+
 #include <QtCore/QSettings>
 #include <QtCore/QStringList>
 #include <QtCore/QDir>

@@ -20,10 +20,10 @@
 #ifndef ULOGGER_H
 #define ULOGGER_H
 
-//#include "utilite/UtiLiteExp.h" // DLL export/import defines
+#include "find_object/FindObjectExp.h" // DLL export/import defines
 
-#include "utilite/UMutex.h"
-#include "utilite/UDestroyer.h"
+#include "find_object/utilite/UMutex.h"
+#include "find_object/utilite/UDestroyer.h"
 
 #include <stdio.h>
 #include <time.h>
@@ -190,7 +190,7 @@
  * @see UDEBUG(), UINFO(), UWARN(), UERROR(), UFATAL()
  *
  */
-class ULogger
+class FINDOBJECT_EXP ULogger
 {
 
 public:

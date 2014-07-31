@@ -2,21 +2,23 @@
  * Copyright (C) 2011, Mathieu Labbe - IntRoLab - Universite de Sherbrooke
  */
 
-#include "MainWindow.h"
+#include "find_object/MainWindow.h"
+#include "find_object/Camera.h"
+#include "find_object/Settings.h"
+#include "find_object/TcpServer.h"
+#include "find_object/FindObject.h"
+#include "find_object/utilite/ULogger.h"
+#include "find_object/ObjWidget.h"
+#include "find_object/QtOpenCV.h"
+
 #include "AddObjectDialog.h"
 #include "ui_mainWindow.h"
-#include "QtOpenCV.h"
 #include "KeypointItem.h"
 #include "RectItem.h"
-#include "ObjWidget.h"
-#include "Camera.h"
-#include "Settings.h"
 #include "ParametersToolBox.h"
 #include "AboutDialog.h"
-#include "TcpServer.h"
 #include "rtabmap/PdfPlot.h"
 #include "Vocabulary.h"
-#include "FindObject.h"
 #include "ObjSignature.h"
 
 #include <iostream>
@@ -44,7 +46,6 @@
 #include <QtGui/QInputDialog>
 
 #include "utilite/UDirectory.h"
-#include "utilite/ULogger.h"
 
 // Camera ownership transferred
 MainWindow::MainWindow(FindObject * findObject, Camera * camera, QWidget * parent) :

@@ -5,6 +5,8 @@
 #ifndef SETTINGS_H_
 #define SETTINGS_H_
 
+#include "find_object/FindObjectExp.h" // DLL export/import defines
+
 #include <QtCore/QMap>
 #include <QtCore/QVariant>
 #include <QtCore/QByteArray>
@@ -55,7 +57,7 @@ typedef unsigned int uint;
 		Dummy##PREFIX##_##NAME dummy##PREFIX##_##NAME;
 // MACRO END
 
-class Settings
+class FINDOBJECT_EXP Settings
 {
 	PARAMETER(Camera, 1deviceId, int, 0, "Device ID (default 0).");
 	PARAMETER(Camera, 2imageWidth, int, 640, "Image width (0 means default width from camera).");

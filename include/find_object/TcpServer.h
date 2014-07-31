@@ -8,11 +8,13 @@
 #ifndef TCPSERVER_H_
 #define TCPSERVER_H_
 
+#include "find_object/FindObjectExp.h" // DLL export/import defines
+
 #include <QtNetwork/QTcpServer>
 
 class QNetworkSession;
 
-class TcpServer : public QTcpServer
+class FINDOBJECT_EXP TcpServer : public QTcpServer
 {
 	Q_OBJECT
 
