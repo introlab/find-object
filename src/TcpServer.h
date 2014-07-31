@@ -22,10 +22,11 @@ public:
 	QHostAddress getHostAddress() const;
 	quint16 getPort() const;
 
+public Q_SLOTS:
+	void publishObjects(const QMultiMap<int, QPair<QRect, QTransform> > & objects);
 
 private Q_SLOTS:
 	void addClient();
-	void publishObjects(const QMultiMap<int, QPair<QRect, QTransform> > & objects);
 };
 
 #endif /* TCPSERVER_H_ */

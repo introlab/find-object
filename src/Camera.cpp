@@ -8,92 +8,8 @@
 #include "Settings.h"
 #include <QtCore/QFile>
 #include "utilite/UDirectory.h"
+#include "utilite/ULogger.h"
 #include "QtOpenCV.h"
-
-CameraTcpClient::CameraTcpClient(QObject *parent) :
-	QTcpSocket(parent),
-    blockSize_(0)
-{
-	connect(this, SIGNAL(readyRead()), this, SLOT(readReceivedData()));
-	connect(this, SIGNAL(error(QAbstractSocket::SocketError)), this, SLOT(displayError(QAbstractSocket::SocketError)));
-	connect(this, SIGNAL(disconnected()), this, SLOT(connectionLost()));
-}
-
-cv::Mat CameraTcpClient::getImage()
-{
-	cv::Mat img;
-	if(images_.size())
-	{
-		// if queue changed after tcp connection ended with images still in the buffer
-		int queue = Settings::getCamera_9queueSize();
-		while(queue > 0 && images_.size() > queue)
-		{
-			images_.pop_front();
-		}
-
-		img = images_.front();
-		images_.pop_front();
-	}
-	return img;
-}
-
-void CameraTcpClient::readReceivedData()
-{
-	QDataStream in(this);
-	in.setVersion(QDataStream::Qt_4_0);
-
-	if (blockSize_ == 0)
-	{
-		if (this->bytesAvailable() < (int)sizeof(quint64))
-		{
-			return;
-		}
-
-		in >> blockSize_;
-	}
-
-	if (this->bytesAvailable() < (int)blockSize_)
-	{
-		return;
-	}
-
-	std::vector<unsigned char> buf(blockSize_);
-	in.readRawData((char*)buf.data(), blockSize_);
-	images_.push_back(cv::imdecode(buf, cv::IMREAD_UNCHANGED));
-	int queue = Settings::getCamera_9queueSize();
-	while(queue > 0 && images_.size() > queue)
-	{
-		images_.pop_front();
-	}
-	blockSize_ = 0;
-}
-
-void CameraTcpClient::displayError(QAbstractSocket::SocketError socketError)
-{
-	switch (socketError)
-	{
-		case QAbstractSocket::RemoteHostClosedError:
-			break;
-		case QAbstractSocket::HostNotFoundError:
-			printf("[ERROR] CameraTcp: Tcp error: The host was not found. Please "
-					"check the host name and port settings.\n");
-			break;
-		case QAbstractSocket::ConnectionRefusedError:
-			printf("[ERROR] CameraTcp: The connection was refused by the peer. "
-					"Make sure your images server is running, "
-					"and check that the host name and port "
-					"settings are correct.\n");
-			break;
-		default:
-			printf("The following error occurred: %s.\n", this->errorString().toStdString().c_str());
-			break;
-	}
-}
-
-void CameraTcpClient::connectionLost()
-{
-	//printf("[WARNING] CameraTcp: Connection lost!\n");
-}
 
 Camera::Camera(QObject * parent) :
 	QObject(parent),
@@ -179,7 +95,7 @@ void Camera::takeImage()
 		img = cameraTcpClient_.getImage();
 		if(cameraTcpClient_.imagesBuffered() > 0 && Settings::getCamera_9queueSize() == 0)
 		{
-			printf("[Warning] %d images buffered so far...\n", cameraTcpClient_.imagesBuffered());
+			UWARN("%d images buffered so far...", cameraTcpClient_.imagesBuffered());
 		}
 		while(img.empty() && cameraTcpClient_.waitForReadyRead())
 		{
@@ -189,7 +105,7 @@ void Camera::takeImage()
 		{
 			if(!cameraTcpClient_.waitForConnected())
 			{
-				printf("Connection is lost, trying to reconnect to server (%s:%d)... (at the rate of the camera: %d ms)\n",
+				UWARN("Connection is lost, trying to reconnect to server (%s:%d)... (at the rate of the camera: %d ms)",
 						Settings::getCamera_7IP().toStdString().c_str(),
 						Settings::getCamera_8port(),
 						cameraTimer_.interval());
@@ -200,7 +116,7 @@ void Camera::takeImage()
 
 	if(img.empty())
 	{
-		printf("Camera: Could not grab a frame, the end of the feed may be reached...\n");
+		UWARN("Camera: Could not grab a frame, the end of the feed may be reached...");
 	}
 	else
 	{
@@ -234,7 +150,7 @@ bool Camera::start()
 			cameraTcpClient_.connectToHost(Settings::getCamera_7IP(), Settings::getCamera_8port());
 			if(!cameraTcpClient_.waitForConnected())
 			{
-				printf("[WARNING] Camera: Cannot connect to server \"%s:%d\"\n",
+				UWARN("Camera: Cannot connect to server \"%s:%d\"",
 						Settings::getCamera_7IP().toStdString().c_str(),
 						Settings::getCamera_8port());
 				cameraTcpClient_.close();
@@ -258,12 +174,12 @@ bool Camera::start()
 				{
 					images_.append(path.toStdString() + UDirectory::separator() + *iter);
 				}
-				printf("Camera: Reading %d images from directory \"%s\"...\n", (int)images_.size(), path.toStdString().c_str());
+				UINFO("Camera: Reading %d images from directory \"%s\"...", (int)images_.size(), path.toStdString().c_str());
 				if(images_.isEmpty())
 				{
-					printf("[WARNING] Camera: Directory \"%s\" is empty (no images matching the \"%s\" extensions). "
+					UWARN("Camera: Directory \"%s\" is empty (no images matching the \"%s\" extensions). "
 						   "If you want to disable loading automatically this directory, "
-						   "clear the Camera/mediaPath parameter. By default, webcam will be used instead of the directory.\n",
+						   "clear the Camera/mediaPath parameter. By default, webcam will be used instead of the directory.",
 						   path.toStdString().c_str(),
 						   ext.toStdString().c_str());
 				}
@@ -274,11 +190,13 @@ bool Camera::start()
 				capture_.open(path.toStdString().c_str());
 				if(!capture_.isOpened())
 				{
-					printf("[WARNING] Camera: Cannot open file \"%s\". If you want to disable loading automatically this video file, clear the Camera/mediaPath parameter. By default, webcam will be used instead of the file.\n", path.toStdString().c_str());
+					UWARN("Camera: Cannot open file \"%s\". If you want to disable loading "
+						  "automatically this video file, clear the Camera/mediaPath parameter. "
+						  "By default, webcam will be used instead of the file.", path.toStdString().c_str());
 				}
 				else
 				{
-					printf("Camera: Reading from video file \"%s\"...\n", path.toStdString().c_str());
+					UINFO("Camera: Reading from video file \"%s\"...", path.toStdString().c_str());
 				}
 			}
 			if(!capture_.isOpened() && images_.empty())
@@ -290,13 +208,13 @@ bool Camera::start()
 					capture_.set(CV_CAP_PROP_FRAME_WIDTH, double(Settings::getCamera_2imageWidth()));
 					capture_.set(CV_CAP_PROP_FRAME_HEIGHT, double(Settings::getCamera_3imageHeight()));
 				}
-				printf("Camera: Reading from camera device %d...\n", Settings::getCamera_1deviceId());
+				UINFO("Camera: Reading from camera device %d...", Settings::getCamera_1deviceId());
 			}
 		}
 	}
 	if(!capture_.isOpened() && images_.empty() && !cameraTcpClient_.isOpen())
 	{
-		printf("[ERROR] Camera: Failed to open a capture object!\n");
+		UERROR("Camera: Failed to open a capture object!");
 		return false;
 	}
 

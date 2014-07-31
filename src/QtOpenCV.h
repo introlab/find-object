@@ -9,7 +9,7 @@
 #include <opencv2/core/core.hpp>
 
 // Convert OpenCV matrix to QImage
-QImage cvtCvMat2QImage(const cv::Mat & image);
+QImage cvtCvMat2QImage(const cv::Mat & image, bool isBgr = true);
 
 // Convert QImage to OpenCV matrix
 cv::Mat cvtQImage2CvMat(const QImage & image);

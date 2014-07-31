@@ -9,25 +9,7 @@
 #include <QtCore/QObject>
 #include <QtCore/QTimer>
 #include <QtGui/QImage>
-#include <QtNetwork/QTcpSocket>
-
-class CameraTcpClient : public QTcpSocket
-{
-	Q_OBJECT;
-public:
-	CameraTcpClient(QObject * parent = 0);
-	cv::Mat getImage();
-	int imagesBuffered() const {return images_.size();}
-
-private Q_SLOTS:
-	void readReceivedData();
-	void displayError(QAbstractSocket::SocketError socketError);
-	void connectionLost();
-
-private:
-	quint64 blockSize_;
-	QVector<cv::Mat> images_;
-};
+#include "CameraTcpClient.h"
 
 class Camera : public QObject {
 	Q_OBJECT

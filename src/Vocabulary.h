@@ -18,7 +18,7 @@ public:
 	virtual ~Vocabulary();
 
 	void clear();
-	QMultiMap<int, int> addWords(const cv::Mat & descriptors, int objectIndex, bool incremental);
+	QMultiMap<int, int> addWords(const cv::Mat & descriptors, int objectId, bool incremental);
 	void update();
 	void search(const cv::Mat & descriptors, cv::Mat & results, cv::Mat & dists, int k);
 	int size() const {return indexedDescriptors_.rows + notIndexedDescriptors_.rows;}
@@ -28,7 +28,7 @@ private:
 	cv::flann::Index flannIndex_;
 	cv::Mat indexedDescriptors_;
 	cv::Mat notIndexedDescriptors_;
-	QMultiMap<int, int> wordToObjects_;
+	QMultiMap<int, int> wordToObjects_; // <wordId, ObjectId>
 	QVector<int> notIndexedWordIds_;
 };
 

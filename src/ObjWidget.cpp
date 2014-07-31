@@ -6,6 +6,7 @@
 #include "KeypointItem.h"
 #include "QtOpenCV.h"
 #include "Settings.h"
+#include "utilite/ULogger.h"
 
 #include <opencv2/highgui/highgui.hpp>
 
@@ -29,32 +30,22 @@
 
 ObjWidget::ObjWidget(QWidget * parent) :
 	QWidget(parent),
-	graphicsView_(0),
 	id_(0),
-	detectorType_("NA"),
-	descriptorType_("NA"),
+	graphicsView_(0),
 	graphicsViewInitialized_(false),
 	alpha_(100)
 {
 	setupUi();
 }
-ObjWidget::ObjWidget(int id,
-		const std::vector<cv::KeyPoint> & keypoints,
-		const cv::Mat & descriptors,
-		const cv::Mat & image,
-		const QString & detectorType,
-		const QString & descriptorType,
-		QWidget * parent) :
+ObjWidget::ObjWidget(int id, const std::vector<cv::KeyPoint> & keypoints, const QImage & image, QWidget * parent) :
 	QWidget(parent),
-	graphicsView_(0),
 	id_(id),
-	detectorType_("NA"),
-	descriptorType_("NA"),
+	graphicsView_(0),
 	graphicsViewInitialized_(false),
 	alpha_(100)
 {
 	setupUi();
-	this->setData(keypoints, descriptors, image, detectorType, descriptorType);
+	this->setData(keypoints, image);
 }
 ObjWidget::~ObjWidget()
 {
@@ -240,38 +231,24 @@ void ObjWidget::setTextLabel(const QString & text)
 	label_->setText(text);
 }
 
-void ObjWidget::setData(const std::vector<cv::KeyPoint> & keypoints,
-		const cv::Mat & descriptors,
-		const cv::Mat & image,
-		const QString & detectorType,
-		const QString & descriptorType)
+void ObjWidget::setData(const std::vector<cv::KeyPoint> & keypoints, const QImage & image)
 {
 	keypoints_ = keypoints;
-	descriptors_ = descriptors;
 	kptColors_ = QVector<QColor>((int)keypoints.size(), defaultColor());
 	keypointItems_.clear();
 	rectItems_.clear();
 	graphicsView_->scene()->clear();
 	graphicsViewInitialized_ = false;
-	detectorType_ = detectorType;
-	descriptorType_ = descriptorType;
 	mouseCurrentPos_ = mousePressedPos_; // this will reset roi selection
 
-	cvImage_ = image.clone();
-	pixmap_ = QPixmap::fromImage(cvtCvMat2QImage(cvImage_));
+	pixmap_ = QPixmap::fromImage(image);
 	//this->setMinimumSize(image_.size());
 
 	if(graphicsViewMode_->isChecked())
 	{
 		this->setupGraphicsView();
 	}
-	label_->setVisible(image.empty());
-}
-
-void ObjWidget::setWords(const QMultiMap<int, int> & words)
-{
-	Q_ASSERT(words.size() == keypoints_.size());
-	words_ = words;
+	label_->setVisible(image.isNull());
 }
 
 void ObjWidget::resetKptsColor()
@@ -296,7 +273,7 @@ void ObjWidget::setKptColor(int index, const QColor & color)
 	}
 	else
 	{
-		printf("PROBLEM index =%d > size=%d\n", index, kptColors_.size());
+		UWARN("PROBLEM index =%d > size=%d\n", index, kptColors_.size());
 	}
 
 	if(graphicsViewMode_->isChecked())
@@ -379,64 +356,6 @@ void ObjWidget::setFeaturesShown(bool shown)
 	{
 		this->update();
 	}
-}
-
-void ObjWidget::save(QDataStream & streamPtr) const
-{
-	streamPtr << id_ << detectorType_ << descriptorType_;
-	streamPtr << (int)keypoints_.size();
-	for(unsigned int j=0; j<keypoints_.size(); ++j)
-	{
-		streamPtr << keypoints_.at(j).angle <<
-				keypoints_.at(j).class_id <<
-				keypoints_.at(j).octave <<
-				keypoints_.at(j).pt.x <<
-				keypoints_.at(j).pt.y <<
-				keypoints_.at(j).response <<
-				keypoints_.at(j).size;
-	}
-
-	qint64 dataSize = descriptors_.elemSize()*descriptors_.cols*descriptors_.rows;
-	streamPtr << descriptors_.rows <<
-			descriptors_.cols <<
-			descriptors_.type() <<
-			dataSize;
-	streamPtr << QByteArray((char*)descriptors_.data, dataSize);
-	streamPtr << pixmap_;
-}
-
-void ObjWidget::load(QDataStream & streamPtr)
-{
-	std::vector<cv::KeyPoint> kpts;
-	cv::Mat descriptors;
-
-	int nKpts;
-	QString detectorType, descriptorType;
-	streamPtr >> id_ >> detectorType >> descriptorType >> nKpts;
-	for(int i=0;i<nKpts;++i)
-	{
-		cv::KeyPoint kpt;
-		streamPtr >>
-		kpt.angle >>
-		kpt.class_id >>
-		kpt.octave >>
-		kpt.pt.x >>
-		kpt.pt.y >>
-		kpt.response >>
-		kpt.size;
-		kpts.push_back(kpt);
-	}
-
-	int rows,cols,type;
-	qint64 dataSize;
-	streamPtr >> rows >> cols >> type >> dataSize;
-	QByteArray data;
-	streamPtr >> data;
-	descriptors = cv::Mat(rows, cols, type, data.data()).clone();
-	streamPtr >> pixmap_;
-	this->setData(kpts, descriptors, cv::Mat(), detectorType, descriptorType);
-	cvImage_ = cvtQImage2CvMat(pixmap_.toImage());
-	//this->setMinimumSize(image_.size());
 }
 
 void ObjWidget::computeScaleOffsets(float & scale, float & offsetX, float & offsetY)
@@ -598,7 +517,7 @@ void ObjWidget::mouseReleaseEvent(QMouseEvent * event)
 			right = qAbs(l - pixmap_.width());
 		}
 
-		Q_EMIT roiChanged(QRect(left, top, right-left, bottom-top));
+		Q_EMIT roiChanged(cv::Rect(left, top, right-left, bottom-top));
 	}
 	QWidget::mouseReleaseEvent(event);
 }

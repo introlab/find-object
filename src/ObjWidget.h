@@ -25,22 +25,11 @@ class ObjWidget : public QWidget
 
 public:
 	ObjWidget(QWidget * parent = 0);
-	ObjWidget(int id,
-			const std::vector<cv::KeyPoint> & keypoints,
-			const cv::Mat & descriptors,
-			const cv::Mat & image,
-			const QString & detectorType = "NA",
-			const QString & descriptorType = "NA",
-			QWidget * parent = 0);
+	ObjWidget(int id, const std::vector<cv::KeyPoint> & keypoints, const QImage & image, QWidget * parent = 0);
 	virtual ~ObjWidget();
 
 	void setId(int id);
-	void setData(const std::vector<cv::KeyPoint> & keypoints,
-			const cv::Mat & descriptors,
-			const cv::Mat & image,
-			const QString & detectorType,
-			const QString & descriptorType);
-	void setWords(const QMultiMap<int, int> & words);
+	void setData(const std::vector<cv::KeyPoint> & keypoints, const QImage & image);
 	void setTextLabel(const QString & text);
 	void resetKptsColor();
 	void setKptColor(int index, const QColor & color);
@@ -55,12 +44,9 @@ public:
 	void addRect(QGraphicsRectItem * rect);
 	void clearRoiSelection() {mousePressedPos_ = mouseCurrentPos_ = QPoint();update();}
 
-	const QMultiMap<int, int> & words() const {return words_;}
-	const std::vector<cv::KeyPoint> & keypoints() const {return keypoints_;}
-	const cv::Mat & descriptors() const {return descriptors_;}
-	const QPixmap & pixmap() const {return pixmap_;}
-	const cv::Mat & cvImage() const {return cvImage_;}
 	int id() const {return id_;}
+	const std::vector<cv::KeyPoint> keypoints() const {return keypoints_;}
+	const QPixmap & pixmap() const {return pixmap_;}
 	QColor defaultColor() const;
 	bool isImageShown() const;
 	bool isFeaturesShown() const;
@@ -68,14 +54,9 @@ public:
 	bool isMirrorView() const;
 	//QGraphicsScene * scene() const;
 	std::vector<cv::KeyPoint> selectedKeypoints() const;
-	const QString & detectorType() const {return detectorType_;}
-	const QString & descriptorType() const {return descriptorType_;}
 	QList<QGraphicsItem*> selectedItems() const;
 
 	QPixmap getSceneAsPixmap();
-
-	void save(QDataStream & streamPtr) const;
-	void load(QDataStream & streamPtr);
 
 protected:
 	virtual void paintEvent(QPaintEvent *event);
@@ -88,7 +69,7 @@ protected:
 Q_SIGNALS:
 	void removalTriggered(ObjWidget *);
 	void selectionChanged();
-	void roiChanged(const QRect &);
+	void roiChanged(const cv::Rect &);
 
 private:
 	void setupGraphicsView();
@@ -98,17 +79,12 @@ private:
 	void computeScaleOffsets(float & scale, float & offsetX, float & offsetY);
 
 private:
+	int id_;
 	std::vector<cv::KeyPoint> keypoints_;
-	cv::Mat descriptors_;
-	QMultiMap<int, int> words_; // <word id, keypoint indexes>
 	QPixmap pixmap_;
-	cv::Mat cvImage_;
 	QList<KeypointItem*> keypointItems_;
 	QGraphicsView * graphicsView_;
-	int id_;
 	QVector<QColor> kptColors_;
-	QString detectorType_;
-	QString descriptorType_;
 	QList<QGraphicsRectItem*> rectItems_;
 	bool graphicsViewInitialized_;
 	int alpha_;

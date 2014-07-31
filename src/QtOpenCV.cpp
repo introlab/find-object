@@ -6,25 +6,46 @@
 #include <opencv2/core/core_c.h>
 #include <stdio.h>
 
-QImage cvtCvMat2QImage(const cv::Mat & image)
+QImage cvtCvMat2QImage(const cv::Mat & image, bool isBgr)
 {
 	QImage qtemp;
 	if(!image.empty() && image.depth() == CV_8U)
 	{
-		const unsigned char * data = image.data;
-		qtemp = QImage(image.cols, image.rows, QImage::Format_RGB32);
-		for(int y = 0; y < image.rows; ++y, data += image.cols*image.elemSize())
+		if(image.channels()==3)
 		{
-			for(int x = 0; x < image.cols; ++x)
+			const unsigned char * data = image.data;
+			if(image.channels() == 3)
 			{
-				QRgb * p = ((QRgb*)qtemp.scanLine (y)) + x;
-				*p = qRgb(data[x * image.channels()+2], data[x * image.channels()+1], data[x * image.channels()]);
+				qtemp = QImage(image.cols, image.rows, QImage::Format_RGB32);
+				for(int y = 0; y < image.rows; ++y, data += image.cols*image.elemSize())
+				{
+					for(int x = 0; x < image.cols; ++x)
+					{
+						QRgb * p = ((QRgb*)qtemp.scanLine (y)) + x;
+						if(isBgr)
+						{
+							*p = qRgb(data[x * image.channels()+2], data[x * image.channels()+1], data[x * image.channels()]);
+						}
+						else
+						{
+							*p = qRgb(data[x * image.channels()], data[x * image.channels()+1], data[x * image.channels()+2]);
+						}
+					}
+				}
 			}
 		}
-	}
-	else if(!image.empty() && image.depth() != CV_8U)
-	{
-		printf("Wrong image format, must be 8_bits\n");
+		else if(image.channels() == 1)
+		{
+			// mono grayscale
+			qtemp = QImage(image.data, image.cols, image.rows, image.cols, QImage::Format_Indexed8).copy();
+			QVector<QRgb> my_table;
+			for(int i = 0; i < 256; i++) my_table.push_back(qRgb(i,i,i));
+			qtemp.setColorTable(my_table);
+		}
+		else
+		{
+			printf("Wrong image format, must have 1 or 3 channels\n");
+		}
 	}
 	return qtemp;
 }

@@ -206,9 +206,14 @@ public:
 	static QString workingDirectory();
 	static QString iniDefaultPath();
 	static QString iniDefaultFileName() {return "config.ini";}
+	static QString iniPath();
 
-	static void loadSettings(const QString & fileName = QString(), QByteArray * windowGeometry = 0, QByteArray * windowState = 0);
-	static void saveSettings(const QString & fileName = QString(), const QByteArray & windowGeometry = QByteArray(), const QByteArray & windowState = QByteArray());
+	static void init(const QString & fileName = QString());
+
+	static void loadSettings(const QString & fileName = QString());
+	static void loadWindowSettings(QByteArray & windowGeometry, QByteArray & windowState, const QString & fileName = QString());
+	static void saveSettings(const QString & fileName = QString());
+	static void saveWindowSettings(const QByteArray & windowGeometry, const QByteArray & windowState, const QString & fileName = QString());
 
 	static const ParametersMap & getDefaultParameters() {return defaultParameters_;}
 	static const ParametersMap & getParameters() {return parameters_;}
@@ -240,6 +245,7 @@ private:
 	static ParametersType parametersType_;
 	static DescriptionsMap descriptions_;
 	static Settings dummyInit_;
+	static QString iniPath_;
 };
 
 class KeypointDetector

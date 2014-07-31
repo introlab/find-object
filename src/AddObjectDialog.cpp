@@ -9,6 +9,8 @@
 #include "Camera.h"
 #include "QtOpenCV.h"
 #include "Settings.h"
+#include "ObjSignature.h"
+#include "utilite/ULogger.h"
 
 #include <stdio.h>
 
@@ -22,7 +24,8 @@
 AddObjectDialog::AddObjectDialog(Camera * camera, const cv::Mat & image, bool mirrorView, QWidget * parent, Qt::WindowFlags f) :
 		QDialog(parent, f),
 		camera_(camera),
-		object_(0)
+		objWidget_(0),
+		objSignature_(0)
 {
 	ui_ = new Ui_addObjectDialog();
 	ui_->setupUi(this);
@@ -38,7 +41,7 @@ AddObjectDialog::AddObjectDialog(Camera * camera, const cv::Mat & image, bool mi
 	connect(ui_->comboBox_selection, SIGNAL(currentIndexChanged(int)), this, SLOT(changeSelectionMode()));
 
 	connect(ui_->cameraView, SIGNAL(selectionChanged()), this, SLOT(updateNextButton()));
-	connect(ui_->cameraView, SIGNAL(roiChanged(const QRect &)), this, SLOT(updateNextButton(const QRect &)));
+	connect(ui_->cameraView, SIGNAL(roiChanged(const cv::Rect &)), this, SLOT(updateNextButton(const cv::Rect &)));
 	ui_->cameraView->setMirrorView(mirrorView);
 
 	if((camera_ && camera_->isRunning()) || image.empty())
@@ -56,11 +59,25 @@ AddObjectDialog::~AddObjectDialog()
 {
 	delete detector_;
 	delete extractor_;
-	if(object_)
+	if(objWidget_)
 	{
-		delete object_;
+		delete objWidget_;
+		objWidget_ = 0;
+	}
+	if(objSignature_)
+	{
+		delete objSignature_;
+		objSignature_ = 0;
 	}
 	delete ui_;
+}
+
+void AddObjectDialog::retrieveObject(ObjWidget ** widget, ObjSignature ** signature)
+{
+	*widget = objWidget_;
+	objWidget_= 0;
+	*signature = objSignature_;
+	objSignature_ = 0;
 }
 
 void AddObjectDialog::closeEvent(QCloseEvent* event)
@@ -91,40 +108,40 @@ void AddObjectDialog::takePicture()
 
 void AddObjectDialog::updateNextButton()
 {
-	updateNextButton(QRect());
+	updateNextButton(cv::Rect());
 }
 
-void AddObjectDialog::updateNextButton(const QRect & rect)
+void AddObjectDialog::updateNextButton(const cv::Rect & rect)
 {
 	roi_ = rect;
-	if(roi_.isValid() && ui_->cameraView->cvImage().cols)
+	if(roi_.height && roi_.width && cameraImage_.cols)
 	{
 		//clip roi
-		if( roi_.x() >= ui_->cameraView->cvImage().cols ||
-			roi_.x()+roi_.width() <= 0 ||
-			roi_.y() >= ui_->cameraView->cvImage().rows ||
-			roi_.y()+roi_.height() <= 0)
+		if( roi_.x >= cameraImage_.cols ||
+			roi_.x+roi_.width <= 0 ||
+			roi_.y >= cameraImage_.rows ||
+			roi_.y+roi_.height <= 0)
 		{
 			//Not valid...
-			roi_ = QRect();
+			roi_ = cv::Rect();
 		}
 		else
 		{
-			if(roi_.x() < 0)
+			if(roi_.x < 0)
 			{
-				roi_.setX(0);
+				roi_.x = 0;
 			}
-			if(roi_.x() + roi_.width() > ui_->cameraView->cvImage().cols)
+			if(roi_.x + roi_.width > cameraImage_.cols)
 			{
-				roi_.setWidth(ui_->cameraView->cvImage().cols - roi_.x());
+				roi_.width = cameraImage_.cols - roi_.x;
 			}
-			if(roi_.y() < 0)
+			if(roi_.y < 0)
 			{
-				roi_.setY(0);
+				roi_.y = 0;
 			}
-			if(roi_.y() + roi_.height() > ui_->cameraView->cvImage().rows)
+			if(roi_.y + roi_.height > cameraImage_.rows)
 			{
-				roi_.setHeight(ui_->cameraView->cvImage().rows - roi_.y());
+				roi_.height = cameraImage_.rows - roi_.y;
 			}
 		}
 	}
@@ -143,7 +160,7 @@ void AddObjectDialog::updateNextButton(const QRect & rect)
 		}
 		else
 		{
-			if(roi_.isNull())
+			if(roi_.width == 0 || roi_.height == 0)
 			{
 				ui_->pushButton_next->setEnabled(false);
 			}
@@ -214,7 +231,7 @@ void AddObjectDialog::setState(int state)
 			ui_->label_instruction->setText(tr("Select region representing the object."));
 			ui_->cameraView->setGraphicsViewMode(false);
 		}
-		updateNextButton(QRect());
+		updateNextButton(cv::Rect());
 	}
 	else if(state == kVerifySelection)
 	{
@@ -245,32 +262,25 @@ void AddObjectDialog::setState(int state)
 		std::vector<cv::KeyPoint> selectedKeypoints = ui_->cameraView->selectedKeypoints();
 
 		// Select keypoints
-		if(!cvImage_.empty() &&
+		if(!cameraImage_.empty() &&
 				((ui_->comboBox_selection->currentIndex() == 1 && selectedKeypoints.size()) ||
-				 (ui_->comboBox_selection->currentIndex() == 0 && !roi_.isNull())))
+				 (ui_->comboBox_selection->currentIndex() == 0 && roi_.width && roi_.height)))
 		{
-			cv::Rect roi;
 			if(ui_->comboBox_selection->currentIndex() == 1)
 			{
-				roi = computeROI(selectedKeypoints);
+				roi_ = computeROI(selectedKeypoints);
 			}
-			else
-			{
-				roi.x = roi_.x();
-				roi.y = roi_.y();
-				roi.width = roi_.width();
-				roi.height = roi_.height();
-			}
-			cv::Mat imgRoi(cvImage_, roi);
+
+			cv::Mat imgRoi(cameraImage_, roi_);
 
 			if(ui_->comboBox_selection->currentIndex() == 1)
 			{
-				if(roi.x != 0 || roi.y != 0)
+				if(roi_.x != 0 || roi_.y != 0)
 				{
 					for(unsigned int i=0; i<selectedKeypoints.size(); ++i)
 					{
-						selectedKeypoints.at(i).pt.x -= roi.x;
-						selectedKeypoints.at(i).pt.y -= roi.y;
+						selectedKeypoints.at(i).pt.x -= roi_.x;
+						selectedKeypoints.at(i).pt.y -= roi_.y;
 					}
 				}
 			}
@@ -280,14 +290,14 @@ void AddObjectDialog::setState(int state)
 				selectedKeypoints.clear();
 				detector_->detect(imgRoi, selectedKeypoints);
 			}
-			ui_->objectView->setData(selectedKeypoints, cv::Mat(), imgRoi, Settings::currentDetectorType(), "");
-			ui_->objectView->setMinimumSize(roi.width, roi.height);
+			ui_->objectView->setData(selectedKeypoints, cvtCvMat2QImage(imgRoi.clone()));
+			ui_->objectView->setMinimumSize(roi_.width, roi_.height);
 			ui_->objectView->update();
 			ui_->pushButton_next->setEnabled(true);
 		}
 		else
 		{
-			printf("Please select items\n");
+			UINFO("Please select items");
 			ui_->pushButton_next->setEnabled(false);
 		}
 		ui_->label_instruction->setText(tr("Selection : %1 features").arg(selectedKeypoints.size()));
@@ -296,26 +306,34 @@ void AddObjectDialog::setState(int state)
 	{
 		std::vector<cv::KeyPoint> keypoints = ui_->objectView->keypoints();
 		if((ui_->comboBox_selection->currentIndex() == 1 && keypoints.size()) ||
-		   (ui_->comboBox_selection->currentIndex() == 0 && !roi_.isNull()))
+		   (ui_->comboBox_selection->currentIndex() == 0 && roi_.width && roi_.height))
 		{
 			cv::Mat descriptors;
+			cv::Mat imgRoi(cameraImage_, roi_);
 			if(keypoints.size())
 			{
 				// Extract descriptors
-				extractor_->compute(ui_->objectView->cvImage(), keypoints, descriptors);
+				extractor_->compute(imgRoi, keypoints, descriptors);
 
 				if(keypoints.size() != (unsigned int)descriptors.rows)
 				{
-					printf("ERROR : keypoints=%d != descriptors=%d\n", (int)keypoints.size(), descriptors.rows);
+					UERROR("keypoints=%d != descriptors=%d", (int)keypoints.size(), descriptors.rows);
 				}
 			}
 
-			if(object_)
+			if(objWidget_)
 			{
-				delete object_;
-				object_ = 0;
+				delete objWidget_;
+				objWidget_ = 0;
 			}
-			object_ = new ObjWidget(0, keypoints, descriptors, ui_->objectView->cvImage(), Settings::currentDetectorType(), Settings::currentDescriptorType());
+			if(objSignature_)
+			{
+				delete objSignature_;
+				objSignature_ = 0;
+			}
+			objSignature_ = new ObjSignature(0, imgRoi.clone());
+			objSignature_->setData(keypoints, descriptors, Settings::currentDetectorType(), Settings::currentDescriptorType());
+			objWidget_ = new ObjWidget(0, keypoints, cvtCvMat2QImage(imgRoi.clone()));
 
 			this->accept();
 		}
@@ -324,24 +342,24 @@ void AddObjectDialog::setState(int state)
 
 void AddObjectDialog::update(const cv::Mat & image)
 {
-	cvImage_ = cv::Mat();
+	cameraImage_ = cv::Mat();
 	if(!image.empty())
 	{
 		// convert to grayscale
 		if(image.channels() != 1 || image.depth() != CV_8U)
 		{
-			cv::cvtColor(image, cvImage_, CV_BGR2GRAY);
+			cv::cvtColor(image, cameraImage_, CV_BGR2GRAY);
 		}
 		else
 		{
-			cvImage_ = image;
+			cameraImage_ = image.clone();
 		}
 
 		// Extract keypoints
 		cv::vector<cv::KeyPoint> keypoints;
-		detector_->detect(cvImage_, keypoints);
+		detector_->detect(cameraImage_, keypoints);
 
-		ui_->cameraView->setData(keypoints, cv::Mat(), cvImage_, Settings::currentDetectorType(), "");
+		ui_->cameraView->setData(keypoints, cvtCvMat2QImage(cameraImage_));
 		ui_->cameraView->update();
 	}
 }
@@ -383,8 +401,8 @@ cv::Rect AddObjectDialog::computeROI(const std::vector<cv::KeyPoint> & kpts)
 		roi.y = h1;
 		roi.width = x2-x1;
 		roi.height = h2-h1;
-		//printf("ptx=%d, pty=%d\n", (int)kpts.at(i).pt.x, (int)kpts.at(i).pt.y);
-		//printf("x=%d, y=%d, w=%d, h=%d\n", roi.x, roi.y, roi.width, roi.height);
+		//UINFO("ptx=%d, pty=%d", (int)kpts.at(i).pt.x, (int)kpts.at(i).pt.y);
+		//UINFO("x=%d, y=%d, w=%d, h=%d", roi.x, roi.y, roi.width, roi.height);
 	}
 
 	return roi;

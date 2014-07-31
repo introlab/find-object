@@ -24,6 +24,7 @@ class TcpServer;
 class KeypointDetector;
 class DescriptorExtractor;
 class Vocabulary;
+class FindObject;
 
 namespace rtabmap
 {
@@ -35,14 +36,8 @@ class MainWindow : public QMainWindow
 	Q_OBJECT
 
 public:
-	MainWindow(Camera * camera = 0, const QString & settings = "", QWidget * parent = 0);
+	MainWindow(FindObject * findObject, Camera * camera = 0, QWidget * parent = 0);
 	virtual ~MainWindow();
-
-	bool loadSettings(const QString & path);
-	bool saveSettings(const QString & path);
-
-	int loadObjects(const QString & dirPath);
-	void saveObjects(const QString & dirPath);
 
 	void setSourceImageText(const QString & text);
 
@@ -70,7 +65,7 @@ private Q_SLOTS:
 	void updateObjectsSize();
 	void updateMirrorView();
 	void showHideControls();
-	void update(const cv::Mat & image);
+	void update(const cv::Mat & image = cv::Mat());
 	void updateObjects();
 	void notifyParametersChanged(const QStringList & param);
 	void moveCameraFrame(int frame);
@@ -80,32 +75,32 @@ Q_SIGNALS:
 	void objectsFound(const QMultiMap<int, QPair<QRect, QTransform> > &);
 
 private:
+	bool loadSettings(const QString & path);
+	bool saveSettings(const QString & path);
+	int loadObjects(const QString & dirPath);
+	int saveObjects(const QString & dirPath);
 	void setupTCPServer();
-	void addObjectFromFile(const QString & filePath);
+	bool addObjectFromFile(const QString & filePath);
 	void showObject(ObjWidget * obj);
-	void updateData();
 	void updateObjectSize(ObjWidget * obj);
+	void updateVocabulary();
 
 private:
 	Ui_mainWindow * ui_;
 	Camera * camera_;
-	QString settings_;
+	FindObject * findObject_;
 	rtabmap::PdfPlotCurve * likelihoodCurve_;
 	rtabmap::PdfPlotCurve * inliersCurve_;
 	AboutDialog * aboutDialog_;
-	QList<ObjWidget*> objects_;
-	std::vector<cv::Mat> objectsDescriptors_;
-	Vocabulary * vocabulary_;
-	QMap<int, int> dataRange_; // <last id of object's descriptor, id>
+	QMap<int, ObjWidget*> objWidgets_;
 	QTime updateRate_;
 	QTime refreshStartTime_;
 	int lowestRefreshRate_;
 	bool objectsModified_;
 	QMap<int, QByteArray> imagesMap_;
-	TcpServer * tcpServer_;
 	QMap<QString, QVariant> lastObjectsUpdateParameters_; // ParametersMap
-	KeypointDetector * detector_;
-	DescriptorExtractor * extractor_;
+	TcpServer * tcpServer_;
+	cv::Mat sceneImage_;
 };
 
 #endif /* MainWindow_H_ */

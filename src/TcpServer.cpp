@@ -6,6 +6,7 @@
  */
 
 #include "TcpServer.h"
+#include "utilite/ULogger.h"
 
 #include <QtNetwork/QNetworkInterface>
 #include <QtNetwork/QTcpSocket>
@@ -16,7 +17,7 @@ TcpServer::TcpServer(quint16 port, QObject * parent) :
 {
 	if (!this->listen(QHostAddress::Any, port))
 	{
-		printf("ERROR: Unable to start the TCP server: %s\n", this->errorString().toStdString().c_str());
+		UERROR("Unable to start the TCP server: %s", this->errorString().toStdString().c_str());
 		return;
 	}
 

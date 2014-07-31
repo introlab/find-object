@@ -151,8 +151,8 @@ int main(int argc, char * argv[])
 		// PROCESS NEAREST NEIGHBOR RESULTS
 		////////////////////////////
 		// Set gui data
-		objWidget.setData(objectKeypoints, objectDescriptors, objectImg, "", "");
-		sceneWidget.setData(sceneKeypoints, sceneDescriptors, sceneImg, "", "");
+		objWidget.setData(objectKeypoints, cvtCvMat2QImage(objectImg));
+		sceneWidget.setData(sceneKeypoints, cvtCvMat2QImage(sceneImg));
 
 		// Find correspondences by NNDR (Nearest Neighbor Distance Ratio)
 		float nndrRatio = 0.8;

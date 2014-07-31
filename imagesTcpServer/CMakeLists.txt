@@ -1,6 +1,7 @@
 ### Qt Gui stuff ###
 SET(headers_ui 
 	../src/Camera.h
+	../src/CameraTcpClient.h
 	ImagesTcpServer.h
 )
 #This will generate moc_* for Qt
@@ -9,10 +10,13 @@ QT4_WRAP_CPP(moc_srcs ${headers_ui})
 
 SET(SRC_FILES
 	../src/Camera.cpp
+	../src/CameraTcpClient.cpp
 	../src/Settings.cpp
 	../src/QtOpenCV.cpp
 	../src/utilite/UDirectory.cpp
 	../src/utilite/UFile.cpp
+	../src/utilite/ULogger.cpp
+	../src/utilite/UConversion.cpp
     ImagesTcpServer.cpp
     main.cpp
     ${moc_srcs} 

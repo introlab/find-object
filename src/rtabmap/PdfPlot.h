@@ -58,7 +58,7 @@ public:
 	virtual ~PdfPlotCurve();
 
 	virtual void clear();
-	void setData(const QMap<int, float> & dataMap, const QMap<int, int> & weightsMap);
+	void setData(const QMap<int, int> & dataMap, const QMap<int, int> & weightsMap);
 
 private:
 	const QMap<int, QByteArray> * _imagesMapRef;

@@ -2,6 +2,7 @@
 SET(headers_ui 
 	../src/ObjWidget.h
 	../src/Camera.h
+	../src/CameraTcpClient.h
 )
 #This will generate moc_* for Qt
 QT4_WRAP_CPP(moc_srcs ${headers_ui})
@@ -14,8 +15,11 @@ SET(SRC_FILES
     ../src/QtOpenCV.cpp
     ../src/Settings.cpp
     ../src/Camera.cpp
+    ../src/CameraTcpClient.cpp
     ../src/utilite/UDirectory.cpp
     ../src/utilite/UFile.cpp
+    ../src/utilite/ULogger.cpp
+    ../src/utilite/UConversion.cpp
     ${moc_srcs} 
 )
 

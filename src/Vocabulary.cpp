@@ -26,7 +26,7 @@ void Vocabulary::clear()
 	notIndexedWordIds_.clear();
 }
 
-QMultiMap<int, int> Vocabulary::addWords(const cv::Mat & descriptors, int objectIndex, bool incremental)
+QMultiMap<int, int> Vocabulary::addWords(const cv::Mat & descriptors, int objectId, bool incremental)
 {
 	QMultiMap<int, int> words;
 	if (descriptors.empty())
@@ -141,7 +141,7 @@ QMultiMap<int, int> Vocabulary::addWords(const cv::Mat & descriptors, int object
 			if(match)
 			{
 				words.insert(fullResults.begin().value(), i);
-				wordToObjects_.insert(fullResults.begin().value(), objectIndex);
+				wordToObjects_.insert(fullResults.begin().value(), objectId);
 				++matches;
 			}
 			else
@@ -150,7 +150,7 @@ QMultiMap<int, int> Vocabulary::addWords(const cv::Mat & descriptors, int object
 				notIndexedWordIds_.push_back(indexedDescriptors_.rows + notIndexedDescriptors_.rows);
 				notIndexedDescriptors_.push_back(descriptors.row(i));
 				words.insert(notIndexedWordIds_.back(), i);
-				wordToObjects_.insert(notIndexedWordIds_.back(), objectIndex);
+				wordToObjects_.insert(notIndexedWordIds_.back(), objectId);
 			}
 		}
 	}
@@ -158,7 +158,7 @@ QMultiMap<int, int> Vocabulary::addWords(const cv::Mat & descriptors, int object
 	{
 		for(int i = 0; i < descriptors.rows; ++i)
 		{
-			wordToObjects_.insert(indexedDescriptors_.rows + notIndexedDescriptors_.rows+i, objectIndex);
+			wordToObjects_.insert(indexedDescriptors_.rows + notIndexedDescriptors_.rows+i, objectId);
 			words.insert(indexedDescriptors_.rows + notIndexedDescriptors_.rows+i, i);
 			notIndexedWordIds_.push_back(indexedDescriptors_.rows + notIndexedDescriptors_.rows+i);
 		}

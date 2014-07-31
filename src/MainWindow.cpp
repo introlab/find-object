@@ -16,6 +16,8 @@
 #include "TcpServer.h"
 #include "rtabmap/PdfPlot.h"
 #include "Vocabulary.h"
+#include "FindObject.h"
+#include "ObjSignature.h"
 
 #include <iostream>
 #include <stdio.h>
@@ -42,21 +44,21 @@
 #include <QtGui/QInputDialog>
 
 #include "utilite/UDirectory.h"
+#include "utilite/ULogger.h"
 
 // Camera ownership transferred
-MainWindow::MainWindow(Camera * camera, const QString & settings, QWidget * parent) :
+MainWindow::MainWindow(FindObject * findObject, Camera * camera, QWidget * parent) :
 	QMainWindow(parent),
 	camera_(camera),
-	settings_(settings),
+	findObject_(findObject),
 	likelihoodCurve_(0),
 	inliersCurve_(0),
-	vocabulary_(new Vocabulary()),
 	lowestRefreshRate_(99),
 	objectsModified_(false),
-	tcpServer_(0),
-	detector_(0),
-	extractor_(0)
+	tcpServer_(0)
 {
+	Q_ASSERT(findObject_ != 0);
+
 	ui_ = new Ui_mainWindow();
 	ui_->setupUi(this);
 	aboutDialog_ = new AboutDialog(this);
@@ -75,14 +77,9 @@ MainWindow::MainWindow(Camera * camera, const QString & settings, QWidget * pare
 	ui_->dockWidget_plot->setVisible(false);
 	ui_->widget_controls->setVisible(false);
 
-	if(settings_.isEmpty())
-	{
-		settings_ = Settings::iniDefaultPath();
-	}
-
 	QByteArray geometry;
 	QByteArray state;
-	Settings::loadSettings(settings_, &geometry, &state);
+	Settings::loadWindowSettings(geometry, state);
 	this->restoreGeometry(geometry);
 	this->restoreState(state);
 	lastObjectsUpdateParameters_ = Settings::getParameters();
@@ -111,9 +108,6 @@ MainWindow::MainWindow(Camera * camera, const QString & settings, QWidget * pare
 
 	if(cv::gpu::getCudaEnabledDeviceCount() == 0)
 	{
-		Settings::setFeature2D_SURF_gpu(false);
-		Settings::setFeature2D_Fast_gpu(false);
-		Settings::setFeature2D_ORB_gpu(false);
 		ui_->toolBox->updateParameter(Settings::kFeature2D_SURF_gpu());
 		ui_->toolBox->updateParameter(Settings::kFeature2D_Fast_gpu());
 		ui_->toolBox->updateParameter(Settings::kFeature2D_ORB_gpu());
@@ -123,10 +117,6 @@ MainWindow::MainWindow(Camera * camera, const QString & settings, QWidget * pare
 		ui_->toolBox->getParameterWidget(Settings::kFeature2D_Fast_keypointsRatio())->setEnabled(false);
 		ui_->toolBox->getParameterWidget(Settings::kFeature2D_ORB_gpu())->setEnabled(false);
 	}
-
-	detector_ = Settings::createKeypointDetector();
-	extractor_ = Settings::createDescriptorExtractor();
-	Q_ASSERT(detector_ != 0 && extractor_ != 0);
 
 	connect((QDoubleSpinBox*)ui_->toolBox->getParameterWidget(Settings::kCamera_4imageRate()),
 			SIGNAL(editingFinished()),
@@ -206,6 +196,20 @@ MainWindow::MainWindow(Camera * camera, const QString & settings, QWidget * pare
 	ui_->label_port->setTextInteractionFlags(Qt::TextSelectableByMouse);
 	setupTCPServer();
 
+	if(findObject_->objects().size())
+	{
+		// show objects already loaded in FindObject
+		for(QMap<int, ObjSignature *>::const_iterator iter = findObject_->objects().constBegin();
+			iter!=findObject_->objects().constEnd();
+			++iter)
+		{
+			ObjWidget * obj = new ObjWidget(iter.key(), iter.value()->keypoints(), cvtCvMat2QImage(iter.value()->image()));
+			objWidgets_.insert(obj->id(), obj);
+			this->showObject(obj);
+		}
+	}
+
+
 	if(Settings::getGeneral_autoStartCamera())
 	{
 		// Set 1 msec to see state on the status bar.
@@ -217,20 +221,17 @@ MainWindow::~MainWindow()
 {
 	disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
 	camera_->stop();
-	delete detector_;
-	delete extractor_;
-	delete vocabulary_;
-	objectsDescriptors_.clear();
-	qDeleteAll(objects_.begin(), objects_.end());
-	objects_.clear();
+	qDeleteAll(objWidgets_);
+	objWidgets_.clear();
 	delete ui_;
+	delete findObject_;
 }
 
 void MainWindow::closeEvent(QCloseEvent * event)
 {
 	bool quit = true;
 	this->stopProcessing();
-	if(objectsModified_ && this->isVisible() && objects_.size())
+	if(objectsModified_ && this->isVisible() && objWidgets_.size())
 	{
 		int ret = QMessageBox::question(this, tr("Save new objects"), tr("Do you want to save added objects?"), QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
 		switch(ret)
@@ -248,7 +249,7 @@ void MainWindow::closeEvent(QCloseEvent * event)
 	}
 	if(quit)
 	{
-		Settings::saveSettings(settings_, this->saveGeometry(), this->saveState());
+		Settings::saveWindowSettings(this->saveGeometry(), this->saveState());
 		event->accept();
 	}
 	else
@@ -268,8 +269,7 @@ void MainWindow::setupTCPServer()
 	connect(this, SIGNAL(objectsFound(QMultiMap<int,QPair<QRect,QTransform> >)), tcpServer_, SLOT(publishObjects(QMultiMap<int,QPair<QRect,QTransform> >)));
 	ui_->label_ipAddress->setText(tcpServer_->getHostAddress().toString());
 	ui_->label_port->setNum(tcpServer_->getPort());
-	printf("IP: %s\nport: %d\n",
-			tcpServer_->getHostAddress().toString().toStdString().c_str(), tcpServer_->getPort());
+	UINFO("IP: %s port: %d", tcpServer_->getHostAddress().toString().toStdString().c_str(), tcpServer_->getPort());
 }
 
 void MainWindow::setSourceImageText(const QString & text)
@@ -308,7 +308,8 @@ bool MainWindow::loadSettings(const QString & path)
 	{
 		QByteArray geometry;
 		QByteArray state;
-		Settings::loadSettings(path, &geometry, &state);
+		Settings::loadSettings(path);
+		Settings::loadWindowSettings(geometry, state, path);
 		this->restoreGeometry(geometry);
 		this->restoreState(state);
 
@@ -321,7 +322,7 @@ bool MainWindow::loadSettings(const QString & path)
 
 		return true;
 	}
-	printf("Path \"%s\" not valid (should be *.ini)\n", path.toStdString().c_str());
+	UINFO("Path \"%s\" not valid (should be *.ini)", path.toStdString().c_str());
 	return false;
 }
 
@@ -329,10 +330,11 @@ bool MainWindow::saveSettings(const QString & path)
 {
 	if(!path.isEmpty() && QFileInfo(path).suffix().compare("ini") == 0)
 	{
-		Settings::saveSettings(path, this->saveGeometry(), this->saveState());
+		Settings::saveSettings(path);
+		Settings::saveWindowSettings(this->saveGeometry(), this->saveState(), path);
 		return true;
 	}
-	printf("Path \"%s\" not valid (should be *.ini)\n", path.toStdString().c_str());
+	UINFO("Path \"%s\" not valid (should be *.ini)", path.toStdString().c_str());
 	return false;
 }
 
@@ -346,28 +348,39 @@ int MainWindow::loadObjects(const QString & dirPath)
 		const std::list<std::string> & names = dir.getFileNames(); // sorted in natural order
 		for(std::list<std::string>::const_iterator iter=names.begin(); iter!=names.end(); ++iter)
 		{
-			this->addObjectFromFile((dirPath.toStdString()+dir.separator()+*iter).c_str());
+			if(this->addObjectFromFile((dirPath.toStdString()+dir.separator()+*iter).c_str()))
+			{
+				++loadedObjects;
+			}
 		}
-		if(names.size())
+		if(loadedObjects)
 		{
 			this->updateObjects();
 		}
-		loadedObjects = (int)names.size();
 	}
 	return loadedObjects;
 }
 
-void MainWindow::saveObjects(const QString & dirPath)
+int MainWindow::saveObjects(const QString & dirPath)
 {
+	int count = 0;
 	QDir dir(dirPath);
 	if(dir.exists())
 	{
-		for(int i=0; i<objects_.size(); ++i)
+		for(QMap<int, ObjWidget*>::iterator iter=objWidgets_.begin(); iter!=objWidgets_.end(); ++iter)
 		{
-			objects_.at(i)->pixmap().save(QString("%1/%2.png").arg(dirPath).arg(objects_.at(i)->id()));
+			if(iter.value()->pixmap().save(QString("%1/%2.png").arg(dirPath).arg(iter.key())))
+			{
+				++count;
+			}
+			else
+			{
+				UERROR("Failed to save object %d", iter.key());
+			}
 		}
 		objectsModified_ = false;
 	}
+	return count;
 }
 
 void MainWindow::loadObjects()
@@ -375,7 +388,15 @@ void MainWindow::loadObjects()
 	QString dirPath = QFileDialog::getExistingDirectory(this, tr("Loading objects... Select a directory."), Settings::workingDirectory());
 	if(!dirPath.isEmpty())
 	{
-		loadObjects(dirPath);
+		int count = loadObjects(dirPath);
+		if(count)
+		{
+			QMessageBox::information(this, tr("Loading..."), tr("%1 objects loaded from \"%2\".").arg(count).arg(dirPath));
+		}
+		else
+		{
+			QMessageBox::information(this, tr("Loading..."), tr("No objects loaded from \"%1\"!").arg(dirPath));
+		}
 	}
 }
 bool MainWindow::saveObjects()
@@ -383,8 +404,16 @@ bool MainWindow::saveObjects()
 	QString dirPath = QFileDialog::getExistingDirectory(this, tr("Saving objects... Select a directory."), Settings::workingDirectory());
 	if(!dirPath.isEmpty())
 	{
-		saveObjects(dirPath);
-		return true;
+		int count = saveObjects(dirPath);
+		if(count)
+		{
+			QMessageBox::information(this, tr("Saving..."), tr("%1 objects saved to \"%2\".").arg(count).arg(dirPath));
+		}
+		else
+		{
+			QMessageBox::warning(this, tr("Saving..."), tr("No objects saved to %1!").arg(dirPath));
+		}
+		return count > 0;
 	}
 	return false;
 }
@@ -393,35 +422,37 @@ void MainWindow::removeObject(ObjWidget * object)
 {
 	if(object)
 	{
-		objects_.removeOne(object);
-		object->deleteLater();
-		this->updateData();
-		if(!camera_->isRunning() && !ui_->imageView_source->cvImage().empty())
+		objWidgets_.remove(object->id());
+		if(objWidgets_.size() == 0)
 		{
-			this->update(ui_->imageView_source->cvImage());
+			ui_->actionSave_objects->setEnabled(false);
+		}
+		findObject_->removeObject(object->id());
+		object->deleteLater();
+		if(!camera_->isRunning() && !sceneImage_.empty())
+		{
+			this->update();
 		}
 	}
 }
 
 void MainWindow::removeAllObjects()
 {
-	for(int i=0; i<objects_.size(); ++i)
+	qDeleteAll(objWidgets_);
+	objWidgets_.clear();
+	ui_->actionSave_objects->setEnabled(false);
+	findObject_->removeAllObjects();
+	if(!camera_->isRunning() && !sceneImage_.empty())
 	{
-		delete objects_.at(i);
-	}
-	objects_.clear();
-	this->updateData();
-	if(!camera_->isRunning() && !ui_->imageView_source->cvImage().empty())
-	{
-		this->update(ui_->imageView_source->cvImage());
+		this->update();
 	}
 }
 
 void MainWindow::updateObjectsSize()
 {
-	for(int i=0; i<objects_.size(); ++i)
+	for(QMap<int, ObjWidget*>::iterator iter=objWidgets_.begin(); iter!=objWidgets_.end(); ++iter)
 	{
-		updateObjectSize(objects_[i]);
+		updateObjectSize(iter.value());
 	}
 }
 
@@ -446,9 +477,9 @@ void MainWindow::updateMirrorView()
 {
 	bool mirrorView = Settings::getGeneral_mirrorView();
 	ui_->imageView_source->setMirrorView(mirrorView);
-	for(int i=0; i<objects_.size(); ++i)
+	for(QMap<int, ObjWidget*>::iterator iter=objWidgets_.begin(); iter!=objWidgets_.end(); ++iter)
 	{
-		objects_[i]->setMirrorView(mirrorView);
+		iter.value()->setMirrorView(mirrorView);
 	}
 }
 
@@ -462,33 +493,38 @@ void MainWindow::addObjectFromScene()
 	disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
 	AddObjectDialog * dialog;
 	bool resumeCamera = camera_->isRunning();
-	if(camera_->isRunning() || ui_->imageView_source->cvImage().empty())
+	if(camera_->isRunning() || sceneImage_.empty())
 	{
 		dialog = new AddObjectDialog(camera_, cv::Mat(), ui_->imageView_source->isMirrorView(), this);
 	}
 	else
 	{
-		dialog = new AddObjectDialog(0, ui_->imageView_source->cvImage(), ui_->imageView_source->isMirrorView(), this);
+		dialog = new AddObjectDialog(0, sceneImage_, ui_->imageView_source->isMirrorView(), this);
 	}
 	if(dialog->exec() == QDialog::Accepted)
 	{
-		ObjWidget * obj = dialog->retrieveObject();
-		if(obj)
-		{
-			objects_.push_back(obj);
-			showObject(objects_.last());
-			updateData();
-			objectsModified_ = true;
-		}
+		ObjWidget * obj = 0;
+		ObjSignature * signature = 0;
+		dialog->retrieveObject(&obj, &signature);
+		Q_ASSERT(obj!=0 && signature!=0);
+		findObject_->addObject(signature);
+		obj->setId(signature->id());
+		objWidgets_.insert(obj->id(), obj);
+		ui_->actionSave_objects->setEnabled(true);
+		showObject(obj);
+		QLabel * detectorDescriptorType = qFindChild<QLabel*>(this, QString("%1type").arg(obj->id()));
+		detectorDescriptorType->setText(QString("%1/%2").arg(signature->detectorType()).arg(signature->descriptorType()));
+		updateVocabulary();
+		objectsModified_ = true;
 	}
-	if(resumeCamera || ui_->imageView_source->cvImage().empty())
+	if(resumeCamera || sceneImage_.empty())
 	{
 		this->startProcessing();
 	}
 	else
 	{
 		connect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)), Qt::UniqueConnection);
-		this->update(ui_->imageView_source->cvImage());
+		this->update();
 	}
 	delete dialog;
 }
@@ -507,48 +543,21 @@ void MainWindow::addObjectsFromFiles()
 	}
 }
 
-void MainWindow::addObjectFromFile(const QString & filePath)
+bool MainWindow::addObjectFromFile(const QString & filePath)
 {
-	printf("Load file %s\n", filePath.toStdString().c_str());
-	if(!filePath.isNull())
+	const ObjSignature * s = findObject_->addObject(filePath);
+	if(s)
 	{
-		cv::Mat img = cv::imread(filePath.toStdString().c_str(), cv::IMREAD_GRAYSCALE);
-		if(!img.empty())
-		{
-			int id = 0;
-			QFileInfo file(filePath);
-			QStringList list = file.fileName().split('.');
-			if(list.size())
-			{
-				bool ok = false;
-				id = list.front().toInt(&ok);
-				if(ok)
-				{
-					for(int i=0; i<objects_.size(); ++i)
-					{
-						if(objects_.at(i)->id() == id)
-						{
-							if(this->isVisible())
-							{
-								QMessageBox::warning(this, tr("Warning"), tr("Object %1 already added, a new ID will be generated.").arg(id));
-							}
-							else
-							{
-								printf("WARNING: Object %d already added, a new ID will be generated.", id);
-							}
-							id = 0;
-							break;
-						}
-					}
-				}
-				else
-				{
-					id = 0;
-				}
-			}
-			objects_.append(new ObjWidget(id, std::vector<cv::KeyPoint>(), cv::Mat(), img, "", ""));
-			this->showObject(objects_.last());
-		}
+		ObjWidget * obj = new ObjWidget(s->id(), std::vector<cv::KeyPoint>(), cvtCvMat2QImage(s->image()));
+		objWidgets_.insert(obj->id(), obj);
+		ui_->actionSave_objects->setEnabled(true);
+		this->showObject(obj);
+		return true;
+	}
+	else
+	{
+		QMessageBox::critical(this, tr("Error adding object"), tr("Failed to add object from \"%1\"").arg(filePath));
+		return false;
 	}
 }
 
@@ -665,21 +674,10 @@ void MainWindow::showObject(ObjWidget * obj)
 		obj->setMirrorView(ui_->imageView_source->isMirrorView());
 		QList<ObjWidget*> objs = ui_->objects_area->findChildren<ObjWidget*>();
 		QVBoxLayout * vLayout = new QVBoxLayout();
-		int id = Settings::getGeneral_nextObjID();
-		if(obj->id() == 0)
-		{
-			obj->setId(id++);
-			Settings::setGeneral_nextObjID(id);
-		}
-		else if(obj->id() > id)
-		{
-			id = obj->id()+1;
-			Settings::setGeneral_nextObjID(id);
-		}
 		ui_->toolBox->updateParameter(Settings::kGeneral_nextObjID());
 
-		QLabel * title = new QLabel(QString("%1 (%2)").arg(obj->id()).arg(QString::number(obj->keypoints().size())), this);
-		QLabel * detectorDescriptorType = new QLabel(QString("%1/%2").arg(obj->detectorType()).arg(obj->descriptorType()), this);
+		QLabel * title = new QLabel(QString("%1 (%2)").arg(obj->id()).arg(obj->keypoints().size()), this);
+		QLabel * detectorDescriptorType = new QLabel(QString("%1/%2").arg("detector").arg("descriptor"), this);
 		QLabel * detectedLabel = new QLabel(this);
 		title->setObjectName(QString("%1title").arg(obj->id()));
 		detectorDescriptorType->setObjectName(QString("%1type").arg(obj->id()));
@@ -692,7 +690,7 @@ void MainWindow::showObject(ObjWidget * obj)
 		hLayout->addWidget(detectedLabel);
 		vLayout->addLayout(hLayout);
 		vLayout->addWidget(obj);
-		objects_.last()->setDeletable(true);
+		obj->setDeletable(true);
 		connect(obj, SIGNAL(removalTriggered(ObjWidget*)), this, SLOT(removeObject(ObjWidget*)));
 		connect(obj, SIGNAL(destroyed(QObject *)), title, SLOT(deleteLater()));
 		connect(obj, SIGNAL(destroyed(QObject *)), detectedLabel, SLOT(deleteLater()));
@@ -710,292 +708,54 @@ void MainWindow::showObject(ObjWidget * obj)
 	}
 }
 
-std::vector<cv::KeyPoint> limitKeypoints(const std::vector<cv::KeyPoint> & keypoints, int maxKeypoints)
-{
-	std::vector<cv::KeyPoint> kptsKept;
-	if(maxKeypoints > 0 && (int)keypoints.size() > maxKeypoints)
-	{
-		// Sort words by response
-		std::multimap<float, int> reponseMap; // <response,id>
-		for(unsigned int i = 0; i <keypoints.size(); ++i)
-		{
-			//Keep track of the data, to be easier to manage the data in the next step
-			reponseMap.insert(std::pair<float, int>(fabs(keypoints[i].response), i));
-		}
-
-		// Remove them
-		std::multimap<float, int>::reverse_iterator iter = reponseMap.rbegin();
-		kptsKept.resize(maxKeypoints);
-		for(unsigned int k=0; k < kptsKept.size() && iter!=reponseMap.rend(); ++k, ++iter)
-		{
-			kptsKept[k] = keypoints[iter->second];
-		}
-	}
-	else
-	{
-		kptsKept = keypoints;
-	}
-	return kptsKept;
-}
-
-class ExtractFeaturesThread : public QThread
-{
-public:
-	ExtractFeaturesThread(int objectId, int objectIndex, const cv::Mat & image) :
-		objectId_(objectId),
-		objectIndex_(objectIndex),
-		image_(image)
-	{
-
-	}
-	int objectId() const {return objectId_;}
-	int objectIndex() const {return objectIndex_;}
-	const cv::Mat & image() const {return image_;}
-	const std::vector<cv::KeyPoint> & keypoints() const {return keypoints_;}
-	const cv::Mat & descriptors() const {return descriptors_;}
-protected:
-	virtual void run()
-	{
-		QTime time;
-		time.start();
-		printf("Extracting descriptors from object %d...\n", objectId_);
-		KeypointDetector * detector = Settings::createKeypointDetector();
-		keypoints_.clear();
-		descriptors_ = cv::Mat();
-		detector->detect(image_, keypoints_);
-		delete detector;
-
-		if(keypoints_.size())
-		{
-			int maxFeatures = Settings::getFeature2D_3MaxFeatures();
-			if(maxFeatures > 0 && (int)keypoints_.size() > maxFeatures)
-			{
-				int previousCount = (int)keypoints_.size();
-				keypoints_ = limitKeypoints(keypoints_, maxFeatures);
-				printf("obj=%d, %d keypoints removed, (kept %d), min/max response=%f/%f\n", objectId_, previousCount-(int)keypoints_.size(), (int)keypoints_.size(), keypoints_.size()?keypoints_.back().response:0.0f, keypoints_.size()?keypoints_.front().response:0.0f);
-			}
-
-			DescriptorExtractor * extractor = Settings::createDescriptorExtractor();
-			extractor->compute(image_, keypoints_, descriptors_);
-			delete extractor;
-			if((int)keypoints_.size() != descriptors_.rows)
-			{
-				printf("ERROR : obj=%d kpt=%d != descriptors=%d\n", objectId_, (int)keypoints_.size(), descriptors_.rows);
-			}
-		}
-		else
-		{
-			printf("WARNING: no features detected in object %d !?!\n", objectId_);
-		}
-		printf("%d descriptors extracted from object %d (in %d ms)\n", descriptors_.rows, objectId_, time.elapsed());
-	}
-private:
-	int objectId_;
-	int objectIndex_;
-	cv::Mat image_;
-	std::vector<cv::KeyPoint> keypoints_;
-	cv::Mat descriptors_;
-};
-
 void MainWindow::updateObjects()
 {
-	if(objects_.size())
+	this->statusBar()->showMessage(tr("Updating %1 objects...").arg(findObject_->objects().size()));
+	QApplication::processEvents();
+
+	findObject_->updateObjects();
+
+	updateVocabulary();
+
+	QList<ObjSignature*> signatures = findObject_->objects().values();
+	for(int i=0; i<signatures.size(); ++i)
 	{
-		this->statusBar()->showMessage(tr("Updating %1 objects...").arg(objects_.size()));
-		QApplication::processEvents();
+		objWidgets_.value(signatures[i]->id())->setData(signatures[i]->keypoints(), cvtCvMat2QImage(signatures[i]->image()));
 
-		int threadCounts = Settings::getGeneral_threads();
-		if(threadCounts == 0)
-		{
-			threadCounts = objects_.size();
-		}
-
-		QTime time;
-		time.start();
-		printf("Features extraction from %d objects...\n", objects_.size());
-		for(int i=0; i<objects_.size(); i+=threadCounts)
-		{
-			QVector<ExtractFeaturesThread*> threads;
-			for(int k=i; k<i+threadCounts && k<objects_.size(); ++k)
-			{
-				threads.push_back(new ExtractFeaturesThread(objects_.at(k)->id(), k, objects_.at(k)->cvImage()));
-				threads.back()->start();
-			}
-
-			for(int j=0; j<threads.size(); ++j)
-			{
-				threads[j]->wait();
-
-				int index = threads[j]->objectIndex();
-
-				objects_.at(index)->setData(threads[j]->keypoints(), threads[j]->descriptors(), threads[j]->image(), Settings::currentDetectorType(), Settings::currentDescriptorType());
-
-				//update object labels
-				QLabel * title = qFindChild<QLabel*>(this, QString("%1title").arg(objects_.at(index)->id()));
-				title->setText(QString("%1 (%2)").arg(objects_.at(index)->id()).arg(QString::number(objects_.at(index)->keypoints().size())));
-				QLabel * detectorDescriptorType = qFindChild<QLabel*>(this, QString("%1type").arg(objects_.at(index)->id()));
-				detectorDescriptorType->setText(QString("%1/%2").arg(objects_.at(index)->detectorType()).arg(objects_.at(index)->descriptorType()));
-			}
-		}
-		printf("Features extraction from %d objects... done! (%d ms)\n", objects_.size(), time.elapsed());
-
-		updateData();
+		//update object labels
+		QLabel * title = qFindChild<QLabel*>(this, QString("%1title").arg(signatures[i]->id()));
+		title->setText(QString("%1 (%2)").arg(signatures[i]->id()).arg(QString::number(signatures[i]->keypoints().size())));
+		QLabel * detectorDescriptorType = qFindChild<QLabel*>(this, QString("%1type").arg(signatures[i]->id()));
+		detectorDescriptorType->setText(QString("%1/%2").arg(signatures[i]->detectorType()).arg(signatures[i]->descriptorType()));
 	}
-	if(!camera_->isRunning() && !ui_->imageView_source->cvImage().empty())
+
+	if(!camera_->isRunning() && !sceneImage_.empty())
 	{
-		this->update(ui_->imageView_source->cvImage());
+		this->update();
 	}
 	this->statusBar()->clearMessage();
 }
 
-void MainWindow::updateData()
+void MainWindow::updateVocabulary()
 {
-	if(objects_.size())
-	{
-		ui_->actionSave_objects->setEnabled(true);
-	}
-	else
-	{
-		ui_->actionSave_objects->setEnabled(false);
-	}
+	this->statusBar()->showMessage(tr("Updating vocabulary..."));
+	QApplication::processEvents();
 
-	objectsDescriptors_.clear();
-	dataRange_.clear();
-	vocabulary_->clear();
-	int count = 0;
-	int dim = -1;
-	int type = -1;
-	// Get the total size and verify descriptors
-	for(int i=0; i<objects_.size(); ++i)
-	{
-		if(!objects_.at(i)->descriptors().empty())
-		{
-			if(dim >= 0 && objects_.at(i)->descriptors().cols != dim)
-			{
-				if(this->isVisible())
-				{
-					QMessageBox::critical(this, tr("Error"), tr("Descriptors of the objects are not all the same size!\nObjects opened must have all the same size (and from the same descriptor extractor)."));
-				}
-				else
-				{
-					printf("ERROR: Descriptors of the objects are not all the same size! Objects opened must have all the same size (and from the same descriptor extractor).\n");
-				}
-				return;
-			}
-			dim = objects_.at(i)->descriptors().cols;
-			if(type >= 0 && objects_.at(i)->descriptors().type() != type)
-			{
-				if(this->isVisible())
-				{
-					QMessageBox::critical(this, tr("Error"), tr("Descriptors of the objects are not all the same type!\nObjects opened must have been processed by the same descriptor extractor."));
-				}
-				else
-				{
-					printf("ERROR: Descriptors of the objects are not all the same type! Objects opened must have been processed by the same descriptor extractor.\n");
-				}
-				return;
-			}
-			type = objects_.at(i)->descriptors().type();
-			count += objects_.at(i)->descriptors().rows;
-		}
-	}
+	QTime time;
+	findObject_->updateVocabulary();
 
-	// Copy data
-	if(count)
+	if(findObject_->vocabulary()->size())
 	{
-		this->statusBar()->showMessage(tr("Updating objects data (%1 descriptors)...").arg(count));
-		QApplication::processEvents();
-		printf("Updating global descriptors matrix: Objects=%d, total descriptors=%d, dim=%d, type=%d\n", (int)objects_.size(), count, dim, type);
-		if(Settings::getGeneral_invertedSearch() || Settings::getGeneral_threads() == 1)
-		{
-			// If only one thread, put all descriptors in the same cv::Mat
-			objectsDescriptors_.push_back(cv::Mat(count, dim, type));
-			int row = 0;
-			for(int i=0; i<objects_.size(); ++i)
-			{
-				if(objects_.at(i)->descriptors().rows)
-				{
-					cv::Mat dest(objectsDescriptors_[0], cv::Range(row, row+objects_.at(i)->descriptors().rows));
-					objects_.at(i)->descriptors().copyTo(dest);
-					row += objects_.at(i)->descriptors().rows;
-					// dataRange contains the upper_bound for each
-					// object (the last descriptors position in the
-					// global object descriptors matrix)
-					if(objects_.at(i)->descriptors().rows)
-					{
-						dataRange_.insert(row-1, i);
-					}
-				}
-			}
-
-			if(Settings::getGeneral_invertedSearch())
-			{
-				QTime time;
-				time.start();
-				bool incremental = Settings::getGeneral_vocabularyIncremental();
-				if(incremental)
-				{
-					printf("Creating incremental vocabulary...\n");
-				}
-				else
-				{
-					printf("Creating vocabulary...\n");
-				}
-				QTime localTime;
-				localTime.start();
-				int updateVocabularyMinWords = Settings::getGeneral_vocabularyUpdateMinWords();
-				int addedWords = 0;
-				for(int i=0; i<objects_.size(); ++i)
-				{
-					QMultiMap<int, int> words = vocabulary_->addWords(objects_[i]->descriptors(), i, incremental);
-					objects_[i]->setWords(words);
-					addedWords += words.uniqueKeys().size();
-					bool updated = false;
-					if(incremental && addedWords && addedWords >= updateVocabularyMinWords)
-					{
-						vocabulary_->update();
-						addedWords = 0;
-						updated = true;
-					}
-					printf("Object %d, %d words from %d descriptors (%d words, %d ms) %s\n",
-							objects_[i]->id(),
-							words.uniqueKeys().size(),
-							objects_[i]->descriptors().rows,
-							vocabulary_->size(),
-							localTime.restart(),
-							updated?"updated":"");
-				}
-				if(addedWords)
-				{
-					vocabulary_->update();
-				}
-				ui_->label_timeIndexing->setNum(time.elapsed());
-				ui_->label_vocabularySize->setNum(vocabulary_->size());
-				if(incremental)
-				{
-					printf("Creating incremental vocabulary... done! size=%d (%d ms)\n", vocabulary_->size(), time.elapsed());
-				}
-				else
-				{
-					printf("Creating vocabulary... done! size=%d (%d ms)\n", vocabulary_->size(), time.elapsed());
-				}
-			}
-		}
-		else
-		{
-			for(int i=0; i<objects_.size(); ++i)
-			{
-				objectsDescriptors_.push_back(objects_.at(i)->descriptors());
-			}
-		}
-		this->statusBar()->clearMessage();
+		ui_->label_timeIndexing->setNum(time.elapsed());
+		ui_->label_vocabularySize->setNum(findObject_->vocabulary()->size());
 	}
 	lastObjectsUpdateParameters_ = Settings::getParameters();
+	this->statusBar()->clearMessage();
 }
 
 void MainWindow::startProcessing()
 {
-	printf("Starting camera...\n");
+	UINFO("Starting camera...");
 	bool updateStatusMessage = this->statusBar()->currentMessage().isEmpty();
 	if(updateStatusMessage)
 	{
@@ -1036,25 +796,14 @@ void MainWindow::startProcessing()
 		{
 			this->statusBar()->clearMessage();
 		}
-		if(this->isVisible())
+
+		if(Settings::getCamera_6useTcpCamera())
 		{
-			if(Settings::getCamera_6useTcpCamera())
-			{
-				QMessageBox::critical(this, tr("Camera error"), tr("Camera initialization failed! (with server %1:%2)").arg(Settings::getCamera_7IP()).arg(Settings::getCamera_8port()));
-			}
-			else
-			{
-				QMessageBox::critical(this, tr("Camera error"), tr("Camera initialization failed! (with device %1)").arg(Settings::getCamera_1deviceId()));
-			}
-		}
-		else if(Settings::getCamera_6useTcpCamera())
-		{
-			printf("%s\n", tr("Camera initialization failed! (with server %1:%2) Trying again in 1 second...").arg(Settings::getCamera_7IP()).arg(Settings::getCamera_8port()).toStdString().c_str());
-			QTimer::singleShot(1000, this, SLOT(startProcessing()));
+			QMessageBox::critical(this, tr("Camera error"), tr("Camera initialization failed! (with server %1:%2)").arg(Settings::getCamera_7IP()).arg(Settings::getCamera_8port()));
 		}
 		else
 		{
-			printf("[ERROR] Camera initialization failed! (with device %d)\n", Settings::getCamera_1deviceId());
+			QMessageBox::critical(this, tr("Camera error"), tr("Camera initialization failed! (with device %1)").arg(Settings::getCamera_1deviceId()));
 		}
 	}
 }
@@ -1124,672 +873,212 @@ void MainWindow::rectHovered(int objId)
 	}
 }
 
-class SearchThread: public QThread
-{
-public:
-	SearchThread(Vocabulary * vocabulary, int objectIndex, const cv::Mat * descriptors, const ObjWidget * sceneObject) :
-		vocabulary_(vocabulary),
-		objectIndex_(objectIndex),
-		descriptors_(descriptors),
-		sceneObject_(sceneObject),
-		minMatchedDistance_(-1.0f),
-		maxMatchedDistance_(-1.0f)
-	{
-		Q_ASSERT(index && descriptors);
-	}
-	virtual ~SearchThread() {}
-
-	int getObjectIndex() const {return objectIndex_;}
-	float getMinMatchedDistance() const {return minMatchedDistance_;}
-	float getMaxMatchedDistance() const {return maxMatchedDistance_;}
-	const QMultiMap<int, int> & getMatches() const {return matches_;}
-
-protected:
-	virtual void run()
-	{
-		//QTime time;
-		//time.start();
-
-		cv::Mat results;
-		cv::Mat dists;
-
-		//match objects to scene
-		int k = Settings::getNearestNeighbor_3nndrRatioUsed()?2:1;
-		results = cv::Mat(descriptors_->rows, k, CV_32SC1); // results index
-		dists = cv::Mat(descriptors_->rows, k, CV_32FC1); // Distance results are CV_32FC1
-		vocabulary_->search(*descriptors_, results, dists, k);
-
-		// PROCESS RESULTS
-		// Get all matches for each object
-		for(int i=0; i<dists.rows; ++i)
-		{
-			// Check if this descriptor matches with those of the objects
-			bool matched = false;
-
-			if(Settings::getNearestNeighbor_3nndrRatioUsed() &&
-			   dists.at<float>(i,0) <= Settings::getNearestNeighbor_4nndrRatio() * dists.at<float>(i,1))
-			{
-				matched = true;
-			}
-			if((matched || !Settings::getNearestNeighbor_3nndrRatioUsed()) &&
-			   Settings::getNearestNeighbor_5minDistanceUsed())
-			{
-				if(dists.at<float>(i,0) <= Settings::getNearestNeighbor_6minDistance())
-				{
-					matched = true;
-				}
-				else
-				{
-					matched = false;
-				}
-			}
-			if(!matched && !Settings::getNearestNeighbor_3nndrRatioUsed() && !Settings::getNearestNeighbor_5minDistanceUsed())
-			{
-				matched = true; // no criterion, match to the nearest descriptor
-			}
-			if(minMatchedDistance_ == -1 || minMatchedDistance_ > dists.at<float>(i,0))
-			{
-				minMatchedDistance_ = dists.at<float>(i,0);
-			}
-			if(maxMatchedDistance_ == -1 || maxMatchedDistance_ < dists.at<float>(i,0))
-			{
-				maxMatchedDistance_ = dists.at<float>(i,0);
-			}
-
-			int wordId = results.at<int>(i,0);
-			if(matched && sceneObject_->words().count(wordId) == 1)
-			{
-				matches_.insert(i, sceneObject_->words().value(wordId));
-				matches_.insert(i, results.at<int>(i,0));
-			}
-		}
-
-		//printf("Search Object %d time=%d ms\n", objectIndex_, time.elapsed());
-	}
-private:
-	Vocabulary * vocabulary_; // would be const but flann search() method is not const!?
-	int objectIndex_;
-	const cv::Mat * descriptors_;
-	const ObjWidget * sceneObject_;
-
-	float minMatchedDistance_;
-	float maxMatchedDistance_;
-	QMultiMap<int, int> matches_;
-};
-
-class HomographyThread: public QThread
-{
-public:
-	HomographyThread(
-			const QMultiMap<int, int> * matches, // <object, scene>
-			int objectIndex,
-			const std::vector<cv::KeyPoint> * kptsA,
-			const std::vector<cv::KeyPoint> * kptsB) :
-				matches_(matches),
-				objectIndex_(objectIndex),
-				kptsA_(kptsA),
-				kptsB_(kptsB),
-				inliers_(0),
-				outliers_(0)
-	{
-		Q_ASSERT(matches && kptsA && kptsB);
-	}
-	virtual ~HomographyThread() {}
-
-	int getObjectIndex() const {return objectIndex_;}
-	const std::vector<int> & getIndexesA() const {return indexesA_;}
-	const std::vector<int> & getIndexesB() const {return indexesB_;}
-	const std::vector<uchar> & getOutlierMask() const {return outlierMask_;}
-	int getInliers() const {return inliers_;}
-	int getOutliers() const {return outliers_;}
-	const cv::Mat & getHomography() const {return h_;}
-
-protected:
-	virtual void run()
-	{
-		//QTime time;
-		//time.start();
-
-		std::vector<cv::Point2f> mpts_1(matches_->size());
-		std::vector<cv::Point2f> mpts_2(matches_->size());
-		indexesA_.resize(matches_->size());
-		indexesB_.resize(matches_->size());
-
-		int j=0;
-		for(QMultiMap<int, int>::const_iterator iter = matches_->begin(); iter!=matches_->end(); ++iter)
-		{
-			mpts_1[j] = kptsA_->at(iter.key()).pt;
-			indexesA_[j] = iter.key();
-			mpts_2[j] = kptsB_->at(iter.value()).pt;
-			indexesB_[j] = iter.value();
-			++j;
-		}
-
-		if((int)mpts_1.size() >= Settings::getHomography_minimumInliers())
-		{
-			h_ = findHomography(mpts_1,
-					mpts_2,
-					Settings::getHomographyMethod(),
-					Settings::getHomography_ransacReprojThr(),
-					outlierMask_);
-
-			for(unsigned int k=0; k<mpts_1.size();++k)
-			{
-				if(outlierMask_.at(k))
-				{
-					++inliers_;
-				}
-				else
-				{
-					++outliers_;
-				}
-			}
-
-			// ignore homography when all features are inliers
-			if(inliers_ == (int)outlierMask_.size() && !h_.empty())
-			{
-				if(Settings::getHomography_ignoreWhenAllInliers() || cv::countNonZero(h_) < 1)
-				{
-					h_ = cv::Mat();
-				}
-			}
-		}
-
-		//printf("Homography Object %d time=%d ms\n", objectIndex_, time.elapsed());
-	}
-private:
-	const QMultiMap<int, int> * matches_;
-	int objectIndex_;
-	const std::vector<cv::KeyPoint> * kptsA_;
-	const std::vector<cv::KeyPoint> * kptsB_;
-
-	std::vector<int> indexesA_;
-	std::vector<int> indexesB_;
-	std::vector<uchar> outlierMask_;
-	int inliers_;
-	int outliers_;
-	cv::Mat h_;
-};
-
 void MainWindow::update(const cv::Mat & image)
 {
-	//printf("====== UPDATE =======\n");
-
-	QTime totalTime;
-	totalTime.start();
 	// reset objects color
-	for(int i=0; i<objects_.size(); ++i)
+	for(QMap<int, ObjWidget*>::iterator iter=objWidgets_.begin(); iter!=objWidgets_.end(); ++iter)
 	{
-		objects_[i]->resetKptsColor();
+		iter.value()->resetKptsColor();
 	}
-
 	if(!image.empty())
 	{
-		//Convert to grayscale
-		cv::Mat grayscaleImg;
-		if(image.channels() != 1 || image.depth() != CV_8U)
-		{
-			cv::cvtColor(image, grayscaleImg, cv::COLOR_BGR2GRAY);
-		}
-		else
-		{
-			grayscaleImg =  image;
-		}
+		sceneImage_ = image.clone();
+	}
 
-		QTime time;
-		time.start();
+	QMultiMap<int,QPair<QRect,QTransform> > objectsDetected;
+	if(findObject_->detect(sceneImage_, objectsDetected))
+	{
+		ui_->label_timeDetection->setNum(findObject_->timeStamps().value(FindObject::kTimeKeypointDetection, 0));
+		ui_->label_timeExtraction->setNum(findObject_->timeStamps().value(FindObject::kTimeDescriptorExtraction, 0));
+		ui_->imageView_source->setData(findObject_->sceneKeypoints(), cvtCvMat2QImage(sceneImage_));
+		ui_->label_timeIndexing->setNum(findObject_->timeStamps().value(FindObject::kTimeIndexing, 0));
+		ui_->label_vocabularySize->setNum(findObject_->vocabulary()->size());
+		ui_->label_timeMatching->setNum(findObject_->timeStamps().value(FindObject::kTimeMatching, 0));
+		ui_->label_timeHomographies->setNum(findObject_->timeStamps().value(FindObject::kTimeHomography, 0));
 
-		// EXTRACT KEYPOINTS
-		std::vector<cv::KeyPoint> keypoints;
-		detector_->detect(grayscaleImg, keypoints);
-		ui_->label_timeDetection->setNum(time.restart());
-
-		cv::Mat descriptors;
-		if(keypoints.size())
+		// Colorize features matched
+		const QMap<int, QMultiMap<int, int> > & matches = findObject_->matches();
+		QMap<int, int> scores;
+		int maxScoreId = -1;
+		int maxScore = 0;
+		for(QMap<int, QMultiMap<int, int> >::const_iterator jter=matches.constBegin(); jter!=matches.end();++jter)
 		{
-			int maxFeatures = Settings::getFeature2D_3MaxFeatures();
-			if(maxFeatures > 0 && (int)keypoints.size() > maxFeatures)
+			scores.insert(jter.key(), jter.value().size());
+			if(maxScoreId == -1 || maxScore < jter.value().size())
 			{
-				//int previousCount = (int)keypoints.size();
-				keypoints = limitKeypoints(keypoints, maxFeatures);
-				//printf("%d keypoints removed, (kept %d), min/max response=%f/%f\n", previousCount-(int)keypoints.size(), (int)keypoints.size(), keypoints.size()?keypoints.back().response:0.0f, keypoints.size()?keypoints.front().response:0.0f);
+				maxScoreId = jter.key();
+				maxScore = jter.value().size();
 			}
 
-			// EXTRACT DESCRIPTORS
-			extractor_->compute(grayscaleImg, keypoints, descriptors);
-			if((int)keypoints.size() != descriptors.rows)
+			int id = jter.key();
+			QLabel * label = ui_->dockWidget_objects->findChild<QLabel*>(QString("%1detection").arg(id));
+			if(!Settings::getHomography_homographyComputed())
 			{
-				printf("ERROR : kpt=%d != descriptors=%d\n", (int)keypoints.size(), descriptors.rows);
-			}
-			ui_->label_timeExtraction->setNum(time.restart());
-		}
-		else
-		{
-			printf("WARNING: no features detected !?!\n");
-			ui_->label_timeExtraction->setNum(0);
-		}
+				label->setText(QString("%1 matches").arg(jter.value().size()));
 
-		if(this->isVisible())
-		{
-			ui_->imageView_source->setData(keypoints, cv::Mat(), image, Settings::currentDetectorType(), Settings::currentDescriptorType());
-		}
+				ObjWidget * obj = objWidgets_.value(id);
+				Q_ASSERT(obj != 0);
 
-		bool consistentNNData = (vocabulary_->size()!=0 && vocabulary_->wordToObjects().begin().value()!=-1 && Settings::getGeneral_invertedSearch()) ||
-								((vocabulary_->size()==0 || vocabulary_->wordToObjects().begin().value()==-1) && !Settings::getGeneral_invertedSearch());
-
-		// COMPARE
-		if(!objectsDescriptors_.empty() &&
-		   keypoints.size() &&
-		   consistentNNData &&
-		   objectsDescriptors_[0].cols == descriptors.cols &&
-		   objectsDescriptors_[0].type() == descriptors.type()) // binary descriptor issue, if the dataTree is not yet updated with modified settings
-		{
-			QVector<QMultiMap<int, int> > matches(objects_.size()); // Map< ObjectDescriptorIndex, SceneDescriptorIndex >
-			QVector<int> matchesId(objects_.size(), -1);
-			float minMatchedDistance = -1.0f;
-			float maxMatchedDistance = -1.0f;
-
-			if(!Settings::getGeneral_invertedSearch())
-			{
-				// CREATE INDEX for the scene
-				//printf("Creating FLANN index (%s)\n", Settings::currentNearestNeighborType().toStdString().c_str());
-				vocabulary_->clear();
-				QMultiMap<int, int> words = vocabulary_->addWords(descriptors, -1, Settings::getGeneral_vocabularyIncremental());
-				if(!Settings::getGeneral_vocabularyIncremental())
+				int nColor = id % 11 + 7;
+				QColor color((Qt::GlobalColor)(nColor==Qt::yellow?Qt::gray:nColor));
+				for(QMultiMap<int, int>::const_iterator iter = jter.value().constBegin(); iter!= jter.value().constEnd(); ++iter)
 				{
-					vocabulary_->update();
+					obj->setKptColor(iter.key(), color);
+					ui_->imageView_source->setKptColor(iter.value(), color);
 				}
-				ui_->imageView_source->setWords(words);
-				ui_->label_timeIndexing->setNum(time.restart());
-				ui_->label_vocabularySize->setNum(vocabulary_->size());
 			}
-
-			if(Settings::getGeneral_invertedSearch() || Settings::getGeneral_threads() == 1)
+			else if(!objectsDetected.contains(id))
 			{
-				cv::Mat results;
-				cv::Mat dists;
-				// DO NEAREST NEIGHBOR
-				int k = Settings::getNearestNeighbor_3nndrRatioUsed()?2:1;
-				if(!Settings::getGeneral_invertedSearch())
+				// Homography could not be computed...
+				QLabel * label = ui_->dockWidget_objects->findChild<QLabel*>(QString("%1detection").arg(id));
+				QMultiMap<int, int> rejectedInliers = findObject_->rejectedInliers().value(id);
+				QMultiMap<int, int> rejectedOutliers = findObject_->rejectedOutliers().value(id);
+				if(jter.value().size() < Settings::getHomography_minimumInliers())
 				{
-					//match objects to scene
-					results = cv::Mat(objectsDescriptors_[0].rows, k, CV_32SC1); // results index
-					dists = cv::Mat(objectsDescriptors_[0].rows, k, CV_32FC1); // Distance results are CV_32FC1
-					vocabulary_->search(objectsDescriptors_[0], results, dists, k);
+					label->setText(QString("Too low matches (%1)").arg(jter.value().size()));
+				}
+				else if(rejectedInliers.size() >= Settings::getHomography_minimumInliers())
+				{
+					label->setText(QString("Ignored, all inliers (%1 in %2 out)").arg(rejectedInliers.size()).arg(rejectedOutliers.size()));
 				}
 				else
 				{
-					//match scene to objects
-					results = cv::Mat(descriptors.rows, k, CV_32SC1); // results index
-					dists = cv::Mat(descriptors.rows, k, CV_32FC1); // Distance results are CV_32FC1
-					vocabulary_->search(descriptors, results, dists, k);
+					label->setText(QString("Too low inliers (%1 in %2 out)").arg(rejectedInliers.size()).arg(rejectedOutliers.size()));
 				}
 
-				// PROCESS RESULTS
-				// Get all matches for each object
-				for(int i=0; i<dists.rows; ++i)
-				{
-					// Check if this descriptor matches with those of the objects
-					bool matched = false;
+			}
+		}
 
-					if(Settings::getNearestNeighbor_3nndrRatioUsed() &&
-					   dists.at<float>(i,0) <= Settings::getNearestNeighbor_4nndrRatio() * dists.at<float>(i,1))
-					{
-						matched = true;
-					}
-					if((matched || !Settings::getNearestNeighbor_3nndrRatioUsed()) &&
-					   Settings::getNearestNeighbor_5minDistanceUsed())
-					{
-						if(dists.at<float>(i,0) <= Settings::getNearestNeighbor_6minDistance())
-						{
-							matched = true;
-						}
-						else
-						{
-							matched = false;
-						}
-					}
-					if(!matched && !Settings::getNearestNeighbor_3nndrRatioUsed() && !Settings::getNearestNeighbor_5minDistanceUsed())
-					{
-						matched = true; // no criterion, match to the nearest descriptor
-					}
-					if(minMatchedDistance == -1 || minMatchedDistance > dists.at<float>(i,0))
-					{
-						minMatchedDistance = dists.at<float>(i,0);
-					}
-					if(maxMatchedDistance == -1 || maxMatchedDistance < dists.at<float>(i,0))
-					{
-						maxMatchedDistance = dists.at<float>(i,0);
-					}
+		// Add homography rectangles when homographies are computed
+		QMultiMap<int, QMultiMap<int,int> >::const_iterator inliersIter = findObject_->inliers().constBegin();
+		QMultiMap<int, QMultiMap<int,int> >::const_iterator outliersIter = findObject_->outliers().constBegin();
+		for(QMultiMap<int,QPair<QRect,QTransform> >::iterator iter = objectsDetected.begin();
+				iter!=objectsDetected.end() && inliersIter!=findObject_->inliers().constEnd();
+				++iter, ++inliersIter)
+		{
+			int id = iter.key();
+			ObjWidget * obj = objWidgets_.value(id);
+			Q_ASSERT(obj != 0);
 
-					if(matched)
-					{
-						if(Settings::getGeneral_invertedSearch())
-						{
-							int wordId = results.at<int>(i,0);
-							QList<int> objIndexes = vocabulary_->wordToObjects().values(wordId);
-							for(int j=0; j<objIndexes.size(); ++j)
-							{
-								// just add unique matches
-								if(vocabulary_->wordToObjects().count(wordId, objIndexes[j]) == 1)
-								{
-									matches[objIndexes[j]].insert(objects_.at(objIndexes[j])->words().value(wordId), i);
-								}
-							}
-						}
-						else
-						{
-							QMap<int, int>::iterator iter = dataRange_.lowerBound(i);
-							int objectIndex = iter.value();
-							int fisrtObjectDescriptorIndex = (iter == dataRange_.begin())?0:(--iter).key()+1;
-							int objectDescriptorIndex = i - fisrtObjectDescriptorIndex;
+			// COLORIZE (should be done in the GUI thread)
+			int nColor = id % 11 + 7;
+			QColor color((Qt::GlobalColor)(nColor==Qt::yellow?Qt::gray:nColor));
 
-							int wordId = results.at<int>(i,0);
-							if(ui_->imageView_source->words().count(wordId) == 1)
-							{
-								matches[objectIndex].insert(objectDescriptorIndex, ui_->imageView_source->words().value(wordId));
-							}
-						}
-					}
-				}
+			QTransform hTransform = iter.value().second;
+
+			QRect rect = obj->pixmap().rect();
+			// add rectangle
+			QPen rectPen(color);
+			rectPen.setWidth(Settings::getHomography_rectBorderWidth());
+			RectItem * rectItemScene = new RectItem(id, rect);
+			connect(rectItemScene, SIGNAL(hovered(int)), this, SLOT(rectHovered(int)));
+			rectItemScene->setPen(rectPen);
+			rectItemScene->setTransform(hTransform);
+			ui_->imageView_source->addRect(rectItemScene);
+
+			QGraphicsRectItem * rectItemObj = new QGraphicsRectItem(rect);
+			rectItemObj->setPen(rectPen);
+			obj->addRect(rectItemObj);
+
+			for(QMultiMap<int, int>::const_iterator iter = inliersIter.value().constBegin(); iter!= inliersIter.value().constEnd(); ++iter)
+			{
+				obj->setKptColor(iter.key(), color);
+				ui_->imageView_source->setKptColor(iter.value(), color);
+			}
+
+			QLabel * label = ui_->dockWidget_objects->findChild<QLabel*>(QString("%1detection").arg(id));
+			if(objectsDetected.count(id) > 1)
+			{
+				// if a homography is already found, set the objects count
+				label->setText(QString("%1 objects found").arg(objectsDetected.count(id)));
 			}
 			else
 			{
-				//multi-threaded, match objects to scene
-				unsigned int threadCounts = Settings::getGeneral_threads();
-				if(threadCounts == 0)
-				{
-					threadCounts = (int)objectsDescriptors_.size();
-				}
-				for(unsigned int j=0; j<objectsDescriptors_.size(); j+=threadCounts)
-				{
-					QVector<SearchThread*> threads;
-
-					for(unsigned int k=j; k<j+threadCounts && k<objectsDescriptors_.size(); ++k)
-					{
-						threads.push_back(new SearchThread(vocabulary_, k, &objectsDescriptors_[k], ui_->imageView_source));
-						threads.back()->start();
-					}
-
-					for(int k=0; k<threads.size(); ++k)
-					{
-						threads[k]->wait();
-						matches[threads[k]->getObjectIndex()] = threads[k]->getMatches();
-
-						if(minMatchedDistance == -1 || minMatchedDistance > threads[k]->getMinMatchedDistance())
-						{
-							minMatchedDistance = threads[k]->getMinMatchedDistance();
-						}
-						if(maxMatchedDistance == -1 || maxMatchedDistance < threads[k]->getMaxMatchedDistance())
-						{
-							maxMatchedDistance = threads[k]->getMaxMatchedDistance();
-						}
-						delete threads[k];
-					}
-
-				}
+				label->setText(QString("%1 in %2 out").arg(inliersIter.value().size()).arg(outliersIter.value().size()));
 			}
-
-			ui_->label_timeMatching->setNum(time.restart());
-
-			// GUI: Homographies and color
-			int maxScoreId = -1;
-			int maxScore = 0;
-			QMultiMap<int, QPair<QRect, QTransform> > objectsDetected;
-
-			QMap<int, float> inliersScores;
-			if(Settings::getHomography_homographyComputed())
-			{
-				// HOMOGRAHPY
-				int threadCounts = Settings::getGeneral_threads();
-				if(threadCounts == 0)
-				{
-					threadCounts = matches.size();
-				}
-
-				for(int i=0; i<matches.size(); i+=threadCounts)
-				{
-					QVector<HomographyThread*> threads;
-
-					for(int k=i; k<i+threadCounts && k<matches.size(); ++k)
-					{
-						int objectId = matchesId[k] >=0 ? matchesId[k]:k; // the first matches ids correspond object index
-						threads.push_back(new HomographyThread(&matches[k], objectId, &objects_.at(objectId)->keypoints(), &keypoints));
-						threads.back()->start();
-					}
-
-					for(int j=0; j<threads.size(); ++j)
-					{
-						threads[j]->wait();
-
-						int index = threads[j]->getObjectIndex();
-
-						// COLORIZE (should be done in the GUI thread)
-						int nColor = index % 10 + 7;
-						QColor color((Qt::GlobalColor)(nColor==Qt::yellow?Qt::darkYellow:nColor));
-						QLabel * label = ui_->dockWidget_objects->findChild<QLabel*>(QString("%1detection").arg(objects_.at(index)->id()));
-						if(!threads[j]->getHomography().empty())
-						{
-							inliersScores.insert(objects_.at(index)->id(), (float)threads[j]->getInliers());
-							if(threads[j]->getInliers() >= Settings::getHomography_minimumInliers())
-							{
-								const cv::Mat & H = threads[j]->getHomography();
-								QTransform hTransform(
-									H.at<double>(0,0), H.at<double>(1,0), H.at<double>(2,0),
-									H.at<double>(0,1), H.at<double>(1,1), H.at<double>(2,1),
-									H.at<double>(0,2), H.at<double>(1,2), H.at<double>(2,2));
-
-								int distance = Settings::getGeneral_multiDetectionRadius(); // in pixels
-								if(Settings::getGeneral_multiDetection())
-								{
-									// Remove inliers and recompute homography
-									QMultiMap<int, int> newMatches;
-									for(unsigned int k=0; k<threads[j]->getOutlierMask().size();++k)
-									{
-										if(!threads[j]->getOutlierMask().at(k))
-										{
-											newMatches.insert(threads[j]->getIndexesA().at(k), threads[j]->getIndexesB().at(k));
-										}
-									}
-									matches.push_back(newMatches);
-									matchesId.push_back(index);
-
-									// compute distance from previous added same objects...
-									QMultiMap<int, QPair<QRect, QTransform> >::iterator objIter = objectsDetected.find(objects_.at(index)->id());
-									for(;objIter!=objectsDetected.end() && objIter.key() == objects_.at(index)->id(); ++objIter)
-									{
-										qreal dx = objIter.value().second.m31() - hTransform.m31();
-										qreal dy = objIter.value().second.m32() - hTransform.m32();
-										int d = (int)sqrt(dx*dx + dy*dy);
-										if(d < distance)
-										{
-											distance = d;
-										}
-									}
-								}
-
-								if(distance >= Settings::getGeneral_multiDetectionRadius())
-								{
-									if(this->isVisible())
-									{
-										for(unsigned int k=0; k<threads[j]->getOutlierMask().size();++k)
-										{
-											if(threads[j]->getOutlierMask().at(k))
-											{
-												objects_.at(index)->setKptColor(threads[j]->getIndexesA().at(k), color);
-												ui_->imageView_source->setKptColor(threads[j]->getIndexesB().at(k), color);
-											}
-											else if(!objectsDetected.contains(objects_.at(index)->id()))
-											{
-												objects_.at(index)->setKptColor(threads[j]->getIndexesA().at(k), Qt::black);
-											}
-										}
-									}
-
-									QRect rect = objects_.at(index)->pixmap().rect();
-									objectsDetected.insert(objects_.at(index)->id(), QPair<QRect, QTransform>(rect, hTransform));
-									// Example getting the center of the object in the scene using the homography
-									//QPoint pos(rect.width()/2, rect.height()/2);
-									//hTransform.map(pos)
-
-									// add rectangle
-									if(this->isVisible())
-									{
-										if(objectsDetected.count(objects_.at(index)->id()) > 1)
-										{
-											// if a homography is already found, set the objects count
-											label->setText(QString("%1 objects found").arg(objectsDetected.count(objects_.at(index)->id())));
-										}
-										else
-										{
-											label->setText(QString("%1 in %2 out").arg(threads[j]->getInliers()).arg(threads[j]->getOutliers()));
-										}
-										QPen rectPen(color);
-										rectPen.setWidth(Settings::getHomography_rectBorderWidth());
-										RectItem * rectItemScene = new RectItem(objects_.at(index)->id(), rect);
-										connect(rectItemScene, SIGNAL(hovered(int)), this, SLOT(rectHovered(int)));
-										rectItemScene->setPen(rectPen);
-										rectItemScene->setTransform(hTransform);
-										ui_->imageView_source->addRect(rectItemScene);
-
-										QGraphicsRectItem * rectItemObj = new QGraphicsRectItem(rect);
-										rectItemObj->setPen(rectPen);
-										objects_.at(index)->addRect(rectItemObj);
-									}
-								}
-							}
-							else if(this->isVisible() && objectsDetected.count(objects_.at(index)->id()) == 0)
-							{
-								label->setText(QString("Too low inliers (%1 in %2 out)").arg(threads[j]->getInliers()).arg(threads[j]->getOutliers()));
-							}
-						}
-						else if(this->isVisible() && objectsDetected.count(objects_.at(index)->id()) == 0)
-						{
-							inliersScores.insert(objects_.at(index)->id(), 0.0f);
-							if(threads[j]->getInliers() >= Settings::getHomography_minimumInliers())
-							{
-								label->setText(QString("Ignored, all inliers (%1 in %2 out)").arg(matches[index].size()).arg(threads[j]->getOutliers()));
-							}
-							else
-							{
-								label->setText(QString("Too low matches (%1)").arg(matches[index].size()));
-							}
-						}
-					}
-				}
-				ui_->label_timeHomographies->setNum(time.restart());
-			}
-			else
-			{
-				for(int i=0; i<matches.size(); ++i)
-				{
-					// colorize all matches if homography is not computed
-					int nColor = i % 11 + 7;
-					QColor color((Qt::GlobalColor)(nColor==Qt::yellow?Qt::gray:nColor));
-					for(QMultiMap<int, int>::iterator iter = matches[i].begin(); iter!=matches[i].end(); ++iter)
-					{
-						objects_[i]->setKptColor(iter.key(), color);
-						ui_->imageView_source->setKptColor(iter.value(), color);
-					}
-					QLabel * label = ui_->dockWidget_objects->findChild<QLabel*>(QString("%1detection").arg(objects_.at(i)->id()));
-					label->setText(QString("%1 matches").arg(matches[i].size()));
-					inliersScores.insert(objects_.at(i)->id(), 0.0f);
-				}
-			}
-
-			//scores
-			QMap<int, float> scores;
-			for(int i=0; i<matches.size(); ++i)
-			{
-				int objectIndex = matchesId.at(i) >= 0? matchesId.at(i): i;
-				if(!scores.contains(objects_.at(objectIndex)->id()))
-				{
-					scores.insert(objects_.at(objectIndex)->id(), matches[i].size());
-				}
-				// If objects detected, set max score to one detected with the most
-				// matches. Otherwise select any objects with the most matches.
-				if(objectsDetected.empty() || objectsDetected.contains(objects_.at(objectIndex)->id()))
-				{
-					if(maxScoreId == -1 || maxScore < matches[i].size())
-					{
-						maxScoreId = objects_.at(objectIndex)->id();
-						maxScore = matches[i].size();
-					}
-				}
-			}
-
-			//update likelihood plot
-			likelihoodCurve_->setData(scores, QMap<int, int>());
-			inliersCurve_->setData(inliersScores, QMap<int, int>());
-			if(ui_->likelihoodPlot->isVisible())
-			{
-				ui_->likelihoodPlot->update();
-			}
-
-			ui_->label_minMatchedDistance->setNum(minMatchedDistance);
-			ui_->label_maxMatchedDistance->setNum(maxMatchedDistance);
-
-			//Scroll objects slider to the best score
-			if(maxScoreId>=0 && Settings::getGeneral_autoScroll())
-			{
-				QLabel * label = ui_->dockWidget_objects->findChild<QLabel*>(QString("%1title").arg(maxScoreId));
-				if(label)
-				{
-					ui_->objects_area->verticalScrollBar()->setValue(label->pos().y());
-				}
-			}
-
-			// Emit homographies
-			if(objectsDetected.size() > 1)
-			{
-				printf("(%s) %d objects detected!\n",
-						QTime::currentTime().toString("HH:mm:ss.zzz").toStdString().c_str(),
-						(int)objectsDetected.size());
-			}
-			else if(objectsDetected.size() == 1)
-			{
-				printf("(%s) Object %d detected!\n",
-						QTime::currentTime().toString("HH:mm:ss.zzz").toStdString().c_str(),
-						(int)objectsDetected.begin().key());
-			}
-			else if(Settings::getGeneral_sendNoObjDetectedEvents())
-			{
-				printf("(%s) No objects detected.\n",
-						QTime::currentTime().toString("HH:mm:ss.zzz").toStdString().c_str());
-			}
-
-			if(objectsDetected.size() > 0 || Settings::getGeneral_sendNoObjDetectedEvents())
-			{
-				Q_EMIT objectsFound(objectsDetected);
-			}
-			ui_->label_objectsDetected->setNum(objectsDetected.size());
 		}
-		else
+
+
+		//update likelihood plot
+		likelihoodCurve_->setData(scores, QMap<int, int>());
+		QMap<int, int> inlierScores;
+		for(QMap<int, int>::iterator iter=scores.begin(); iter!=scores.end(); ++iter)
 		{
-			if(!objectsDescriptors_.empty() && keypoints.size())
+			QList<QMultiMap<int, int> > values = findObject_->inliers().values(iter.key());
+			int maxValue = 0;
+			if(values.size())
 			{
-				this->statusBar()->showMessage(tr("Cannot search, objects must be updated!"));
-				printf("Cannot search, objects must be updated!\n");
+				maxValue = values[0].size();
+				for(int i=1; i<values.size(); ++i)
+				{
+					if(maxValue < values[i].size())
+					{
+						maxValue = values[i].size();
+					}
+				}
 			}
-			if(this->isVisible())
-			{
-				ui_->imageView_source->setData(keypoints, cv::Mat(), image, Settings::currentDetectorType(), Settings::currentDescriptorType());
-			}
-
+			inlierScores.insert(iter.key(), maxValue);
 		}
-
-		if(this->isVisible())
+		inliersCurve_->setData(inlierScores, QMap<int, int>());
+		if(ui_->likelihoodPlot->isVisible())
 		{
-			//Update object pictures
-			for(int i=0; i<objects_.size(); ++i)
+			ui_->likelihoodPlot->update();
+		}
+
+		ui_->label_minMatchedDistance->setNum(findObject_->minMatchedDistance());
+		ui_->label_maxMatchedDistance->setNum(findObject_->maxMatchedDistance());
+
+		//Scroll objects slider to the best score
+		if(maxScoreId>=0 && Settings::getGeneral_autoScroll())
+		{
+			QLabel * label = ui_->dockWidget_objects->findChild<QLabel*>(QString("%1title").arg(maxScoreId));
+			if(label)
 			{
-				objects_[i]->update();
+				ui_->objects_area->verticalScrollBar()->setValue(label->pos().y());
 			}
 		}
 
-		ui_->label_nfeatures->setNum((int)keypoints.size());
-		ui_->imageView_source->update();
+		// Emit homographies
+		if(objectsDetected.size() > 1)
+		{
+			UINFO("(%s) %d objects detected!",
+					QTime::currentTime().toString("HH:mm:ss.zzz").toStdString().c_str(),
+					(int)objectsDetected.size());
+		}
+		else if(objectsDetected.size() == 1)
+		{
+			UINFO("(%s) Object %d detected!",
+					QTime::currentTime().toString("HH:mm:ss.zzz").toStdString().c_str(),
+					(int)objectsDetected.begin().key());
+		}
+		else if(Settings::getGeneral_sendNoObjDetectedEvents())
+		{
+			UINFO("(%s) No objects detected.",
+					QTime::currentTime().toString("HH:mm:ss.zzz").toStdString().c_str());
+		}
+
+		if(objectsDetected.size() > 0 || Settings::getGeneral_sendNoObjDetectedEvents())
+		{
+			Q_EMIT objectsFound(objectsDetected);
+		}
+		ui_->label_objectsDetected->setNum(objectsDetected.size());
 	}
+	else
+	{
+		this->statusBar()->showMessage(tr("Cannot search, objects must be updated!"));
+		ui_->imageView_source->setData(findObject_->sceneKeypoints(), cvtCvMat2QImage(sceneImage_));
+	}
+
+
+	//Update object pictures
+	for(QMap<int, ObjWidget*>::iterator iter=objWidgets_.begin(); iter!=objWidgets_.end(); ++iter)
+	{
+		iter.value()->update();
+	}
+
+	ui_->label_nfeatures->setNum((int)findObject_->sceneKeypoints().size());
+	ui_->imageView_source->update();
+
 	ui_->label_detectorDescriptorType->setText(QString("%1/%2").arg(Settings::currentDetectorType()).arg(Settings::currentDescriptorType()));
 
 	//update slider
@@ -1801,7 +1090,7 @@ void MainWindow::update(const cv::Mat & image)
 		ui_->horizontalSlider_frames->blockSignals(false);
 	}
 
-	ui_->label_timeTotal->setNum(totalTime.elapsed());
+	ui_->label_timeTotal->setNum(findObject_->timeStamps().value(FindObject::kTimeTotal, 0));
 	int refreshRate = qRound(1000.0f/float(updateRate_.restart()));
 	if(refreshRate > 0 && refreshRate < lowestRefreshRate_)
 	{
@@ -1830,10 +1119,10 @@ void MainWindow::notifyParametersChanged(const QStringList & paramChanged)
 	bool nearestNeighborParamsChanged = false;
 	for(QStringList::const_iterator iter = paramChanged.begin(); iter!=paramChanged.end(); ++iter)
 	{
-		printf("Parameter changed: %s -> \"%s\"\n", iter->toStdString().c_str(), Settings::getParameter(*iter).toString().toStdString().c_str());
-		printf("lastObjectsUpdateParameters_.value(*iter)=%s, Settings::getParameter(*iter)=%s",
-				lastObjectsUpdateParameters_.value(*iter).toString().toStdString().c_str(),
-				Settings::getParameter(*iter).toString().toStdString().c_str());
+		UINFO("Parameter changed: %s -> \"%s\"", iter->toStdString().c_str(), Settings::getParameter(*iter).toString().toStdString().c_str());
+		//UINFO("lastObjectsUpdateParameters_.value(*iter)=%s, Settings::getParameter(*iter)=%s",
+		//		lastObjectsUpdateParameters_.value(*iter).toString().toStdString().c_str(),
+		//		Settings::getParameter(*iter).toString().toStdString().c_str());
 		if(lastObjectsUpdateParameters_.value(*iter) != Settings::getParameter(*iter))
 		{
 			if(!detectorDescriptorParamsChanged && iter->contains("Feature2D"))
@@ -1862,11 +1151,7 @@ void MainWindow::notifyParametersChanged(const QStringList & paramChanged)
 	if(detectorDescriptorParamsChanged)
 	{
 		//Re-init detector and extractor
-		delete detector_;
-		delete extractor_;
-		detector_ = Settings::createKeypointDetector();
-		extractor_ = Settings::createDescriptorExtractor();
-		Q_ASSERT(detector_ != 0 && extractor_ != 0);
+		findObject_->updateDetectorExtractor();
 	}
 
 	if(Settings::getGeneral_autoUpdateObjects())
@@ -1877,16 +1162,16 @@ void MainWindow::notifyParametersChanged(const QStringList & paramChanged)
 		}
 		else if(nearestNeighborParamsChanged)
 		{
-			this->updateData();
+			this->updateVocabulary();
 		}
 	}
-	else if(objects_.size() && (detectorDescriptorParamsChanged || nearestNeighborParamsChanged))
+	else if(objWidgets_.size() && (detectorDescriptorParamsChanged || nearestNeighborParamsChanged))
 	{
 		this->statusBar()->showMessage(tr("A parameter has changed... \"Update objects\" may be required."));
 	}
-	if(!camera_->isRunning() && !ui_->imageView_source->cvImage().empty())
+	if(!camera_->isRunning() && !sceneImage_.empty())
 	{
-		this->update(ui_->imageView_source->cvImage());
+		this->update();
 		ui_->label_timeRefreshRate->setVisible(false);
 	}
 

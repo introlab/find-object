@@ -3,6 +3,12 @@
 #include <QtCore/QFile>
 #include "MainWindow.h"
 #include "Settings.h"
+#include "FindObject.h"
+#include "Camera.h"
+#include "TcpServer.h"
+#include "utilite/ULogger.h"
+
+bool running = true;
 
 #ifdef WIN32
 #include <windows.h> 
@@ -11,18 +17,46 @@ BOOL WINAPI my_handler(DWORD signal)
     if (signal == CTRL_C_EVENT)
 	{
         printf("\nCtrl-C caught! Quitting application...\n");
-		QApplication::quit();
+		QCoreApplication::quit();
 	}
     return TRUE;
+    running = false;
 }
 #else
 #include <signal.h>
 void my_handler(int s)
 {
 	printf("\nCtrl-C caught! Quitting application...\n");
-	QApplication::quit();
+	QCoreApplication::quit();
+	running = false;
+}
+inline void Sleep(unsigned int ms)
+{
+	struct timespec req;
+	struct timespec rem;
+	req.tv_sec = ms / 1000;
+	req.tv_nsec = (ms - req.tv_sec * 1000) * 1000 * 1000;
+	nanosleep (&req, &rem);
 }
 #endif
+
+void setupQuitSignal()
+{
+// Catch ctrl-c to close Qt
+#ifdef WIN32
+	if (!SetConsoleCtrlHandler(my_handler, TRUE))
+	{
+		printf("\nERROR: Could not set control handler");
+		return 1;
+	}
+#else
+	struct sigaction sigIntHandler;
+	sigIntHandler.sa_handler = my_handler;
+	sigemptyset(&sigIntHandler.sa_mask);
+	sigIntHandler.sa_flags = 0;
+	sigaction(SIGINT, &sigIntHandler, NULL);
+#endif
+}
 
 void showUsage()
 {
@@ -44,9 +78,14 @@ void showUsage()
 
 int main(int argc, char* argv[])
 {
-	QApplication app(argc, argv);
+	ULogger::setType(ULogger::kTypeConsole);
+	ULogger::setLevel(ULogger::kInfo);
+	ULogger::setPrintWhere(false);
+	ULogger::setPrintTime(false);
 
-	// parse options
+	//////////////////////////
+	// parse options BEGIN
+	//////////////////////////
 	bool guiMode = true;
 	QString objectsPath = "";
 	QString configPath = Settings::iniDefaultPath();
@@ -65,7 +104,7 @@ int main(int argc, char* argv[])
 				}
 				if(!QDir(objectsPath).exists())
 				{
-					printf("[ERROR] Path not valid : %s\n", objectsPath.toStdString().c_str());
+					UERROR("Path not valid : %s", objectsPath.toStdString().c_str());
 					showUsage();
 				}
 			}
@@ -87,7 +126,7 @@ int main(int argc, char* argv[])
 				}
 				if(!QFile::exists(configPath))
 				{
-					printf("[ERROR] Configuration file doesn't exist : %s\n", configPath.toStdString().c_str());
+					UERROR("Configuration file doesn't exist : %s", configPath.toStdString().c_str());
 					showUsage();
 				}
 			}
@@ -107,61 +146,93 @@ int main(int argc, char* argv[])
 			showUsage();
 		}
 
-		printf("[ERROR] Unrecognized option : %s\n", argv[i]);
+		UERROR("Unrecognized option : %s", argv[i]);
 		showUsage();
 	}
 
-	printf("Options:\n");
-	printf("   GUI mode = %s\n", guiMode?"true":"false");
-	printf("   Objects path: \"%s\"\n", objectsPath.toStdString().c_str());
-	printf("   Settings path: \"%s\"\n", configPath.toStdString().c_str());
+	UINFO("Options:");
+	UINFO("   GUI mode = %s", guiMode?"true":"false");
+	UINFO("   Objects path: \"%s\"", objectsPath.toStdString().c_str());
+	UINFO("   Settings path: \"%s\"", configPath.toStdString().c_str());
 
+	//////////////////////////
+	// parse options END
+	//////////////////////////
 
-	MainWindow mainWindow(0, configPath);
+	// Load settings, should be loaded before creating other objects
+	Settings::init(configPath);
 
+	// Create FindObject
+	FindObject * findObject = new FindObject();
+
+	// Load objects if path is set
 	int objectsLoaded = 0;
 	if(!objectsPath.isEmpty())
 	{
-		objectsLoaded = mainWindow.loadObjects(objectsPath);
+		objectsLoaded = findObject->loadObjects(objectsPath);
 		if(!objectsLoaded)
 		{
-			printf("[WARNING] No objects loaded from \"%s\"\n", objectsPath.toStdString().c_str());
+			UWARN("No objects loaded from \"%s\"", objectsPath.toStdString().c_str());
 		}
-	}
-
-	if(objectsLoaded == 0 && !guiMode)
-	{
-		printf("[ERROR] In console mode, at least one object must be loaded! See -console option.\n");
-		showUsage();
 	}
 
 	if(guiMode)
 	{
+		QApplication app(argc, argv);
+		MainWindow mainWindow(findObject, 0); // ownership transfered
+
 		app.connect( &app, SIGNAL( lastWindowClosed() ), &app, SLOT( quit() ) );
 		mainWindow.show();
+
+		app.exec();
 	}
 	else
 	{
-		mainWindow.startProcessing();
-	}
-
-	if(!guiMode)
-	{
-		// Catch ctrl-c to close the gui
-#ifdef WIN32
-		if (!SetConsoleCtrlHandler(my_handler, TRUE))
+		if(objectsLoaded == 0)
 		{
-			printf("\nERROR: Could not set control handler"); 
-			return 1;
+			UERROR("In console mode, at least one object must be loaded! See -console option.");
+			delete findObject;
+			showUsage();
 		}
-#else
-		struct sigaction sigIntHandler;
-		sigIntHandler.sa_handler = my_handler;
-		sigemptyset(&sigIntHandler.sa_mask);
-		sigIntHandler.sa_flags = 0;
-		sigaction(SIGINT, &sigIntHandler, NULL);
-#endif
+
+		QCoreApplication app(argc, argv);
+		Camera camera;
+		TcpServer tcpServer(Settings::getGeneral_port());
+		printf("IP: %s\nport: %d\n", tcpServer.getHostAddress().toString().toStdString().c_str(), tcpServer.getPort());
+
+		// connect stuff:
+		// [Camera] ---Image---> [FindObject] ---ObjectsDetected---> [TcpServer]
+		QObject::connect(&camera, SIGNAL(imageReceived(const cv::Mat &)), findObject, SLOT(detect(const cv::Mat &)));
+		QObject::connect(findObject, SIGNAL(objectsFound(QMultiMap<int,QPair<QRect,QTransform> >)), &tcpServer, SLOT(publishObjects(QMultiMap<int,QPair<QRect,QTransform> >)));
+
+		setupQuitSignal();
+
+		// start processing!
+		while(running && !camera.start())
+		{
+			if(Settings::getCamera_6useTcpCamera())
+			{
+				UWARN("Camera initialization failed! (with server %s:%d) Trying again in 1 second...",
+						Settings::getCamera_7IP().toStdString().c_str(), Settings::getCamera_8port());
+				Sleep(1000);
+			}
+			else
+			{
+				UERROR("Camera initialization failed!");
+				running = false;
+			}
+		}
+		if(running)
+		{
+			app.exec();
+		}
+
+		// cleanup
+		camera.stop();
+		delete findObject;
+		tcpServer.close();
 	}
 
-    return app.exec();
+	// Save settings
+	Settings::saveSettings();
 }

@@ -5,7 +5,9 @@ SET(headers_ui
 	../src/MainWindow.h
 	../src/AddObjectDialog.h
 	../src/ObjWidget.h
+	../src/FindObject.h
 	../src/Camera.h
+	../src/CameraTcpClient.h
 	../src/ParametersToolBox.h
 	../src/AboutDialog.h
 	../src/TcpServer.h
@@ -43,12 +45,15 @@ SET(SRC_FILES
 	../src/RectItem.cpp
 	../src/QtOpenCV.cpp
 	../src/Camera.cpp
+	../src/CameraTcpClient.cpp
 	../src/ParametersToolBox.cpp
 	../src/Settings.cpp
 	../src/ObjWidget.cpp
+	../src/FindObject.cpp
 	../src/AboutDialog.cpp
 	../src/TcpServer.cpp
 	../src/Vocabulary.cpp
+	../src/utilite/ULogger.cpp
 	../src/utilite/UPlot.cpp
 	../src/utilite/UDirectory.cpp
 	../src/utilite/UFile.cpp

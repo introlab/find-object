@@ -4,6 +4,7 @@
 
 #include "Settings.h"
 #include "Camera.h"
+#include "utilite/ULogger.h"
 #include <QtCore/QSettings>
 #include <QtCore/QStringList>
 #include <QtCore/QDir>
@@ -20,6 +21,7 @@ ParametersMap Settings::parameters_;
 ParametersType Settings::parametersType_;
 DescriptionsMap Settings::descriptions_;
 Settings Settings::dummyInit_;
+QString Settings::iniPath_;
 
 QString Settings::workingDirectory()
 {
@@ -39,12 +41,31 @@ QString Settings::iniDefaultPath()
 #endif
 }
 
-void Settings::loadSettings(const QString & fileName, QByteArray * windowGeometry, QByteArray * windowState)
+QString Settings::iniPath()
+{
+	if(!iniPath_.isNull())
+	{
+		return iniPath_;
+	}
+	return iniDefaultPath();
+}
+
+void Settings::init(const QString & fileName)
+{
+	iniPath_ = fileName;
+	if(fileName.isEmpty())
+	{
+		iniPath_ = iniDefaultPath();
+	}
+	loadSettings(iniPath_);
+}
+
+void Settings::loadSettings(const QString & fileName)
 {
 	QString path = fileName;
 	if(fileName.isEmpty())
 	{
-		path = iniDefaultPath();
+		path = iniPath();
 	}
 	QSettings ini(path, QSettings::IniFormat);
 	for(ParametersMap::const_iterator iter = defaultParameters_.begin(); iter!=defaultParameters_.end(); ++iter)
@@ -62,38 +83,53 @@ void Settings::loadSettings(const QString & fileName, QByteArray * windowGeometr
 				str = getParameter(key).toString();
 				str[0] = index.toAscii();
 				value = QVariant(str);
-				printf("Updated list of parameter \"%s\"\n", key.toStdString().c_str());
+				UINFO("Updated list of parameter \"%s\"", key.toStdString().c_str());
 			}
 			setParameter(key, value);
 		}
 	}
 
-	if(windowGeometry)
+	if(cv::gpu::getCudaEnabledDeviceCount() == 0)
 	{
-		QVariant value = ini.value("windowGeometry", QVariant());
-		if(value.isValid())
-		{
-			*windowGeometry = value.toByteArray();
-		}
-	}
-	if(windowState)
-	{
-		QVariant value = ini.value("windowState", QVariant());
-		if(value.isValid())
-		{
-			*windowState = value.toByteArray();
-		}
+		Settings::setFeature2D_SURF_gpu(false);
+		Settings::setFeature2D_Fast_gpu(false);
+		Settings::setFeature2D_ORB_gpu(false);
 	}
 
-	printf("Settings loaded from %s\n", path.toStdString().c_str());
+	UINFO("Settings loaded from %s", path.toStdString().c_str());
 }
 
-void Settings::saveSettings(const QString & fileName, const QByteArray & windowGeometry, const QByteArray & windowState)
+void Settings::loadWindowSettings(QByteArray & windowGeometry, QByteArray & windowState, const QString & fileName)
 {
 	QString path = fileName;
 	if(fileName.isEmpty())
 	{
-		path = iniDefaultPath();
+		path = iniPath();
+	}
+
+	QSettings ini(path, QSettings::IniFormat);
+
+	QVariant value = ini.value("windowGeometry", QVariant());
+	if(value.isValid())
+	{
+		windowGeometry = value.toByteArray();
+	}
+
+	value = ini.value("windowState", QVariant());
+	if(value.isValid())
+	{
+		windowState = value.toByteArray();
+	}
+
+	UINFO("Window settings loaded from %s", path.toStdString().c_str());
+}
+
+void Settings::saveSettings(const QString & fileName)
+{
+	QString path = fileName;
+	if(fileName.isEmpty())
+	{
+		path = iniPath();
 	}
 	QSettings ini(path, QSettings::IniFormat);
 	for(ParametersMap::const_iterator iter = parameters_.begin(); iter!=parameters_.end(); ++iter)
@@ -108,6 +144,17 @@ void Settings::saveSettings(const QString & fileName, const QByteArray & windowG
 			ini.setValue(iter.key(), iter.value());
 		}
 	}
+	UINFO("Settings saved to %s", path.toStdString().c_str());
+}
+
+void Settings::saveWindowSettings(const QByteArray & windowGeometry, const QByteArray & windowState, const QString & fileName)
+{
+	QString path = fileName;
+	if(fileName.isEmpty())
+	{
+		path = iniPath();
+	}
+	QSettings ini(path, QSettings::IniFormat);
 	if(!windowGeometry.isEmpty())
 	{
 		ini.setValue("windowGeometry", windowGeometry);
@@ -116,7 +163,7 @@ void Settings::saveSettings(const QString & fileName, const QByteArray & windowG
 	{
 		ini.setValue("windowState", windowState);
 	}
-	printf("Settings saved to %s\n", path.toStdString().c_str());
+	UINFO("Window settings saved to %s", path.toStdString().c_str());
 }
 
 class GPUFeature2D
@@ -161,7 +208,8 @@ public:
 		}
 		catch(cv::Exception &e)
 		{
-			printf("GPUSURF error: %s \n(If something about layer_rows, parameter nOctaves=%d of SURF is too high for the size of the image (%d,%d).)\n",
+			UERROR("GPUSURF error: %s \n(If something about layer_rows, parameter nOctaves=%d of SURF "
+					"is too high for the size of the image (%d,%d).)",
 					e.msg.c_str(),
 					surf_.nOctaves,
 					image.cols,
@@ -182,7 +230,8 @@ public:
     	}
 		catch(cv::Exception &e)
 		{
-			printf("GPUSURF error: %s \n(If something about layer_rows, parameter nOctaves=%d of SURF is too high for the size of the image (%d,%d).)\n",
+			UERROR("GPUSURF error: %s \n(If something about layer_rows, parameter nOctaves=%d of SURF "
+					"is too high for the size of the image (%d,%d).)",
 					e.msg.c_str(),
 					surf_.nOctaves,
 					image.cols,
@@ -226,7 +275,7 @@ protected:
 		std::vector<cv::KeyPoint>& keypoints,
 		cv::Mat& descriptors)
 	{
-		printf("GPUFAST:computeDescriptors() Should not be used!\n");
+		UERROR("GPUFAST:computeDescriptors() Should not be used!");
 	}
 
 private:
@@ -269,7 +318,7 @@ protected:
     	}
     	catch(cv::Exception &e)
 		{
-			printf("GPUORB error: %s \n(If something about matrix size, the image/object may be too small (%d,%d).)\n",
+    		UERROR("GPUORB error: %s \n(If something about matrix size, the image/object may be too small (%d,%d).)",
 					e.msg.c_str(),
 					image.cols,
 					image.rows);
@@ -289,7 +338,7 @@ protected:
 		}
 		catch(cv::Exception &e)
 		{
-			printf("GPUORB error: %s \n(If something about matrix size, the image/object may be too small (%d,%d).)\n",
+			UERROR("GPUORB error: %s \n(If something about matrix size, the image/object may be too small (%d,%d).)",
 					e.msg.c_str(),
 					image.cols,
 					image.rows);
@@ -759,7 +808,7 @@ cv::flann::IndexParams * Settings::createFlannIndexParams()
 	}
 	if(!params)
 	{
-		printf("ERROR: NN strategy not found !? Using default KDTRee...\n");
+		UERROR("NN strategy not found !? Using default KDTRee...");
 		params = new cv::flann::KDTreeIndexParams();
 	}
 	return params ;

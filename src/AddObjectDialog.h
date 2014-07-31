@@ -16,6 +16,7 @@ class Camera;
 class KeypointItem;
 class KeypointDetector;
 class DescriptorExtractor;
+class ObjSignature;
 
 class AddObjectDialog : public QDialog {
 
@@ -26,7 +27,7 @@ public:
 	virtual ~AddObjectDialog();
 
 	// ownership transferred to caller
-	ObjWidget * retrieveObject() {ObjWidget * obj = object_; object_=0; return obj;}
+	void retrieveObject(ObjWidget ** widget, ObjSignature ** signature);
 
 private Q_SLOTS:
 	void update(const cv::Mat &);
@@ -35,7 +36,7 @@ private Q_SLOTS:
 	void cancel();
 	void takePicture();
 	void updateNextButton();
-	void updateNextButton(const QRect &);
+	void updateNextButton(const cv::Rect &);
 	void changeSelectionMode();
 
 protected:
@@ -47,14 +48,15 @@ private:
 private:
 	Ui_addObjectDialog * ui_;
 	Camera * camera_;
-	ObjWidget * object_;
-	cv::Mat cvImage_;
+	ObjWidget * objWidget_;
+	ObjSignature * objSignature_;
+	cv::Mat cameraImage_;
+	cv::Rect roi_;
 	KeypointDetector * detector_;
 	DescriptorExtractor * extractor_;
 
 	enum State{kTakePicture, kSelectFeatures, kVerifySelection, kClosing};
 	int state_;
-	QRect roi_;
 };
 
 #endif /* ADDOBJECTDIALOG_H_ */
