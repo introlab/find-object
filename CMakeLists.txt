@@ -12,6 +12,9 @@ ELSE ()
 ENDIF()
 #ADD_DEFINITIONS("-DUNICODE") # to test with UNICODE projects
 
+####### local cmake modules #######
+SET(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake_modules")
+
 #######################
 # VERSION
 #######################
@@ -78,7 +81,8 @@ set(INSTALL_CMAKE_DIR ${DEF_INSTALL_CMAKE_DIR} CACHE PATH
 
 ####### DEPENDENCIES #######
 FIND_PACKAGE(OpenCV REQUIRED) # tested on 2.3.1
-FIND_PACKAGE(Qt4 COMPONENTS QtCore QtGui QtNetwork) # tested on Qt4.7
+FIND_PACKAGE(Qt4 COMPONENTS QtCore QtGui QtNetwork REQUIRED) # tested on Qt4.8
+FIND_PACKAGE(JSONCPP)
 ADD_DEFINITIONS(-DQT_NO_KEYWORDS) # To avoid conflicts with boost signals used in ROS
 
 ####### OSX BUNDLE CMAKE_INSTALL_PREFIX #######
@@ -103,9 +107,7 @@ ENDIF(APPLE AND BUILD_AS_BUNDLE)
 ADD_SUBDIRECTORY( src )
 ADD_SUBDIRECTORY( app )
 ADD_SUBDIRECTORY( example )
-ADD_SUBDIRECTORY( tcpClient )
-ADD_SUBDIRECTORY( imagesTcpServer )
-ADD_SUBDIRECTORY( console_app )
+ADD_SUBDIRECTORY( tools )
 
 
 
@@ -221,4 +223,9 @@ MESSAGE(STATUS "  CMAKE_BUILD_TYPE = ${CMAKE_BUILD_TYPE}")
 IF(APPLE)
 MESSAGE(STATUS "  BUILD_AS_BUNDLE = ${BUILD_AS_BUNDLE}")
 ENDIF(APPLE)
+IF(JSONCPP_FOUND)
+MESSAGE(STATUS "  With JSONCPP  = YES")
+ELSE()
+MESSAGE(STATUS "  With JSONCPP  = NO (libjsoncpp not found)")
+ENDIF()
 MESSAGE(STATUS "--------------------------------------------")

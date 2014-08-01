@@ -50,6 +50,7 @@ public Q_SLOTS:
 	void startProcessing();
 	void stopProcessing();
 	void pauseProcessing();
+	void update(const cv::Mat & image = cv::Mat());
 
 private Q_SLOTS:
 	void loadSettings();
@@ -67,7 +68,6 @@ private Q_SLOTS:
 	void updateObjectsSize();
 	void updateMirrorView();
 	void showHideControls();
-	void update(const cv::Mat & image = cv::Mat());
 	void updateObjects();
 	void notifyParametersChanged(const QStringList & param);
 	void moveCameraFrame(int frame);

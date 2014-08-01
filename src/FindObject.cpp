@@ -594,6 +594,8 @@ private:
 
 void FindObject::detect(const cv::Mat & image)
 {
+	QTime time;
+	time.start();
 	QMultiMap<int,QPair<QRect,QTransform> > objects;
 	this->detect(image, objects);
 	if(objects.size() > 0 || Settings::getGeneral_sendNoObjDetectedEvents())
@@ -603,20 +605,23 @@ void FindObject::detect(const cv::Mat & image)
 
 	if(objects.size() > 1)
 	{
-		UINFO("(%s) %d objects detected!",
+		UINFO("(%s) %d objects detected! (%d ms)",
 				QTime::currentTime().toString("HH:mm:ss.zzz").toStdString().c_str(),
-				(int)objects.size());
+				(int)objects.size(),
+				time.elapsed());
 	}
 	else if(objects.size() == 1)
 	{
-		UINFO("(%s) Object %d detected!",
+		UINFO("(%s) Object %d detected! (%d ms)",
 				QTime::currentTime().toString("HH:mm:ss.zzz").toStdString().c_str(),
-				(int)objects.begin().key());
+				(int)objects.begin().key(),
+				time.elapsed());
 	}
 	else if(Settings::getGeneral_sendNoObjDetectedEvents())
 	{
-		UINFO("(%s) No objects detected.",
-				QTime::currentTime().toString("HH:mm:ss.zzz").toStdString().c_str());
+		UINFO("(%s) No objects detected. (%d ms)",
+				QTime::currentTime().toString("HH:mm:ss.zzz").toStdString().c_str(),
+				time.elapsed());
 	}
 }
 
@@ -626,6 +631,7 @@ bool FindObject::detect(const cv::Mat & image, QMultiMap<int,QPair<QRect,QTransf
 	totalTime.start();
 
 	// reset statistics
+	objectsDetected_.clear();
 	timeStamps_.clear();
 	sceneKeypoints_.clear();
 	sceneDescriptors_ = cv::Mat();
@@ -934,6 +940,7 @@ bool FindObject::detect(const cv::Mat & image, QMultiMap<int,QPair<QRect,QTransf
 		}
 	}
 
+	objectsDetected_ = objectsDetected;
 	timeStamps_.insert(kTimeTotal, totalTime.elapsed());
 
 	return success;

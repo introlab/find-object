@@ -53,6 +53,7 @@ public:
 	const QMap<int, ObjSignature*> & objects() const {return objects_;}
 	const Vocabulary * vocabulary() const {return vocabulary_;}
 
+	const QMultiMap<int,QPair<QRect,QTransform> > & objectsDetected() const {return objectsDetected_;}
 	const QMap<TimeStamp, float> & timeStamps() const {return timeStamps_;}
 	const std::vector<cv::KeyPoint> & sceneKeypoints() const {return sceneKeypoints_;}
 	const cv::Mat & sceneDescriptors() const {return sceneDescriptors_;}
@@ -66,7 +67,7 @@ public:
 	float maxMatchedDistance() const {return maxMatchedDistance_;}
 
 public Q_SLOTS:
-	void detect(const cv::Mat & image);
+	void detect(const cv::Mat & image); // emit objectsfound()
 
 Q_SIGNALS:
 	void objectsFound(const QMultiMap<int, QPair<QRect, QTransform> > &);
@@ -82,6 +83,7 @@ private:
 	KeypointDetector * detector_;
 	DescriptorExtractor * extractor_;
 
+	QMultiMap<int,QPair<QRect,QTransform> > objectsDetected_;
 	QMap<TimeStamp, float> timeStamps_;
 	std::vector<cv::KeyPoint> sceneKeypoints_;
 	cv::Mat sceneDescriptors_;
