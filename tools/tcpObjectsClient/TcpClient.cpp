@@ -12,15 +12,13 @@
 #include <QtCore/QPointF>
 #include <QtCore/QTime>
 
-TcpClient::TcpClient(const QString & hostname, quint16 port, QObject *parent) :
+TcpClient::TcpClient(QObject *parent) :
 	QTcpSocket(parent),
     blockSize_(0)
 {
 	connect(this, SIGNAL(readyRead()), this, SLOT(readReceivedData()));
 	connect(this, SIGNAL(error(QAbstractSocket::SocketError)), this, SLOT(displayError(QAbstractSocket::SocketError)));
 	connect(this, SIGNAL(disconnected()), this, SLOT(connectionLost()));
-
-	this->connectToHost(hostname, port);
 }
 
 void TcpClient::readReceivedData()

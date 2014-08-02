@@ -240,8 +240,7 @@ int main(int argc, char* argv[])
 				}
 				if(!QFile::exists(configPath))
 				{
-					UERROR("Configuration file doesn't exist : %s", configPath.toStdString().c_str());
-					showUsage();
+					UWARN("Configuration file \"%s\" doesn't exist, it will be created with default values...", configPath.toStdString().c_str());
 				}
 			}
 			else
@@ -292,7 +291,7 @@ int main(int argc, char* argv[])
 	UINFO("   Scene path: \"%s\"", scenePath.toStdString().c_str());
 	UINFO("   Settings path: \"%s\"", configPath.toStdString().c_str());
 #ifdef WITH_JSONCPP
-	UINFO("   JSON path: \"%s\"", configPath.toStdString().c_str());
+	UINFO("   JSON path: \"%s\"", jsonPath.toStdString().c_str());
 #endif
 
 	//////////////////////////
@@ -355,7 +354,7 @@ int main(int argc, char* argv[])
 		QCoreApplication app(argc, argv);
 
 		TcpServer tcpServer(Settings::getGeneral_port());
-		printf("IP: %s\nport: %d\n", tcpServer.getHostAddress().toString().toStdString().c_str(), tcpServer.getPort());
+		UINFO("Detection sent on port: %d (IP=%s)", tcpServer.getPort(), tcpServer.getHostAddress().toString().toStdString().c_str());
 
 		// connect stuff:
 		// [FindObject] ---ObjectsDetected---> [TcpServer]
@@ -384,17 +383,8 @@ int main(int argc, char* argv[])
 			// start processing!
 			while(running && !camera.start())
 			{
-				if(Settings::getCamera_6useTcpCamera())
-				{
-					UWARN("Camera initialization failed! (with server %s:%d) Trying again in 1 second...",
-							Settings::getCamera_7IP().toStdString().c_str(), Settings::getCamera_8port());
-					Sleep(1000);
-				}
-				else
-				{
-					UERROR("Camera initialization failed!");
-					running = false;
-				}
+				UERROR("Camera initialization failed!");
+				running = false;
 			}
 			if(running)
 			{

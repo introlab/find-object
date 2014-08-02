@@ -15,17 +15,17 @@
 #include <QtGui/QTransform>
 
 ImagesTcpServer::ImagesTcpServer(float hz, const QString & path, QObject * parent) :
-	QTcpServer(parent)
+	QTcpSocket(parent)
 {
 	// Set camera parameters
 	Settings::setCamera_4imageRate(hz);
 	Settings::setCamera_5mediaPath(path);
 
-	connect(this, SIGNAL(newConnection()), this, SLOT(addClient()));
 	connect(&camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(publishImage(const cv::Mat &)));
+	connect(this, SIGNAL(connected()), this, SLOT(startCamera()));
 }
 
-QHostAddress ImagesTcpServer::getHostAddress() const
+QHostAddress ImagesTcpServer::getHostAddress()
 {
 	QHostAddress hostAddress;
 
@@ -49,21 +49,21 @@ QHostAddress ImagesTcpServer::getHostAddress() const
 	return hostAddress;
 }
 
-quint16 ImagesTcpServer::getPort() const
-{
-	return this->serverPort();
-}
-
 void ImagesTcpServer::publishImage(const cv::Mat & image)
 {
-	QList<QTcpSocket*> clients = this->findChildren<QTcpSocket*>();
-	if(clients.size())
+	if(image.empty())
 	{
-		std::vector<unsigned char> buf;
-		cv::imencode(".png", image, buf);
-
-		for(QList<QTcpSocket*>::iterator iter = clients.begin(); iter!=clients.end(); ++iter)
+		printf("No more images...\n");
+		camera_.pause();
+		Q_EMIT connectionLost();
+	}
+	else
+	{
+		if(this->waitForConnected())
 		{
+			std::vector<unsigned char> buf;
+			cv::imencode(".png", image, buf);
+
 			QByteArray block;
 			QDataStream out(&block, QIODevice::WriteOnly);
 			out.setVersion(QDataStream::Qt_4_0);
@@ -71,20 +71,20 @@ void ImagesTcpServer::publishImage(const cv::Mat & image)
 			out.writeRawData((char*)buf.data(), (int)buf.size());
 			out.device()->seek(0);
 			out << (quint64)(block.size() - sizeof(quint64));
-			(*iter)->write(block);
+			this->write(block);
+
 		}
-	}
-	else
-	{
-		printf("Paused...\n");
-		camera_.pause();
+		else
+		{
+			printf("Lost connection...\n");
+			camera_.pause();
+			Q_EMIT connectionLost();
+		}
 	}
 }
 
-void ImagesTcpServer::addClient()
+void ImagesTcpServer::startCamera()
 {
-	QTcpSocket * client = this->nextPendingConnection();
-	connect(client, SIGNAL(disconnected()), client, SLOT(deleteLater()));
 	if(!camera_.isRunning())
 	{
 		printf("Start...\n");

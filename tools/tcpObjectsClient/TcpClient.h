@@ -14,7 +14,7 @@ class TcpClient : public QTcpSocket
 {
 	Q_OBJECT;
 public:
-	TcpClient(const QString & hostname, quint16 port, QObject * parent = 0);
+	TcpClient(QObject * parent = 0);
 
 private Q_SLOTS:
 	void readReceivedData();

@@ -448,6 +448,13 @@
        <property name="verticalSpacing">
         <number>0</number>
        </property>
+       <item row="4" column="1">
+        <widget class="QLabel" name="label_timeMatching">
+         <property name="text">
+          <string>000</string>
+         </property>
+        </widget>
+       </item>
        <item row="3" column="2">
         <widget class="QLabel" name="label_9">
          <property name="text">
@@ -471,13 +478,6 @@
        </item>
        <item row="3" column="1">
         <widget class="QLabel" name="label_timeIndexing">
-         <property name="text">
-          <string>000</string>
-         </property>
-        </widget>
-       </item>
-       <item row="4" column="1">
-        <widget class="QLabel" name="label_timeMatching">
          <property name="text">
           <string>000</string>
          </property>
@@ -619,7 +619,7 @@
        <item row="11" column="0">
         <widget class="QLabel" name="label_19">
          <property name="text">
-          <string>Port</string>
+          <string>Output detection port</string>
          </property>
         </widget>
        </item>
@@ -655,6 +655,20 @@
         <widget class="QLabel" name="label_timeHomographies">
          <property name="text">
           <string>000</string>
+         </property>
+        </widget>
+       </item>
+       <item row="12" column="0">
+        <widget class="QLabel" name="label_21">
+         <property name="text">
+          <string>Input image port</string>
+         </property>
+        </widget>
+       </item>
+       <item row="12" column="1">
+        <widget class="QLabel" name="label_port_image">
+         <property name="text">
+          <string>NA</string>
          </property>
         </widget>
        </item>

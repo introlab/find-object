@@ -11,12 +11,12 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <QtCore/QFile>
 #include "utilite/UDirectory.h"
-#include "CameraTcpClient.h"
+#include "CameraTcpServer.h"
 
 Camera::Camera(QObject * parent) :
 	QObject(parent),
 	currentImageIndex_(0),
-	cameraTcpClient_(new CameraTcpClient(this))
+	cameraTcpServer_(0)
 {
 	qRegisterMetaType<cv::Mat>("cv::Mat");
 	connect(&cameraTimer_, SIGNAL(timeout()), this, SLOT(takeImage()));
@@ -33,7 +33,12 @@ void Camera::stop()
 	capture_.release();
 	images_.clear();
 	currentImageIndex_ = 0;
-	cameraTcpClient_->close();
+	if(cameraTcpServer_)
+	{
+		cameraTcpServer_->close();
+		delete cameraTcpServer_;
+		cameraTcpServer_ = 0;
+	}
 }
 
 void Camera::pause()
@@ -79,6 +84,15 @@ void Camera::moveToFrame(int frame)
 	}
 }
 
+int Camera::getPort()
+{
+	if(cameraTcpServer_)
+	{
+		return cameraTcpServer_->getPort();
+	}
+	return 0;
+}
+
 void Camera::takeImage()
 {
 	cv::Mat img;
@@ -93,33 +107,29 @@ void Camera::takeImage()
 			img = cv::imread(images_[currentImageIndex_++]);
 		}
 	}
-	else
+	else if(cameraTcpServer_)
 	{
-		img = cameraTcpClient_->getImage();
-		if(cameraTcpClient_->imagesBuffered() > 0 && Settings::getCamera_9queueSize() == 0)
+		img = cameraTcpServer_->getImage();
+		if(cameraTcpServer_->imagesBuffered() > 0 && Settings::getCamera_9queueSize() == 0)
 		{
-			UWARN("%d images buffered so far...", cameraTcpClient_->imagesBuffered());
-		}
-		while(img.empty() && cameraTcpClient_->waitForReadyRead())
-		{
-			img = cameraTcpClient_->getImage();
-		}
-		if(img.empty())
-		{
-			if(!cameraTcpClient_->waitForConnected())
-			{
-				UWARN("Connection is lost, trying to reconnect to server (%s:%d)... (at the rate of the camera: %d ms)",
-						Settings::getCamera_7IP().toStdString().c_str(),
-						Settings::getCamera_8port(),
-						cameraTimer_.interval());
-				cameraTcpClient_->connectToHost(Settings::getCamera_7IP(), Settings::getCamera_8port());
-			}
+			UWARN("%d images buffered so far...", cameraTcpServer_->imagesBuffered());
 		}
 	}
 
 	if(img.empty())
 	{
-		UWARN("Camera: Could not grab a frame, the end of the feed may be reached...");
+		if(cameraTcpServer_)
+		{
+			if(!cameraTcpServer_->isConnected())
+			{
+				cameraTcpServer_->waitForNewConnection(100);
+			}
+		}
+		else
+		{
+			// In case of a directory of images or a video
+			Q_EMIT imageReceived(cv::Mat()); // empty image to notify that there are no more images
+		}
 	}
 	else
 	{
@@ -146,17 +156,22 @@ void Camera::takeImage()
 
 bool Camera::start()
 {
-	if(!capture_.isOpened() && images_.empty() && !cameraTcpClient_->isOpen())
+	if(!capture_.isOpened() && images_.empty() && cameraTcpServer_ == 0)
 	{
 		if(Settings::getCamera_6useTcpCamera())
 		{
-			cameraTcpClient_->connectToHost(Settings::getCamera_7IP(), Settings::getCamera_8port());
-			if(!cameraTcpClient_->waitForConnected())
+			cameraTcpServer_ = new CameraTcpServer(Settings::getCamera_8port(), this);
+			if(!cameraTcpServer_->isListening())
 			{
-				UWARN("Camera: Cannot connect to server \"%s:%d\"",
-						Settings::getCamera_7IP().toStdString().c_str(),
-						Settings::getCamera_8port());
-				cameraTcpClient_->close();
+				UWARN("CameraTCP: Cannot listen to port %d", cameraTcpServer_->getPort());
+				delete cameraTcpServer_;
+				cameraTcpServer_ = 0;
+			}
+			else
+			{
+				UINFO("CameraTCP: listening to port %d (IP=%s)",
+						cameraTcpServer_->getPort(),
+						cameraTcpServer_->getHostAddress().toString().toStdString().c_str());
 			}
 		}
 		else
@@ -215,7 +230,7 @@ bool Camera::start()
 			}
 		}
 	}
-	if(!capture_.isOpened() && images_.empty() && !cameraTcpClient_->isOpen())
+	if(!capture_.isOpened() && images_.empty() && cameraTcpServer_ == 0)
 	{
 		UERROR("Camera: Failed to open a capture object!");
 		return false;

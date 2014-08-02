@@ -5,26 +5,28 @@
  *      Author: mathieu
  */
 
-#ifndef TCPCLIENT_H_
-#define TCPCLIENT_H_
+#ifndef IMAGESTCPSERVER_H_
+#define IMAGESTCPSERVER_H_
 
 #include "find_object/Camera.h"
-#include <QtNetwork/QTcpServer>
+#include <QtNetwork/QTcpSocket>
 
-class ImagesTcpServer : public QTcpServer
+class ImagesTcpServer : public QTcpSocket
 {
 	Q_OBJECT
 
 public:
+	static QHostAddress getHostAddress();
+
+public:
 	ImagesTcpServer(float hz = 10.0f, const QString & path = "", QObject * parent = 0);
 
-	QHostAddress getHostAddress() const;
-	quint16 getPort() const;
-
-
 private Q_SLOTS:
-	void addClient();
+	void startCamera();
 	void publishImage(const cv::Mat & image);
+
+Q_SIGNALS:
+	void connectionLost();
 
 private:
 	Camera camera_;

@@ -363,6 +363,11 @@ void AddObjectDialog::update(const cv::Mat & image)
 		ui_->cameraView->setData(keypoints, cvtCvMat2QImage(cameraImage_));
 		ui_->cameraView->update();
 	}
+	else
+	{
+		UWARN("Camera cannot get more images (maybe the end of stream is reached)...");
+		camera_->stop();
+	}
 }
 
 cv::Rect AddObjectDialog::computeROI(const std::vector<cv::KeyPoint> & kpts)

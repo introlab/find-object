@@ -12,7 +12,7 @@
 #include <QtCore/QTimer>
 #include <QtGui/QImage>
 
-class CameraTcpClient;
+class CameraTcpServer;
 
 class FINDOBJECT_EXP Camera : public QObject {
 	Q_OBJECT
@@ -27,6 +27,7 @@ public:
 	void pause();
 	int getTotalFrames();
 	int getCurrentFrameIndex();
+	int getPort();
 	void moveToFrame(int frame);
 
 Q_SIGNALS:
@@ -45,7 +46,7 @@ private:
 	QTimer cameraTimer_;
 	QList<std::string> images_;
 	unsigned int currentImageIndex_;
-	CameraTcpClient * cameraTcpClient_;
+	CameraTcpServer * cameraTcpServer_;
 };
 
 #endif /* CAMERA_H_ */

@@ -8,7 +8,7 @@ SET(headers_ui
 	../include/${PROJECT_PREFIX}/TcpServer.h
 	../include/${PROJECT_PREFIX}/ObjWidget.h
 	./AddObjectDialog.h
-	./CameraTcpClient.h
+	./CameraTcpServer.h
 	./ParametersToolBox.h
 	./AboutDialog.h
 	./RectItem.h
@@ -46,7 +46,7 @@ SET(SRC_FILES
 	./RectItem.cpp
 	./QtOpenCV.cpp
 	./Camera.cpp
-	./CameraTcpClient.cpp
+	./CameraTcpServer.cpp
 	./ParametersToolBox.cpp
 	./Settings.cpp
 	./ObjWidget.cpp

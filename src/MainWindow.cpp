@@ -99,8 +99,8 @@ MainWindow::MainWindow(FindObject * findObject, Camera * camera, QWidget * paren
 		ui_->toolBox->getParameterWidget(Settings::kCamera_3imageHeight())->setEnabled(false);
 		ui_->toolBox->getParameterWidget(Settings::kCamera_5mediaPath())->setEnabled(false);
 		ui_->toolBox->getParameterWidget(Settings::kCamera_6useTcpCamera())->setEnabled(false);
-		ui_->toolBox->getParameterWidget(Settings::kCamera_7IP())->setEnabled(false);
 		ui_->toolBox->getParameterWidget(Settings::kCamera_8port())->setEnabled(false);
+		ui_->toolBox->getParameterWidget(Settings::kCamera_9queueSize())->setEnabled(false);
 		ui_->actionCamera_from_video_file->setVisible(false);
 		ui_->actionCamera_from_TCP_IP->setVisible(false);
 		ui_->actionCamera_from_directory_of_images->setVisible(false);
@@ -270,7 +270,7 @@ void MainWindow::setupTCPServer()
 	connect(this, SIGNAL(objectsFound(QMultiMap<int,QPair<QRect,QTransform> >)), tcpServer_, SLOT(publishObjects(QMultiMap<int,QPair<QRect,QTransform> >)));
 	ui_->label_ipAddress->setText(tcpServer_->getHostAddress().toString());
 	ui_->label_port->setNum(tcpServer_->getPort());
-	UINFO("IP: %s port: %d", tcpServer_->getHostAddress().toString().toStdString().c_str(), tcpServer_->getPort());
+	UINFO("Detection sent on port: %d (IP=%s)", tcpServer_->getPort(), tcpServer_->getHostAddress().toString().toStdString().c_str());
 }
 
 void MainWindow::setSourceImageText(const QString & text)
@@ -430,6 +430,10 @@ void MainWindow::removeObject(ObjWidget * object)
 		}
 		findObject_->removeObject(object->id());
 		object->deleteLater();
+		if(Settings::getGeneral_autoUpdateObjects())
+		{
+			this->updateVocabulary();
+		}
 		if(!camera_->isRunning() && !sceneImage_.empty())
 		{
 			this->update();
@@ -641,19 +645,20 @@ void MainWindow::setupCameraFromTcpIp()
 	}
 	else
 	{
-		QString ip = QInputDialog::getText(this, tr("Server IP..."), "IP: ", QLineEdit::Normal, Settings::getCamera_7IP());
-		if(!ip.isEmpty())
-		{
-			int port = QInputDialog::getInteger(this, tr("Server port..."), "Port: ", Settings::getCamera_8port());
+		bool ok;
+		int port = QInputDialog::getInteger(this, tr("Server port..."), "Port: ", Settings::getCamera_8port(), 1, USHRT_MAX, 1, &ok);
 
-			if(port > 0)
+		if(ok)
+		{
+			int queue = QInputDialog::getInteger(this, tr("Queue size..."), "Images buffer size (0 means infinite): ", Settings::getCamera_9queueSize(), 0, 2147483647, 1, &ok);
+			if(ok)
 			{
 				Settings::setCamera_6useTcpCamera(true);
 				ui_->toolBox->updateParameter(Settings::kCamera_6useTcpCamera());
-				Settings::setCamera_7IP(ip);
-				ui_->toolBox->updateParameter(Settings::kCamera_7IP());
 				Settings::setCamera_8port(port);
 				ui_->toolBox->updateParameter(Settings::kCamera_8port());
+				Settings::setCamera_9queueSize(queue);
+				ui_->toolBox->updateParameter(Settings::kCamera_9queueSize());
 				if(camera_->isRunning())
 				{
 					this->stopProcessing();
@@ -786,6 +791,13 @@ void MainWindow::startProcessing()
 			ui_->horizontalSlider_frames->setMaximum(totalFrames-1);
 		}
 
+		//update camera port if TCP is used
+		ui_->label_port_image->setText("-");
+		if(Settings::getCamera_6useTcpCamera() && camera_->getPort())
+		{
+			ui_->label_port_image->setNum(camera_->getPort());
+		}
+
 		if(updateStatusMessage)
 		{
 			this->statusBar()->showMessage(tr("Camera started."), 2000);
@@ -800,7 +812,7 @@ void MainWindow::startProcessing()
 
 		if(Settings::getCamera_6useTcpCamera())
 		{
-			QMessageBox::critical(this, tr("Camera error"), tr("Camera initialization failed! (with server %1:%2)").arg(Settings::getCamera_7IP()).arg(Settings::getCamera_8port()));
+			QMessageBox::critical(this, tr("Camera error"), tr("Camera initialization failed! (with port %1)").arg(Settings::getCamera_8port()));
 		}
 		else
 		{
@@ -829,6 +841,7 @@ void MainWindow::stopProcessing()
 	ui_->horizontalSlider_frames->setEnabled(false);
 	ui_->horizontalSlider_frames->setValue(0);
 	ui_->label_frame->setVisible(false);
+	ui_->label_port_image->setText("-");
 }
 
 void MainWindow::pauseProcessing()
@@ -876,6 +889,12 @@ void MainWindow::rectHovered(int objId)
 
 void MainWindow::update(const cv::Mat & image)
 {
+	if(image.empty())
+	{
+		UWARN("Camera cannot get more images (maybe the end of stream is reached)...");
+		return;
+	}
+
 	// reset objects color
 	for(QMap<int, ObjWidget*>::iterator iter=objWidgets_.begin(); iter!=objWidgets_.end(); ++iter)
 	{

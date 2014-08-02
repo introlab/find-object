@@ -11,7 +11,7 @@
 
 void showUsage()
 {
-	printf("tcpClient [hostname] port\n");
+	printf("\ntcpObjectsClient [hostname] port\n");
 	exit(-1);
 }
 
@@ -37,30 +37,16 @@ int main(int argc, char * argv[])
 
 	if(ipAddress.isEmpty())
 	{
-		// find out which IP to connect to
-		 QList<QHostAddress> ipAddressesList = QNetworkInterface::allAddresses();
-		 // use the first non-localhost IPv4 address
-		 for (int i = 0; i < ipAddressesList.size(); ++i)
-		 {
-			 if (ipAddressesList.at(i) != QHostAddress::LocalHost &&
-				 ipAddressesList.at(i).toIPv4Address())
-			 {
-				 ipAddress = ipAddressesList.at(i).toString();
-				 break;
-			 }
-		 }
-		 // if we did not find one, use IPv4 localhost
-		 if (ipAddress.isEmpty())
-		 {
-			 ipAddress = QHostAddress(QHostAddress::LocalHost).toString();
-		 }
+		 ipAddress = QHostAddress(QHostAddress::LocalHost).toString();
 	}
 
 	QCoreApplication app(argc, argv);
 
 	printf("Connecting to \"%s:%d\"...\n", ipAddress.toStdString().c_str(), port);
 
-	TcpClient client(ipAddress, port);
+	TcpClient client;
+
+	client.connectToHost(ipAddress, port);
 
 	if(client.waitForConnected())
 	{

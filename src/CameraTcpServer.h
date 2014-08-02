@@ -8,21 +8,28 @@
 #ifndef CAMERATCPCLIENT_H_
 #define CAMERATCPCLIENT_H_
 
-#include <QtNetwork/QTcpSocket>
+#include <QtNetwork/QTcpServer>
 #include <opencv2/opencv.hpp>
 
-class CameraTcpClient : public QTcpSocket
+class CameraTcpServer : public QTcpServer
 {
 	Q_OBJECT;
 public:
-	CameraTcpClient(QObject * parent = 0);
+	CameraTcpServer(quint16 port = 0, QObject * parent = 0);
 	cv::Mat getImage();
 	int imagesBuffered() const {return images_.size();}
+	bool isConnected() const;
+
+	QHostAddress getHostAddress() const;
+	quint16 getPort() const;
 
 private Q_SLOTS:
 	void readReceivedData();
 	void displayError(QAbstractSocket::SocketError socketError);
 	void connectionLost();
+
+private Q_SLOTS:
+	void addClient();
 
 private:
 	quint64 blockSize_;

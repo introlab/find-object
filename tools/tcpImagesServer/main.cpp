@@ -11,11 +11,11 @@
 
 void showUsage()
 {
-	printf("imagesTcpServer [options]\n"
+	printf("\ntcpImagesServer [options] port\n"
 			"  Options:\n"
-			"    -hz #.#          Image rate (default 10 Hz).\n"
-			"    -p #             Set manually a port to which the clients will connect.\n"
-			"    -path \"\"       Set a path of a directory of images or a video file.\n");
+			"    --hz #.#          Image rate (default 10 Hz).\n"
+			"    --host #.#.#.#    Set host address.\n"
+			"    --path \"\"       Set a path of a directory of images or a video file.\n");
 	exit(-1);
 }
 
@@ -23,15 +23,19 @@ int main(int argc, char * argv[])
 {
 	QString ipAddress;
 	float hz = 10.0f;
-	quint16 port = 0;
 	QString path;
 
-	for(int i=1; i<argc; ++i)
+	if(argc < 2)
 	{
-		if(strcmp(argv[i], "-hz") == 0)
+		showUsage();
+	}
+
+	for(int i=1; i<argc-1; ++i)
+	{
+		if(strcmp(argv[i], "-hz") == 0 || strcmp(argv[i], "--hz") == 0)
 		{
 			++i;
-			if(i < argc)
+			if(i < argc-1)
 			{
 				hz = std::atof(argv[i]);
 				if(hz < 0.0f)
@@ -46,18 +50,12 @@ int main(int argc, char * argv[])
 			}
 			continue;
 		}
-		if(strcmp(argv[i], "-p") == 0)
+		if(strcmp(argv[i], "-host") == 0 || strcmp(argv[i], "--host") == 0)
 		{
 			++i;
-			if(i < argc)
+			if(i < argc-1)
 			{
-				int v = std::atoi(argv[i]);
-				if(v < 0)
-				{
-					printf("[ERROR] Port not valid : %s\n", argv[i]);
-					showUsage();
-				}
-				port = v;
+				ipAddress = argv[i];
 			}
 			else
 			{
@@ -65,10 +63,10 @@ int main(int argc, char * argv[])
 			}
 			continue;
 		}
-		if(strcmp(argv[i], "-path") == 0)
+		if(strcmp(argv[i], "-path") == 0 || strcmp(argv[i], "--path") == 0)
 		{
 			++i;
-			if(i < argc)
+			if(i < argc-1)
 			{
 				path = argv[i];
 			}
@@ -83,24 +81,29 @@ int main(int argc, char * argv[])
 		showUsage();
 	}
 
+	quint16 port = std::atoi(argv[argc-1]);
+
 	if(!path.isEmpty())
 	{
 		printf("Using images from path \"%s\"\n", path.toStdString().c_str());
 	}
 
 	QCoreApplication app(argc, argv);
-
 	ImagesTcpServer server(hz, path);
 
-	if (!server.listen(QHostAddress::Any, port))
+	QObject::connect(&server, SIGNAL(connectionLost()), &app, SLOT(quit()));
+
+	if(ipAddress.isEmpty())
 	{
-		printf("ERROR: Unable to start the TCP server: %s\n", server.errorString().toStdString().c_str());
+		ipAddress = server.getHostAddress().toString();
+	}
+	server.connectToHost(ipAddress, port);
+
+	if(!server.waitForConnected())
+	{
+		printf("ERROR: Unable to connect to %s:%d\n", ipAddress.toStdString().c_str(), port);
 		return -1;
 	}
-
-	printf("Images server waiting on \"%s:%d\"...\n",
-			server.getHostAddress().toString().toStdString().c_str(), server.getPort());
-
 	return app.exec();
 }
 
