@@ -675,12 +675,12 @@ bool FindObject::detect(const cv::Mat & image, QMultiMap<int,QPair<QRect,QTransf
 			extractor_->compute(grayscaleImg, sceneKeypoints_, sceneDescriptors_);
 			if((int)sceneKeypoints_.size() != sceneDescriptors_.rows)
 			{
-				UERROR("kpt=%d != descriptors=%d\n", (int)sceneKeypoints_.size(), sceneDescriptors_.rows);
+				UERROR("kpt=%d != descriptors=%d", (int)sceneKeypoints_.size(), sceneDescriptors_.rows);
 			}
 		}
 		else
 		{
-			UWARN("no features detected !?!\n");
+			UWARN("no features detected !?!");
 		}
 		timeStamps_.insert(kTimeDescriptorExtraction, time.restart());
 

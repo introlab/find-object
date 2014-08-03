@@ -436,7 +436,7 @@ void MainWindow::removeObject(ObjWidget * object)
 		}
 		if(!camera_->isRunning() && !sceneImage_.empty())
 		{
-			this->update();
+			this->update(sceneImage_);
 		}
 	}
 }
@@ -449,7 +449,7 @@ void MainWindow::removeAllObjects()
 	findObject_->removeAllObjects();
 	if(!camera_->isRunning() && !sceneImage_.empty())
 	{
-		this->update();
+		this->update(sceneImage_);
 	}
 }
 
@@ -529,7 +529,10 @@ void MainWindow::addObjectFromScene()
 	else
 	{
 		connect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)), Qt::UniqueConnection);
-		this->update();
+		if(!sceneImage_.empty())
+		{
+			this->update(sceneImage_);
+		}
 	}
 	delete dialog;
 }
@@ -592,6 +595,9 @@ void MainWindow::setupCameraFromVideoFile()
 		QString fileName = QFileDialog::getOpenFileName(this, tr("Setup camera from video file..."), Settings::workingDirectory(), tr("Video Files (%1)").arg(Settings::getGeneral_videoFormats()));
 		if(!fileName.isEmpty())
 		{
+			Settings::setCamera_6useTcpCamera(false);
+			ui_->toolBox->updateParameter(Settings::kCamera_6useTcpCamera());
+
 			Settings::setCamera_5mediaPath(fileName);
 			ui_->toolBox->updateParameter(Settings::kCamera_5mediaPath());
 			if(camera_->isRunning())
@@ -620,6 +626,9 @@ void MainWindow::setupCameraFromImagesDirectory()
 		QString directory = QFileDialog::getExistingDirectory(this, tr("Setup camera from directory of images..."), Settings::workingDirectory());
 		if(!directory.isEmpty())
 		{
+			Settings::setCamera_6useTcpCamera(false);
+			ui_->toolBox->updateParameter(Settings::kCamera_6useTcpCamera());
+
 			Settings::setCamera_5mediaPath(directory);
 			ui_->toolBox->updateParameter(Settings::kCamera_5mediaPath());
 			if(camera_->isRunning())
@@ -737,7 +746,7 @@ void MainWindow::updateObjects()
 
 	if(!camera_->isRunning() && !sceneImage_.empty())
 	{
-		this->update();
+		this->update(sceneImage_);
 	}
 	this->statusBar()->clearMessage();
 }
@@ -891,18 +900,20 @@ void MainWindow::update(const cv::Mat & image)
 {
 	if(image.empty())
 	{
-		UWARN("Camera cannot get more images (maybe the end of stream is reached)...");
+		UWARN("The image received is empty...");
+		if(!Settings::getCamera_6useTcpCamera())
+		{
+			UINFO("Stopping the camera...");
+			this->stopProcessing();
+		}
 		return;
 	}
+	sceneImage_ = image.clone();
 
 	// reset objects color
 	for(QMap<int, ObjWidget*>::iterator iter=objWidgets_.begin(); iter!=objWidgets_.end(); ++iter)
 	{
 		iter.value()->resetKptsColor();
-	}
-	if(!image.empty())
-	{
-		sceneImage_ = image.clone();
 	}
 
 	QMultiMap<int,QPair<QRect,QTransform> > objectsDetected;
@@ -1137,34 +1148,33 @@ void MainWindow::notifyParametersChanged(const QStringList & paramChanged)
 	//Selective update (to not update all objects for a simple camera's parameter modification)
 	bool detectorDescriptorParamsChanged = false;
 	bool nearestNeighborParamsChanged = false;
+	bool parameterChanged = false;
 	for(QStringList::const_iterator iter = paramChanged.begin(); iter!=paramChanged.end(); ++iter)
 	{
-		UINFO("Parameter changed: %s -> \"%s\"", iter->toStdString().c_str(), Settings::getParameter(*iter).toString().toStdString().c_str());
-		//UINFO("lastObjectsUpdateParameters_.value(*iter)=%s, Settings::getParameter(*iter)=%s",
-		//		lastObjectsUpdateParameters_.value(*iter).toString().toStdString().c_str(),
-		//		Settings::getParameter(*iter).toString().toStdString().c_str());
 		if(lastObjectsUpdateParameters_.value(*iter) != Settings::getParameter(*iter))
 		{
-			if(!detectorDescriptorParamsChanged && iter->contains("Feature2D"))
+			lastObjectsUpdateParameters_[*iter] = Settings::getParameter(*iter);
+			parameterChanged = true;
+			UINFO("Parameter changed: %s -> \"%s\"", iter->toStdString().c_str(), Settings::getParameter(*iter).toString().toStdString().c_str());
+
+			if(iter->contains("Feature2D"))
 			{
 				detectorDescriptorParamsChanged = true;
 			}
-			else if(!nearestNeighborParamsChanged &&
-					( (iter->contains("NearestNeighbor") && Settings::getGeneral_invertedSearch()) ||
+			else if( (iter->contains("NearestNeighbor") && Settings::getGeneral_invertedSearch()) ||
 					  iter->compare(Settings::kGeneral_invertedSearch()) == 0 ||
 					  (iter->compare(Settings::kGeneral_vocabularyIncremental()) == 0 && Settings::getGeneral_invertedSearch()) ||
-					  (iter->compare(Settings::kGeneral_threads()) == 0 && !Settings::getGeneral_invertedSearch()) ))
+					  (iter->compare(Settings::kGeneral_threads()) == 0 && !Settings::getGeneral_invertedSearch()) )
 			{
 				nearestNeighborParamsChanged = true;
 			}
-			lastObjectsUpdateParameters_[*iter] = Settings::getParameter(*iter);
-		}
 
-		if(iter->compare(Settings::kGeneral_port()) == 0 &&
-		   Settings::getGeneral_port() != ui_->label_port->text().toInt() &&
-		   Settings::getGeneral_port() != 0)
-		{
-			setupTCPServer();
+			if(iter->compare(Settings::kGeneral_port()) == 0 &&
+			   Settings::getGeneral_port() != ui_->label_port->text().toInt() &&
+			   Settings::getGeneral_port() != 0)
+			{
+				setupTCPServer();
+			}
 		}
 	}
 
@@ -1189,9 +1199,9 @@ void MainWindow::notifyParametersChanged(const QStringList & paramChanged)
 	{
 		this->statusBar()->showMessage(tr("A parameter has changed... \"Update objects\" may be required."));
 	}
-	if(!camera_->isRunning() && !sceneImage_.empty())
+	if(parameterChanged && !camera_->isRunning() && !sceneImage_.empty())
 	{
-		this->update();
+		this->update(sceneImage_);
 		ui_->label_timeRefreshRate->setVisible(false);
 	}
 

@@ -50,7 +50,7 @@ public Q_SLOTS:
 	void startProcessing();
 	void stopProcessing();
 	void pauseProcessing();
-	void update(const cv::Mat & image = cv::Mat());
+	void update(const cv::Mat & image);
 
 private Q_SLOTS:
 	void loadSettings();
