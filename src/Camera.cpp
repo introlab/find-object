@@ -128,7 +128,8 @@ void Camera::takeImage()
 		else
 		{
 			// In case of a directory of images or a video
-			Q_EMIT imageReceived(cv::Mat()); // empty image to notify that there are no more images
+			this->stop();
+			Q_EMIT finished(); // notify that there are no more images
 		}
 	}
 	else

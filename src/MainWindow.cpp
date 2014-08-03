@@ -221,6 +221,7 @@ MainWindow::MainWindow(FindObject * findObject, Camera * camera, QWidget * paren
 MainWindow::~MainWindow()
 {
 	disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
+	disconnect(camera_, SIGNAL(finished()), this, SLOT(stopProcessing()));
 	camera_->stop();
 	qDeleteAll(objWidgets_);
 	objWidgets_.clear();
@@ -496,6 +497,7 @@ void MainWindow::showHideControls()
 void MainWindow::addObjectFromScene()
 {
 	disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
+	disconnect(camera_, SIGNAL(finished()), this, SLOT(stopProcessing()));
 	AddObjectDialog * dialog;
 	bool resumeCamera = camera_->isRunning();
 	if(camera_->isRunning() || sceneImage_.empty())
@@ -529,6 +531,7 @@ void MainWindow::addObjectFromScene()
 	else
 	{
 		connect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)), Qt::UniqueConnection);
+		connect(camera_, SIGNAL(finished()), this, SLOT(stopProcessing()), Qt::UniqueConnection);
 		if(!sceneImage_.empty())
 		{
 			this->update(sceneImage_);
@@ -779,6 +782,7 @@ void MainWindow::startProcessing()
 	if(camera_->start())
 	{
 		connect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)), Qt::UniqueConnection);
+		connect(camera_, SIGNAL(finished()), this, SLOT(stopProcessing()), Qt::UniqueConnection);
 		ui_->actionStop_camera->setEnabled(true);
 		ui_->actionPause_camera->setEnabled(true);
 		ui_->actionStart_camera->setEnabled(false);
@@ -835,6 +839,7 @@ void MainWindow::stopProcessing()
 	if(camera_)
 	{
 		disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
+		disconnect(camera_, SIGNAL(finished()), this, SLOT(stopProcessing()));
 		camera_->stop();
 	}
 	ui_->actionStop_camera->setEnabled(false);
@@ -901,11 +906,6 @@ void MainWindow::update(const cv::Mat & image)
 	if(image.empty())
 	{
 		UWARN("The image received is empty...");
-		if(!Settings::getCamera_6useTcpCamera())
-		{
-			UINFO("Stopping the camera...");
-			this->stopProcessing();
-		}
 		return;
 	}
 	sceneImage_ = image.clone();

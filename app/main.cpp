@@ -376,6 +376,7 @@ int main(int argc, char* argv[])
 
 			// [Camera] ---Image---> [FindObject]
 			QObject::connect(&camera, SIGNAL(imageReceived(const cv::Mat &)), findObject, SLOT(detect(const cv::Mat &)));
+			QObject::connect(&camera, SIGNAL(finished()), &app, SLOT(quit()));
 
 			//use camera in settings
 			setupQuitSignal();

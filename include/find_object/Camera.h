@@ -32,6 +32,7 @@ public:
 
 Q_SIGNALS:
 	void imageReceived(const cv::Mat & image);
+	void finished();
 
 public Q_SLOTS:
 	virtual void updateImageRate();
