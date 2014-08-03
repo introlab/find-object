@@ -24,6 +24,7 @@
 #include <QtGui/QInputDialog>
 #include <QtGui/QPen>
 #include <QtGui/QLabel>
+#include <QtGui/QColorDialog>
 
 #include <QtCore/QDir>
 
@@ -34,7 +35,8 @@ ObjWidget::ObjWidget(QWidget * parent) :
 	id_(0),
 	graphicsView_(0),
 	graphicsViewInitialized_(false),
-	alpha_(100)
+	alpha_(100),
+	color_(Qt::red)
 {
 	setupUi();
 }
@@ -43,7 +45,8 @@ ObjWidget::ObjWidget(int id, const std::vector<cv::KeyPoint> & keypoints, const 
 	id_(id),
 	graphicsView_(0),
 	graphicsViewInitialized_(false),
-	alpha_(100)
+	alpha_(100),
+	color_(QColor((Qt::GlobalColor)((id % 11 + 7)==Qt::yellow?Qt::gray:(id % 11 + 7))))
 {
 	setupUi();
 	this->setData(keypoints, image);
@@ -89,6 +92,7 @@ void ObjWidget::setupUi()
 	sizedFeatures_->setCheckable(true);
 	sizedFeatures_->setChecked(false);
 	menu_->addSeparator();
+	setColor_ = menu_->addAction(tr("Set color..."));
 	setAlpha_ = menu_->addAction(tr("Set alpha..."));
 	menu_->addSeparator();
 	saveImage_ = menu_->addAction(tr("Save picture..."));
@@ -106,6 +110,7 @@ void ObjWidget::setupUi()
 
 void ObjWidget::setId(int id)
 {
+	color_ = QColor((Qt::GlobalColor)((id % 11 + 7)==Qt::yellow?Qt::gray:(id % 11 + 7)));
 	id_=id;
 	if(id_)
 	{
@@ -574,6 +579,35 @@ void ObjWidget::contextMenuEvent(QContextMenuEvent * event)
 	else if(action == sizedFeatures_)
 	{
 		this->setSizedFeatures(sizedFeatures_->isChecked());
+	}
+	else if(action == setColor_)
+	{
+		QColor color = QColorDialog::getColor(color_, this);
+		if(color.isValid())
+		{
+			for(int i=0; i<kptColors_.size(); ++i)
+			{
+				if(kptColors_[i] == color_)
+				{
+					kptColors_[i] = color;
+					if(graphicsViewMode_->isChecked())
+					{
+						keypointItems_[i]->setColor(color);
+					}
+				}
+			}
+			for(int i=0; i<rectItems_.size(); ++i)
+			{
+				if(rectItems_[i]->pen().color() == color_)
+				{
+					QPen p = rectItems_[i]->pen();
+					p.setColor(color);
+					rectItems_[i]->setPen(p);
+				}
+			}
+			color_ = color;
+
+		}
 	}
 	else if(action == setAlpha_)
 	{

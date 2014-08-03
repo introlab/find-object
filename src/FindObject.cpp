@@ -663,6 +663,7 @@ bool FindObject::detect(const cv::Mat & image, QMultiMap<int,QPair<QRect,QTransf
 		detector_->detect(grayscaleImg, sceneKeypoints_);
 		timeStamps_.insert(kTimeKeypointDetection, time.restart());
 
+		bool emptyScene = sceneKeypoints_.size() == 0;
 		if(sceneKeypoints_.size())
 		{
 			int maxFeatures = Settings::getFeature2D_3MaxFeatures();
@@ -677,10 +678,6 @@ bool FindObject::detect(const cv::Mat & image, QMultiMap<int,QPair<QRect,QTransf
 			{
 				UERROR("kpt=%d != descriptors=%d", (int)sceneKeypoints_.size(), sceneDescriptors_.rows);
 			}
-		}
-		else
-		{
-			UWARN("no features detected !?!");
 		}
 		timeStamps_.insert(kTimeDescriptorExtraction, time.restart());
 
@@ -937,6 +934,12 @@ bool FindObject::detect(const cv::Mat & image, QMultiMap<int,QPair<QRect,QTransf
 		else if(!objectsDescriptors_.empty() && sceneKeypoints_.size())
 		{
 			UWARN("Cannot search, objects must be updated");
+		}
+		else if(emptyScene)
+		{
+			// Accept but warn the user
+			UWARN("No features detected in the scene!?!");
+			success = true;
 		}
 	}
 

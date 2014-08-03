@@ -47,6 +47,7 @@ public:
 	void clearRoiSelection() {mousePressedPos_ = mouseCurrentPos_ = QPoint();update();}
 
 	int id() const {return id_;}
+	const QColor & color() const {return color_;}
 	const std::vector<cv::KeyPoint> keypoints() const {return keypoints_;}
 	const QPixmap & pixmap() const {return pixmap_;}
 	QColor defaultColor() const;
@@ -91,6 +92,7 @@ private:
 	bool graphicsViewInitialized_;
 	int alpha_;
 	QLabel * label_;
+	QColor color_;
 
 	// menu stuff
 	QString savedFileName_;
@@ -104,6 +106,7 @@ private:
 	QAction * autoScale_;
 	QAction * sizedFeatures_;
 	QAction * setAlpha_;
+	QAction * setColor_;
 
 	// selection stuff
 	QPoint mousePressedPos_;

@@ -950,12 +950,10 @@ void MainWindow::update(const cv::Mat & image)
 				ObjWidget * obj = objWidgets_.value(id);
 				Q_ASSERT(obj != 0);
 
-				int nColor = id % 11 + 7;
-				QColor color((Qt::GlobalColor)(nColor==Qt::yellow?Qt::gray:nColor));
 				for(QMultiMap<int, int>::const_iterator iter = jter.value().constBegin(); iter!= jter.value().constEnd(); ++iter)
 				{
-					obj->setKptColor(iter.key(), color);
-					ui_->imageView_source->setKptColor(iter.value(), color);
+					obj->setKptColor(iter.key(), obj->color());
+					ui_->imageView_source->setKptColor(iter.value(), obj->color());
 				}
 			}
 			else if(!objectsDetected.contains(id))
@@ -992,14 +990,11 @@ void MainWindow::update(const cv::Mat & image)
 			Q_ASSERT(obj != 0);
 
 			// COLORIZE (should be done in the GUI thread)
-			int nColor = id % 11 + 7;
-			QColor color((Qt::GlobalColor)(nColor==Qt::yellow?Qt::gray:nColor));
-
 			QTransform hTransform = iter.value().second;
 
 			QRect rect = obj->pixmap().rect();
 			// add rectangle
-			QPen rectPen(color);
+			QPen rectPen(obj->color());
 			rectPen.setWidth(Settings::getHomography_rectBorderWidth());
 			RectItem * rectItemScene = new RectItem(id, rect);
 			connect(rectItemScene, SIGNAL(hovered(int)), this, SLOT(rectHovered(int)));
@@ -1013,8 +1008,8 @@ void MainWindow::update(const cv::Mat & image)
 
 			for(QMultiMap<int, int>::const_iterator iter = inliersIter.value().constBegin(); iter!= inliersIter.value().constEnd(); ++iter)
 			{
-				obj->setKptColor(iter.key(), color);
-				ui_->imageView_source->setKptColor(iter.value(), color);
+				obj->setKptColor(iter.key(), obj->color());
+				ui_->imageView_source->setKptColor(iter.value(), obj->color());
 			}
 
 			QLabel * label = ui_->dockWidget_objects->findChild<QLabel*>(QString("%1detection").arg(id));
