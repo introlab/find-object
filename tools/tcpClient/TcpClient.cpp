@@ -6,7 +6,7 @@
  */
 
 #include "TcpClient.h"
-
+#include "find_object/DetectionInfo.h"
 #include <opencv2/opencv.hpp>
 #include <QtGui/QTransform>
 #include <QtCore/QPointF>
@@ -43,28 +43,29 @@ void TcpClient::readReceivedData()
 
 	blockSize_ = 0;
 
-	QVector<float> data;
-	in >> data;
+	DetectionInfo info;
+	in >> info;
 
 	printf("---\n");
-	if(data.size() == 0)
+	if(info.objDetected_.size() == 0)
 	{
 		printf("(%s) No objects detected.\n",
 				QTime::currentTime().toString("HH:mm:ss.zzz").toStdString().c_str());
 	}
 	else
 	{
-		for(int i=0; i<data.size(); i+=12)
+		QMultiMap<int, QSize>::const_iterator iterSizes = info.objDetectedSizes_.constBegin();
+		for(QMultiMap<int, QTransform>::const_iterator iter=info.objDetected_.constBegin();
+			iter!=info.objDetected_.constEnd();
+			++iter)
 		{
 			// get data
-			int id = (int)data[i];
-			float objectWidth = data[i+1];
-			float objectHeight = data[i+2];
+			int id = (int)iter.key();
+			float objectWidth = iterSizes.value().width();
+			float objectHeight = iterSizes.value().height();
 
 			// Find corners Qt
-			QTransform qtHomography(data[i+3], data[i+4], data[i+5],
-			data[i+6], data[i+7], data[i+8],
-			data[i+9], data[i+10], data[i+11]);
+			QTransform qtHomography = iter.value();
 
 			QPointF qtTopLeft = qtHomography.map(QPointF(0,0));
 			QPointF qtTopRight = qtHomography.map(QPointF(objectWidth,0));
@@ -84,15 +85,15 @@ void TcpClient::readReceivedData()
 			{
 				// Find corners OpenCV
 				cv::Mat cvHomography(3, 3, CV_32F);
-				cvHomography.at<float>(0,0) = data[i+3];
-				cvHomography.at<float>(1,0) = data[i+4];
-				cvHomography.at<float>(2,0) = data[i+5];
-				cvHomography.at<float>(0,1) = data[i+6];
-				cvHomography.at<float>(1,1) = data[i+7];
-				cvHomography.at<float>(2,1) = data[i+8];
-				cvHomography.at<float>(0,2) = data[i+9];
-				cvHomography.at<float>(1,2) = data[i+10];
-				cvHomography.at<float>(2,2) = data[i+11];
+				cvHomography.at<float>(0,0) = qtHomography.m11();
+				cvHomography.at<float>(1,0) = qtHomography.m12();
+				cvHomography.at<float>(2,0) = qtHomography.m13();
+				cvHomography.at<float>(0,1) = qtHomography.m21();
+				cvHomography.at<float>(1,1) = qtHomography.m22();
+				cvHomography.at<float>(2,1) = qtHomography.m23();
+				cvHomography.at<float>(0,2) = qtHomography.m31();
+				cvHomography.at<float>(1,2) = qtHomography.m32();
+				cvHomography.at<float>(2,2) = qtHomography.m33();
 				std::vector<cv::Point2f> inPts, outPts;
 				inPts.push_back(cv::Point2f(0,0));
 				inPts.push_back(cv::Point2f(objectWidth,0));
@@ -108,6 +109,8 @@ void TcpClient::readReceivedData()
 						outPts.at(2).x, outPts.at(2).y,
 						outPts.at(3).x, outPts.at(3).y);
 			}
+
+			++iterSizes;
 		}
 	}
 }
