@@ -23,10 +23,9 @@ FindObject::FindObject(QObject * parent) :
 	QObject(parent),
 	vocabulary_(new Vocabulary()),
 	detector_(Settings::createKeypointDetector()),
-	extractor_(Settings::createDescriptorExtractor()),
-	minMatchedDistance_(-1),
-	maxMatchedDistance_(-1)
+	extractor_(Settings::createDescriptorExtractor())
 {
+	qRegisterMetaType<DetectionInfo>("DetectionInfo");
 	Q_ASSERT(detector_ != 0 && extractor_ != 0);
 }
 
@@ -87,16 +86,16 @@ const ObjSignature * FindObject::addObject(const QString & filePath)
 					id = 0;
 				}
 			}
-			return this->addObject(img, id);
+			return this->addObject(img, id, file.fileName());
 		}
 	}
 	return 0;
 }
 
-const ObjSignature * FindObject::addObject(const cv::Mat & image, int id)
+const ObjSignature * FindObject::addObject(const cv::Mat & image, int id, const QString & filename)
 {
 	Q_ASSERT(id >= 0);
-	ObjSignature * s = new ObjSignature(id, image);
+	ObjSignature * s = new ObjSignature(id, image, filename);
 	if(!this->addObject(s))
 	{
 		delete s;
@@ -596,25 +595,25 @@ void FindObject::detect(const cv::Mat & image)
 {
 	QTime time;
 	time.start();
-	QMultiMap<int,QPair<QRect,QTransform> > objects;
-	this->detect(image, objects);
-	if(objects.size() > 0 || Settings::getGeneral_sendNoObjDetectedEvents())
+	DetectionInfo info;
+	this->detect(image, info);
+	if(info.objDetected_.size() > 0 || Settings::getGeneral_sendNoObjDetectedEvents())
 	{
-		Q_EMIT objectsFound(objects);
+		Q_EMIT objectsFound(info);
 	}
 
-	if(objects.size() > 1)
+	if(info.objDetected_.size() > 1)
 	{
 		UINFO("(%s) %d objects detected! (%d ms)",
 				QTime::currentTime().toString("HH:mm:ss.zzz").toStdString().c_str(),
-				(int)objects.size(),
+				(int)info.objDetected_.size(),
 				time.elapsed());
 	}
-	else if(objects.size() == 1)
+	else if(info.objDetected_.size() == 1)
 	{
 		UINFO("(%s) Object %d detected! (%d ms)",
 				QTime::currentTime().toString("HH:mm:ss.zzz").toStdString().c_str(),
-				(int)objects.begin().key(),
+				(int)info.objDetected_.begin().key(),
 				time.elapsed());
 	}
 	else if(Settings::getGeneral_sendNoObjDetectedEvents())
@@ -625,22 +624,13 @@ void FindObject::detect(const cv::Mat & image)
 	}
 }
 
-bool FindObject::detect(const cv::Mat & image, QMultiMap<int,QPair<QRect,QTransform> > & objectsDetected)
+bool FindObject::detect(const cv::Mat & image, DetectionInfo & info)
 {
 	QTime totalTime;
 	totalTime.start();
 
 	// reset statistics
-	objectsDetected_.clear();
-	timeStamps_.clear();
-	sceneKeypoints_.clear();
-	sceneDescriptors_ = cv::Mat();
-	sceneWords_.clear();
-	matches_.clear();
-	inliers_.clear();
-	outliers_.clear();
-	minMatchedDistance_ = -1.0f;
-	maxMatchedDistance_ = -1.0f;
+	info = DetectionInfo();
 
 	bool success = false;
 	if(!image.empty())
@@ -660,36 +650,36 @@ bool FindObject::detect(const cv::Mat & image, QMultiMap<int,QPair<QRect,QTransf
 		time.start();
 
 		// EXTRACT KEYPOINTS
-		detector_->detect(grayscaleImg, sceneKeypoints_);
-		timeStamps_.insert(kTimeKeypointDetection, time.restart());
+		detector_->detect(grayscaleImg, info.sceneKeypoints_);
+		info.timeStamps_.insert(DetectionInfo::kTimeKeypointDetection, time.restart());
 
-		bool emptyScene = sceneKeypoints_.size() == 0;
-		if(sceneKeypoints_.size())
+		bool emptyScene = info.sceneKeypoints_.size() == 0;
+		if(info.sceneKeypoints_.size())
 		{
 			int maxFeatures = Settings::getFeature2D_3MaxFeatures();
-			if(maxFeatures > 0 && (int)sceneKeypoints_.size() > maxFeatures)
+			if(maxFeatures > 0 && (int)info.sceneKeypoints_.size() > maxFeatures)
 			{
-				sceneKeypoints_ = limitKeypoints(sceneKeypoints_, maxFeatures);
+				info.sceneKeypoints_ = limitKeypoints(info.sceneKeypoints_, maxFeatures);
 			}
 
 			// EXTRACT DESCRIPTORS
-			extractor_->compute(grayscaleImg, sceneKeypoints_, sceneDescriptors_);
-			if((int)sceneKeypoints_.size() != sceneDescriptors_.rows)
+			extractor_->compute(grayscaleImg, info.sceneKeypoints_, info.sceneDescriptors_);
+			if((int)info.sceneKeypoints_.size() != info.sceneDescriptors_.rows)
 			{
-				UERROR("kpt=%d != descriptors=%d", (int)sceneKeypoints_.size(), sceneDescriptors_.rows);
+				UERROR("kpt=%d != descriptors=%d", (int)info.sceneKeypoints_.size(), info.sceneDescriptors_.rows);
 			}
 		}
-		timeStamps_.insert(kTimeDescriptorExtraction, time.restart());
+		info.timeStamps_.insert(DetectionInfo::kTimeDescriptorExtraction, time.restart());
 
 		bool consistentNNData = (vocabulary_->size()!=0 && vocabulary_->wordToObjects().begin().value()!=-1 && Settings::getGeneral_invertedSearch()) ||
 								((vocabulary_->size()==0 || vocabulary_->wordToObjects().begin().value()==-1) && !Settings::getGeneral_invertedSearch());
 
 		// COMPARE
 		if(!objectsDescriptors_.empty() &&
-			sceneKeypoints_.size() &&
+			info.sceneKeypoints_.size() &&
 		   consistentNNData &&
-		   objectsDescriptors_.begin().value().cols == sceneDescriptors_.cols &&
-		   objectsDescriptors_.begin().value().type() == sceneDescriptors_.type()) // binary descriptor issue, if the dataTree is not yet updated with modified settings
+		   objectsDescriptors_.begin().value().cols == info.sceneDescriptors_.cols &&
+		   objectsDescriptors_.begin().value().type() == info.sceneDescriptors_.type()) // binary descriptor issue, if the dataTree is not yet updated with modified settings
 		{
 			success = true;
 
@@ -699,17 +689,17 @@ bool FindObject::detect(const cv::Mat & image, QMultiMap<int,QPair<QRect,QTransf
 			{
 				// CREATE INDEX for the scene
 				vocabulary_->clear();
-				words = vocabulary_->addWords(sceneDescriptors_, -1, Settings::getGeneral_vocabularyIncremental());
+				words = vocabulary_->addWords(info.sceneDescriptors_, -1, Settings::getGeneral_vocabularyIncremental());
 				if(!Settings::getGeneral_vocabularyIncremental())
 				{
 					vocabulary_->update();
 				}
-				timeStamps_.insert(kTimeIndexing, time.restart());
+				info.timeStamps_.insert(DetectionInfo::kTimeIndexing, time.restart());
 			}
 
 			for(QMap<int, ObjSignature*>::iterator iter=objects_.begin(); iter!=objects_.end(); ++iter)
 			{
-				matches_.insert(iter.key(), QMultiMap<int, int>());
+				info.matches_.insert(iter.key(), QMultiMap<int, int>());
 			}
 
 			if(Settings::getGeneral_invertedSearch() || Settings::getGeneral_threads() == 1)
@@ -728,9 +718,9 @@ bool FindObject::detect(const cv::Mat & image, QMultiMap<int,QPair<QRect,QTransf
 				else
 				{
 					//match scene to objects
-					results = cv::Mat(sceneDescriptors_.rows, k, CV_32SC1); // results index
-					dists = cv::Mat(sceneDescriptors_.rows, k, CV_32FC1); // Distance results are CV_32FC1
-					vocabulary_->search(sceneDescriptors_, results, dists, k);
+					results = cv::Mat(info.sceneDescriptors_.rows, k, CV_32SC1); // results index
+					dists = cv::Mat(info.sceneDescriptors_.rows, k, CV_32FC1); // Distance results are CV_32FC1
+					vocabulary_->search(info.sceneDescriptors_, results, dists, k);
 				}
 
 				// PROCESS RESULTS
@@ -761,13 +751,13 @@ bool FindObject::detect(const cv::Mat & image, QMultiMap<int,QPair<QRect,QTransf
 					{
 						matched = true; // no criterion, match to the nearest descriptor
 					}
-					if(minMatchedDistance_ == -1 || minMatchedDistance_ > dists.at<float>(i,0))
+					if(info.minMatchedDistance_ == -1 || info.minMatchedDistance_ > dists.at<float>(i,0))
 					{
-						minMatchedDistance_ = dists.at<float>(i,0);
+						info.minMatchedDistance_ = dists.at<float>(i,0);
 					}
-					if(maxMatchedDistance_ == -1 || maxMatchedDistance_ < dists.at<float>(i,0))
+					if(info.maxMatchedDistance_ == -1 || info.maxMatchedDistance_ < dists.at<float>(i,0))
 					{
-						maxMatchedDistance_ = dists.at<float>(i,0);
+						info.maxMatchedDistance_ = dists.at<float>(i,0);
 					}
 
 					if(matched)
@@ -781,7 +771,7 @@ bool FindObject::detect(const cv::Mat & image, QMultiMap<int,QPair<QRect,QTransf
 								// just add unique matches
 								if(vocabulary_->wordToObjects().count(wordId, objIds[j]) == 1)
 								{
-									matches_.find(objIds[j]).value().insert(objects_.value(objIds[j])->words().value(wordId), i);
+									info.matches_.find(objIds[j]).value().insert(objects_.value(objIds[j])->words().value(wordId), i);
 								}
 							}
 						}
@@ -795,7 +785,7 @@ bool FindObject::detect(const cv::Mat & image, QMultiMap<int,QPair<QRect,QTransf
 							int wordId = results.at<int>(i,0);
 							if(words.count(wordId) == 1)
 							{
-								matches_.find(objectId).value().insert(objectDescriptorIndex, words.value(wordId));
+								info.matches_.find(objectId).value().insert(objectDescriptorIndex, words.value(wordId));
 							}
 						}
 					}
@@ -825,15 +815,15 @@ bool FindObject::detect(const cv::Mat & image, QMultiMap<int,QPair<QRect,QTransf
 					for(int k=0; k<threads.size(); ++k)
 					{
 						threads[k]->wait();
-						matches_[threads[k]->getObjectId()] = threads[k]->getMatches();
+						info.matches_[threads[k]->getObjectId()] = threads[k]->getMatches();
 
-						if(minMatchedDistance_ == -1 || minMatchedDistance_ > threads[k]->getMinMatchedDistance())
+						if(info.minMatchedDistance_ == -1 || info.minMatchedDistance_ > threads[k]->getMinMatchedDistance())
 						{
-							minMatchedDistance_ = threads[k]->getMinMatchedDistance();
+							info.minMatchedDistance_ = threads[k]->getMinMatchedDistance();
 						}
-						if(maxMatchedDistance_ == -1 || maxMatchedDistance_ < threads[k]->getMaxMatchedDistance())
+						if(info.maxMatchedDistance_ == -1 || info.maxMatchedDistance_ < threads[k]->getMaxMatchedDistance())
 						{
-							maxMatchedDistance_ = threads[k]->getMaxMatchedDistance();
+							info.maxMatchedDistance_ = threads[k]->getMaxMatchedDistance();
 						}
 						delete threads[k];
 					}
@@ -841,7 +831,7 @@ bool FindObject::detect(const cv::Mat & image, QMultiMap<int,QPair<QRect,QTransf
 				}
 			}
 
-			timeStamps_.insert(kTimeMatching, time.restart());
+			info.timeStamps_.insert(DetectionInfo::kTimeMatching, time.restart());
 
 			// Homographies
 			if(Settings::getHomography_homographyComputed())
@@ -850,10 +840,10 @@ bool FindObject::detect(const cv::Mat & image, QMultiMap<int,QPair<QRect,QTransf
 				int threadCounts = Settings::getGeneral_threads();
 				if(threadCounts == 0)
 				{
-					threadCounts = matches_.size();
+					threadCounts = info.matches_.size();
 				}
-				QList<int> matchesId = matches_.keys();
-				QList<QMultiMap<int, int> > matchesList = matches_.values();
+				QList<int> matchesId = info.matches_.keys();
+				QList<QMultiMap<int, int> > matchesList = info.matches_.values();
 				for(int i=0; i<matchesList.size(); i+=threadCounts)
 				{
 					QVector<HomographyThread*> threads;
@@ -861,7 +851,7 @@ bool FindObject::detect(const cv::Mat & image, QMultiMap<int,QPair<QRect,QTransf
 					for(int k=i; k<i+threadCounts && k<matchesList.size(); ++k)
 					{
 						int objectId = matchesId[k];
-						threads.push_back(new HomographyThread(&matchesList[k], objectId, &objects_.value(objectId)->keypoints(), &sceneKeypoints_));
+						threads.push_back(new HomographyThread(&matchesList[k], objectId, &objects_.value(objectId)->keypoints(), &info.sceneKeypoints_));
 						threads.back()->start();
 					}
 
@@ -889,11 +879,11 @@ bool FindObject::detect(const cv::Mat & image, QMultiMap<int,QPair<QRect,QTransf
 									matchesId.push_back(id);
 
 									// compute distance from previous added same objects...
-									QMultiMap<int, QPair<QRect, QTransform> >::iterator objIter = objectsDetected.find(id);
-									for(;objIter!=objectsDetected.end() && objIter.key() == id; ++objIter)
+									QMultiMap<int, QTransform>::iterator objIter = info.objDetected_.find(id);
+									for(;objIter!=info.objDetected_.end() && objIter.key() == id; ++objIter)
 									{
-										qreal dx = objIter.value().second.m31() - hTransform.m31();
-										qreal dy = objIter.value().second.m32() - hTransform.m32();
+										qreal dx = objIter.value().m31() - hTransform.m31();
+										qreal dy = objIter.value().m32() - hTransform.m32();
 										int d = (int)sqrt(dx*dx + dy*dy);
 										if(d < distance)
 										{
@@ -905,33 +895,37 @@ bool FindObject::detect(const cv::Mat & image, QMultiMap<int,QPair<QRect,QTransf
 								if(distance >= Settings::getGeneral_multiDetectionRadius())
 								{
 									QRect rect = objects_.value(id)->rect();
-									objectsDetected.insert(id, QPair<QRect, QTransform>(rect, hTransform));
-									inliers_.insert(id, threads[j]->getInliers());
-									outliers_.insert(id, threads[j]->getOutliers());
+									info.objDetected_.insert(id, hTransform);
+									info.objDetectedSizes_.insert(id, rect.size());
+									info.objDetectedInliers_.insert(id, threads[j]->getInliers());
+									info.objDetectedOutliers_.insert(id, threads[j]->getOutliers());
+									info.objDetectedInliersCount_.insert(id, threads[j]->getInliers().size());
+									info.objDetectedOutliersCount_.insert(id, threads[j]->getOutliers().size());
+									info.objDetectedFilenames_.insert(id, objects_.value(id)->filename());
 								}
 								else
 								{
-									rejectedInliers_.insert(id, threads[j]->getInliers());
-									rejectedOutliers_.insert(id, threads[j]->getOutliers());
+									info.rejectedInliers_.insert(id, threads[j]->getInliers());
+									info.rejectedOutliers_.insert(id, threads[j]->getOutliers());
 								}
 							}
 							else
 							{
-								rejectedInliers_.insert(id, threads[j]->getInliers());
-								rejectedOutliers_.insert(id, threads[j]->getOutliers());
+								info.rejectedInliers_.insert(id, threads[j]->getInliers());
+								info.rejectedOutliers_.insert(id, threads[j]->getOutliers());
 							}
 						}
 						else
 						{
-							rejectedInliers_.insert(id, threads[j]->getInliers());
-							rejectedOutliers_.insert(id, threads[j]->getOutliers());
+							info.rejectedInliers_.insert(id, threads[j]->getInliers());
+							info.rejectedOutliers_.insert(id, threads[j]->getOutliers());
 						}
 					}
 				}
-				timeStamps_.insert(kTimeHomography, time.restart());
+				info.timeStamps_.insert(DetectionInfo::kTimeHomography, time.restart());
 			}
 		}
-		else if(!objectsDescriptors_.empty() && sceneKeypoints_.size())
+		else if(!objectsDescriptors_.empty() && info.sceneKeypoints_.size())
 		{
 			UWARN("Cannot search, objects must be updated");
 		}
@@ -943,8 +937,7 @@ bool FindObject::detect(const cv::Mat & image, QMultiMap<int,QPair<QRect,QTransf
 		}
 	}
 
-	objectsDetected_ = objectsDetected;
-	timeStamps_.insert(kTimeTotal, totalTime.elapsed());
+	info.timeStamps_.insert(DetectionInfo::kTimeTotal, totalTime.elapsed());
 
 	return success;
 }

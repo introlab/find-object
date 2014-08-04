@@ -332,7 +332,7 @@ void AddObjectDialog::setState(int state)
 				delete objSignature_;
 				objSignature_ = 0;
 			}
-			objSignature_ = new ObjSignature(0, imgRoi.clone());
+			objSignature_ = new ObjSignature(0, imgRoi.clone(), "");
 			objSignature_->setData(keypoints, descriptors, Settings::currentDetectorType(), Settings::currentDescriptorType());
 			objWidget_ = new ObjWidget(0, keypoints, cvtCvMat2QImage(imgRoi.clone()));
 

@@ -268,7 +268,7 @@ void MainWindow::setupTCPServer()
 		delete tcpServer_;
 	}
 	tcpServer_ = new TcpServer(Settings::getGeneral_port(), this);
-	connect(this, SIGNAL(objectsFound(QMultiMap<int,QPair<QRect,QTransform> >)), tcpServer_, SLOT(publishObjects(QMultiMap<int,QPair<QRect,QTransform> >)));
+	connect(this, SIGNAL(objectsFound(DetectionInfo)), tcpServer_, SLOT(publishDetectionInfo(DetectionInfo)));
 	ui_->label_ipAddress->setText(tcpServer_->getHostAddress().toString());
 	ui_->label_port->setNum(tcpServer_->getPort());
 	UINFO("Detection sent on port: %d (IP=%s)", tcpServer_->getPort(), tcpServer_->getHostAddress().toString().toStdString().c_str());
@@ -916,19 +916,20 @@ void MainWindow::update(const cv::Mat & image)
 		iter.value()->resetKptsColor();
 	}
 
-	QMultiMap<int,QPair<QRect,QTransform> > objectsDetected;
-	if(findObject_->detect(sceneImage_, objectsDetected))
+	DetectionInfo info;
+	if(findObject_->detect(sceneImage_, info))
 	{
-		ui_->label_timeDetection->setNum(findObject_->timeStamps().value(FindObject::kTimeKeypointDetection, 0));
-		ui_->label_timeExtraction->setNum(findObject_->timeStamps().value(FindObject::kTimeDescriptorExtraction, 0));
-		ui_->imageView_source->setData(findObject_->sceneKeypoints(), cvtCvMat2QImage(sceneImage_));
-		ui_->label_timeIndexing->setNum(findObject_->timeStamps().value(FindObject::kTimeIndexing, 0));
+		ui_->label_timeDetection->setNum(info.timeStamps_.value(DetectionInfo::kTimeKeypointDetection, 0));
+		ui_->label_timeExtraction->setNum(info.timeStamps_.value(DetectionInfo::kTimeDescriptorExtraction, 0));
+		ui_->imageView_source->setData(info.sceneKeypoints_, cvtCvMat2QImage(sceneImage_));
+		ui_->label_timeIndexing->setNum(info.timeStamps_.value(DetectionInfo::kTimeIndexing, 0));
+		ui_->label_timeMatching->setNum(info.timeStamps_.value(DetectionInfo::kTimeMatching, 0));
+		ui_->label_timeHomographies->setNum(info.timeStamps_.value(DetectionInfo::kTimeHomography, 0));
+
 		ui_->label_vocabularySize->setNum(findObject_->vocabulary()->size());
-		ui_->label_timeMatching->setNum(findObject_->timeStamps().value(FindObject::kTimeMatching, 0));
-		ui_->label_timeHomographies->setNum(findObject_->timeStamps().value(FindObject::kTimeHomography, 0));
 
 		// Colorize features matched
-		const QMap<int, QMultiMap<int, int> > & matches = findObject_->matches();
+		const QMap<int, QMultiMap<int, int> > & matches = info.matches_;
 		QMap<int, int> scores;
 		int maxScoreId = -1;
 		int maxScore = 0;
@@ -956,12 +957,12 @@ void MainWindow::update(const cv::Mat & image)
 					ui_->imageView_source->setKptColor(iter.value(), obj->color());
 				}
 			}
-			else if(!objectsDetected.contains(id))
+			else if(!info.objDetected_.contains(id))
 			{
 				// Homography could not be computed...
 				QLabel * label = ui_->dockWidget_objects->findChild<QLabel*>(QString("%1detection").arg(id));
-				QMultiMap<int, int> rejectedInliers = findObject_->rejectedInliers().value(id);
-				QMultiMap<int, int> rejectedOutliers = findObject_->rejectedOutliers().value(id);
+				QMultiMap<int, int> rejectedInliers = info.rejectedInliers_.value(id);
+				QMultiMap<int, int> rejectedOutliers = info.rejectedOutliers_.value(id);
 				if(jter.value().size() < Settings::getHomography_minimumInliers())
 				{
 					label->setText(QString("Too low matches (%1)").arg(jter.value().size()));
@@ -979,18 +980,18 @@ void MainWindow::update(const cv::Mat & image)
 		}
 
 		// Add homography rectangles when homographies are computed
-		QMultiMap<int, QMultiMap<int,int> >::const_iterator inliersIter = findObject_->inliers().constBegin();
-		QMultiMap<int, QMultiMap<int,int> >::const_iterator outliersIter = findObject_->outliers().constBegin();
-		for(QMultiMap<int,QPair<QRect,QTransform> >::iterator iter = objectsDetected.begin();
-				iter!=objectsDetected.end() && inliersIter!=findObject_->inliers().constEnd();
-				++iter, ++inliersIter)
+		QMultiMap<int, QMultiMap<int,int> >::const_iterator inliersIter = info.objDetectedInliers_.constBegin();
+		QMultiMap<int, QMultiMap<int,int> >::const_iterator outliersIter = info.objDetectedOutliers_.constBegin();
+		for(QMultiMap<int,QTransform>::iterator iter = info.objDetected_.begin();
+				iter!=info.objDetected_.end();
+				++iter, ++inliersIter, ++outliersIter)
 		{
 			int id = iter.key();
 			ObjWidget * obj = objWidgets_.value(id);
 			Q_ASSERT(obj != 0);
 
 			// COLORIZE (should be done in the GUI thread)
-			QTransform hTransform = iter.value().second;
+			QTransform hTransform = iter.value();
 
 			QRect rect = obj->pixmap().rect();
 			// add rectangle
@@ -1013,10 +1014,10 @@ void MainWindow::update(const cv::Mat & image)
 			}
 
 			QLabel * label = ui_->dockWidget_objects->findChild<QLabel*>(QString("%1detection").arg(id));
-			if(objectsDetected.count(id) > 1)
+			if(info.objDetected_.count(id) > 1)
 			{
 				// if a homography is already found, set the objects count
-				label->setText(QString("%1 objects found").arg(objectsDetected.count(id)));
+				label->setText(QString("%1 objects found").arg(info.objDetected_.count(id)));
 			}
 			else
 			{
@@ -1030,7 +1031,7 @@ void MainWindow::update(const cv::Mat & image)
 		QMap<int, int> inlierScores;
 		for(QMap<int, int>::iterator iter=scores.begin(); iter!=scores.end(); ++iter)
 		{
-			QList<QMultiMap<int, int> > values = findObject_->inliers().values(iter.key());
+			QList<QMultiMap<int, int> > values = info.objDetectedInliers_.values(iter.key());
 			int maxValue = 0;
 			if(values.size())
 			{
@@ -1051,8 +1052,8 @@ void MainWindow::update(const cv::Mat & image)
 			ui_->likelihoodPlot->update();
 		}
 
-		ui_->label_minMatchedDistance->setNum(findObject_->minMatchedDistance());
-		ui_->label_maxMatchedDistance->setNum(findObject_->maxMatchedDistance());
+		ui_->label_minMatchedDistance->setNum(info.minMatchedDistance_);
+		ui_->label_maxMatchedDistance->setNum(info.maxMatchedDistance_);
 
 		//Scroll objects slider to the best score
 		if(maxScoreId>=0 && Settings::getGeneral_autoScroll())
@@ -1065,17 +1066,17 @@ void MainWindow::update(const cv::Mat & image)
 		}
 
 		// Emit homographies
-		if(objectsDetected.size() > 1)
+		if(info.objDetected_.size() > 1)
 		{
 			UINFO("(%s) %d objects detected!",
 					QTime::currentTime().toString("HH:mm:ss.zzz").toStdString().c_str(),
-					(int)objectsDetected.size());
+					(int)info.objDetected_.size());
 		}
-		else if(objectsDetected.size() == 1)
+		else if(info.objDetected_.size() == 1)
 		{
 			UINFO("(%s) Object %d detected!",
 					QTime::currentTime().toString("HH:mm:ss.zzz").toStdString().c_str(),
-					(int)objectsDetected.begin().key());
+					(int)info.objDetected_.begin().key());
 		}
 		else if(Settings::getGeneral_sendNoObjDetectedEvents())
 		{
@@ -1083,16 +1084,16 @@ void MainWindow::update(const cv::Mat & image)
 					QTime::currentTime().toString("HH:mm:ss.zzz").toStdString().c_str());
 		}
 
-		if(objectsDetected.size() > 0 || Settings::getGeneral_sendNoObjDetectedEvents())
+		if(info.objDetected_.size() > 0 || Settings::getGeneral_sendNoObjDetectedEvents())
 		{
-			Q_EMIT objectsFound(objectsDetected);
+			Q_EMIT objectsFound(info);
 		}
-		ui_->label_objectsDetected->setNum(objectsDetected.size());
+		ui_->label_objectsDetected->setNum(info.objDetected_.size());
 	}
 	else
 	{
 		this->statusBar()->showMessage(tr("Cannot search, objects must be updated!"));
-		ui_->imageView_source->setData(findObject_->sceneKeypoints(), cvtCvMat2QImage(sceneImage_));
+		ui_->imageView_source->setData(info.sceneKeypoints_, cvtCvMat2QImage(sceneImage_));
 	}
 
 
@@ -1102,7 +1103,7 @@ void MainWindow::update(const cv::Mat & image)
 		iter.value()->update();
 	}
 
-	ui_->label_nfeatures->setNum((int)findObject_->sceneKeypoints().size());
+	ui_->label_nfeatures->setNum((int)info.sceneKeypoints_.size());
 	ui_->imageView_source->update();
 
 	ui_->label_detectorDescriptorType->setText(QString("%1/%2").arg(Settings::currentDetectorType()).arg(Settings::currentDescriptorType()));
@@ -1116,7 +1117,7 @@ void MainWindow::update(const cv::Mat & image)
 		ui_->horizontalSlider_frames->blockSignals(false);
 	}
 
-	ui_->label_timeTotal->setNum(findObject_->timeStamps().value(FindObject::kTimeTotal, 0));
+	ui_->label_timeTotal->setNum(info.timeStamps_.value(DetectionInfo::kTimeTotal, 0));
 	int refreshRate = qRound(1000.0f/float(updateRate_.restart()));
 	if(refreshRate > 0 && refreshRate < lowestRefreshRate_)
 	{
@@ -1200,7 +1201,7 @@ void MainWindow::notifyParametersChanged(const QStringList & paramChanged)
 		ui_->label_timeRefreshRate->setVisible(false);
 	}
 
-	ui_->actionCamera_from_video_file->setChecked(!Settings::getCamera_5mediaPath().isEmpty() && !UDirectory::exists(Settings::getCamera_5mediaPath().toStdString()));
-	ui_->actionCamera_from_directory_of_images->setChecked(!Settings::getCamera_5mediaPath().isEmpty() && UDirectory::exists(Settings::getCamera_5mediaPath().toStdString()));
+	ui_->actionCamera_from_video_file->setChecked(!Settings::getCamera_5mediaPath().isEmpty() && !UDirectory::exists(Settings::getCamera_5mediaPath().toStdString()) && !Settings::getCamera_6useTcpCamera());
+	ui_->actionCamera_from_directory_of_images->setChecked(!Settings::getCamera_5mediaPath().isEmpty() && UDirectory::exists(Settings::getCamera_5mediaPath().toStdString()) && !Settings::getCamera_6useTcpCamera());
 	ui_->actionCamera_from_TCP_IP->setChecked(Settings::getCamera_6useTcpCamera());
 }

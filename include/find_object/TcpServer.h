@@ -10,6 +10,8 @@
 
 #include "find_object/FindObjectExp.h" // DLL export/import defines
 
+#include "find_object/DetectionInfo.h"
+
 #include <QtNetwork/QTcpServer>
 
 class QNetworkSession;
@@ -25,7 +27,7 @@ public:
 	quint16 getPort() const;
 
 public Q_SLOTS:
-	void publishObjects(const QMultiMap<int, QPair<QRect, QTransform> > & objects);
+	void publishDetectionInfo(const DetectionInfo & info);
 
 private Q_SLOTS:
 	void addClient();

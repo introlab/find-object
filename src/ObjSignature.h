@@ -15,9 +15,10 @@
 
 class ObjSignature {
 public:
-	ObjSignature(int id, const cv::Mat & image) :
+	ObjSignature(int id, const cv::Mat & image, const QString & filename) :
 		id_(id),
-		image_(image)
+		image_(image),
+		filename_(filename)
 	{}
 	virtual ~ObjSignature() {}
 
@@ -37,6 +38,7 @@ public:
 	QRect rect() const {return QRect(0,0,image_.cols, image_.rows);}
 
 	int id() const {return id_;}
+	const QString & filename() const {return filename_;}
 	const cv::Mat & image() const {return image_;}
 	const std::vector<cv::KeyPoint> & keypoints() const {return keypoints_;}
 	const cv::Mat & descriptors() const {return descriptors_;}
@@ -47,6 +49,7 @@ public:
 private:
 	int id_;
 	cv::Mat image_;
+	QString filename_;
 	std::vector<cv::KeyPoint> keypoints_;
 	cv::Mat descriptors_;
 	QMultiMap<int, int> words_; // <word id, keypoint indexes>

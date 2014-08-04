@@ -7,6 +7,8 @@
 
 #include "find_object/FindObjectExp.h" // DLL export/import defines
 
+#include "find_object/DetectionInfo.h"
+
 #include <QtGui/QMainWindow>
 #include <QtCore/QSet>
 #include <QtCore/QTimer>
@@ -74,7 +76,7 @@ private Q_SLOTS:
 	void rectHovered(int objId);
 
 Q_SIGNALS:
-	void objectsFound(const QMultiMap<int, QPair<QRect, QTransform> > &);
+	void objectsFound(const DetectionInfo &);
 
 private:
 	bool loadSettings(const QString & path);

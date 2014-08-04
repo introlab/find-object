@@ -11,10 +11,7 @@
 #include <QtCore/QTime>
 #include <opencv2/opencv.hpp>
 #include "TcpResponse.h"
-
-#ifdef WITH_JSONCPP
-#include <jsoncpp/json/writer.h>
-#endif
+#include "find_object/JsonWriter.h"
 
 void showUsage()
 {
@@ -22,67 +19,12 @@ void showUsage()
 			"  \"out\" is the port to which the image is sent.\n"
 			"  \"in\" is the port from which the detection is received.\n"
 			"  Options:\n"
-			"    --host #.#.#.#       Set host address.\n"
-#ifdef WITH_JSONCPP
-			"    --json \"path\"      Path to an output JSON file.\n"
-#endif
-			);
-	exit(-1);
-}
-
-void writeJSON(const QMultiMap<int, QPair<QRect, QTransform> > & objectsDetected, const QString & path)
-{
-#ifdef WITH_JSONCPP
-	if(!path.isEmpty())
+			"    --host #.#.#.#       Set host address.\n");
+	if(JsonWriter::available())
 	{
-		Json::Value root;
-		Json::Value detections;
-
-		if(objectsDetected.size())
-		{
-			for(QMultiMap<int,QPair<QRect,QTransform> >::const_iterator iter = objectsDetected.constBegin();
-					iter!= objectsDetected.end();)
-			{
-				char index = 'a';
-				QMultiMap<int,QPair<QRect,QTransform> >::const_iterator jter = iter;
-				for(;jter != objectsDetected.constEnd() && jter.key() == iter.key(); ++jter)
-				{
-					QString name = QString("object_%1%2").arg(jter.key()).arg(objectsDetected.count(jter.key())>1?QString(index++):"");
-					detections.append(name.toStdString());
-
-					Json::Value homography;
-					homography.append(jter.value().second.m11());
-					homography.append(jter.value().second.m12());
-					homography.append(jter.value().second.m13());
-					homography.append(jter.value().second.m21());
-					homography.append(jter.value().second.m22());
-					homography.append(jter.value().second.m23());
-					homography.append(jter.value().second.m31());  // dx
-					homography.append(jter.value().second.m32());  // dy
-					homography.append(jter.value().second.m33());
-					root[name.toStdString()]["width"] = jter.value().first.width();
-					root[name.toStdString()]["height"] = jter.value().first.height();
-					root[name.toStdString()]["homography"] = homography;
-				}
-				iter = jter;
-			}
-		}
-
-		root["objects"] = detections;
-
-		// write in a nice readible way
-		Json::StyledWriter styledWriter;
-		//std::cout << styledWriter.write(root);
-		QFile file(path);
-		file.open(QIODevice::WriteOnly | QIODevice::Text);
-		QTextStream out(&file);
-		out << styledWriter.write(root).c_str();
-		file.close();
-		printf("JSON written to \"%s\"\n", path.toStdString().c_str());
+		printf("    --json \"path\"      Path to an output JSON file.\n");
 	}
-#else
-	printf("Not built with JSON support!\n");
-#endif
+	exit(-1);
 }
 
 int main(int argc, char * argv[])
@@ -123,20 +65,6 @@ int main(int argc, char * argv[])
 			}
 			continue;
 		}
-		if(strcmp(argv[i], "--json") == 0 || strcmp(argv[i], "-json") == 0)
-		{
-			++i;
-			if(i < argc)
-			{
-				jsonPath = argv[i];
-			}
-			else
-			{
-				printf("error parsing --json\n");
-				showUsage();
-			}
-			continue;
-		}
 		if(strcmp(argv[i], "--out") == 0 || strcmp(argv[i], "-out") == 0)
 		{
 			++i;
@@ -164,6 +92,24 @@ int main(int argc, char * argv[])
 				showUsage();
 			}
 			continue;
+		}
+
+		if(JsonWriter::available())
+		{
+			if(strcmp(argv[i], "--json") == 0 || strcmp(argv[i], "-json") == 0)
+			{
+				++i;
+				if(i < argc)
+				{
+					jsonPath = argv[i];
+				}
+				else
+				{
+					printf("error parsing --json\n");
+					showUsage();
+				}
+				continue;
+			}
 		}
 
 		printf("Unrecognized option: %s\n", argv[i]);
@@ -242,12 +188,12 @@ int main(int argc, char * argv[])
 	{
 		printf("Response received! (%d ms)\n", time.elapsed());
 		// print detected objects
-		if(response.objectsDetected().size())
+		if(response.info().objDetected_.size())
 		{
-			QList<int> ids = response.objectsDetected().uniqueKeys();
+			QList<int> ids = response.info().objDetected_.uniqueKeys();
 			for(int i=0; i<ids.size(); ++i)
 			{
-				int count = response.objectsDetected().count(ids[i]);
+				int count = response.info().objDetected_.count(ids[i]);
 				if(count == 1)
 				{
 					printf("Object %d detected.\n", ids[i]);
@@ -263,9 +209,10 @@ int main(int argc, char * argv[])
 			printf("No objects detected.\n");
 		}
 		// write json
-		if(!jsonPath.isEmpty())
+		if(!jsonPath.isEmpty() && JsonWriter::available())
 		{
-			writeJSON(response.objectsDetected(), jsonPath);
+			JsonWriter::write(response.info(), jsonPath);
+			printf("JSON written to \"%s\"\n", jsonPath.toStdString().c_str());
 		}
 	}
 	else

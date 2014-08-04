@@ -44,24 +44,7 @@ void TcpResponse::readReceivedData()
 
 	blockSize_ = 0;
 
-	QVector<float> data;
-	in >> data;
-
-	objectsDetected_.clear();
-	for(int i=0; i<data.size(); i+=12)
-	{
-		// get data
-		int id = (int)data[i];
-		float width = data[i+1];
-		float height = data[i+2];
-
-		// Find corners Qt
-		QTransform homography(data[i+3], data[i+4], data[i+5],
-		data[i+6], data[i+7], data[i+8],
-		data[i+9], data[i+10], data[i+11]);
-
-		objectsDetected_.insert(id, QPair<QRect, QTransform>(QRect(0,0,width, height), homography));
-	}
+	in >> info_;
 
 	dataReceived_ = true;
 	Q_EMIT detectionReceived();

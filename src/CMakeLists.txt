@@ -36,9 +36,6 @@ QT4_WRAP_UI(moc_uis ${uis})
 QT4_WRAP_CPP(moc_srcs ${headers_ui})
 ### Qt Gui stuff  end###
 
-
-
-
 SET(SRC_FILES 
 	./MainWindow.cpp
 	./AddObjectDialog.cpp
@@ -54,6 +51,7 @@ SET(SRC_FILES
 	./AboutDialog.cpp
 	./TcpServer.cpp
 	./Vocabulary.cpp
+	./JsonWriter.cpp
 	./utilite/ULogger.cpp
 	./utilite/UPlot.cpp
 	./utilite/UDirectory.cpp
@@ -78,6 +76,18 @@ SET(LIBRARIES
     ${QT_LIBRARIES} 
     ${OpenCV_LIBS} 
 )
+
+IF(JSONCPP_FOUND)
+	SET(INCLUDE_DIRS
+	    ${INCLUDE_DIRS} 
+	    ${JSONCPP_INCLUDE_DIRS} 
+	)
+	SET(LIBRARIES
+	    ${LIBRARIES} 
+	    ${JSONCPP_LIBRARIES} 
+	)
+	ADD_DEFINITIONS("-DWITH_JSONCPP")
+ENDIF(JSONCPP_FOUND)
 
 #include files
 INCLUDE_DIRECTORIES(${INCLUDE_DIRS})

@@ -53,13 +53,13 @@ bool ULogger::printWhereFullPath_ = false;
 bool ULogger::limitWhereLength_ = false;
 bool ULogger::buffered_ = false;
 bool ULogger::exitingState_ = false;
-ULogger::Level ULogger::level_ = kInfo; // By default, we show all info msgs + upper level (Warning, Error)
+ULogger::Level ULogger::level_ = kWarning;
 ULogger::Level ULogger::exitLevel_ = kFatal;
 ULogger::Level ULogger::eventLevel_ = kFatal;
 const char * ULogger::levelName_[5] = {"DEBUG", " INFO", " WARN", "ERROR", "FATAL"};
 ULogger* ULogger::instance_ = 0;
 UDestroyer<ULogger> ULogger::destroyer_;
-ULogger::Type ULogger::type_ = ULogger::kTypeNoLog; // Default nothing
+ULogger::Type ULogger::type_ = ULogger::kTypeConsole;
 UMutex ULogger::loggerMutex_;
 const std::string ULogger::kDefaultLogFileName = "./ULog.txt";
 std::string ULogger::logFileName_;

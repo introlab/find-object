@@ -8,6 +8,8 @@
 #ifndef TCPRESPONSE_H_
 #define TCPRESPONSE_H_
 
+#include "find_object/DetectionInfo.h"
+
 #include <QtNetwork/QTcpSocket>
 #include <QtCore/QMultiMap>
 #include <QtGui/QTransform>
@@ -18,7 +20,7 @@ class TcpResponse : public QTcpSocket
 	Q_OBJECT;
 public:
 	TcpResponse(QObject * parent = 0);
-	const QMultiMap<int, QPair<QRect, QTransform> > & objectsDetected() const {return objectsDetected_;}
+	const DetectionInfo & info() const {return info_;}
 	bool dataReceived() const {return dataReceived_;}
 
 private Q_SLOTS:
@@ -31,7 +33,7 @@ Q_SIGNALS:
 
 private:
 	quint16 blockSize_;
-	QMultiMap<int, QPair<QRect, QTransform> > objectsDetected_;
+	DetectionInfo info_;
 	bool dataReceived_;
 };
 
