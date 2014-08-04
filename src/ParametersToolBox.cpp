@@ -397,6 +397,7 @@ void ParametersToolBox::addParameter(QVBoxLayout * layout, const QString & key, 
 	QLabel * label = new QLabel(tmp, this);
 	label->setObjectName(key+"/label");
 	label->setToolTip(QString("<FONT>%1</FONT>").arg(Settings::getDescriptions().value(key, "")));
+	label->setTextInteractionFlags(Qt::TextSelectableByMouse);
 	hLayout->addWidget(label);
 	hLayout->addWidget(widget);
 }
