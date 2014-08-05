@@ -1,6 +1,8 @@
 #include <QtGui/QApplication>
 #include <QtCore/QDir>
 #include <QtCore/QFile>
+#include <iostream>
+#include <iomanip>
 #include "find_object/MainWindow.h"
 #include "find_object/Settings.h"
 #include "find_object/FindObject.h"
@@ -67,16 +69,20 @@ void showUsage()
 			"  find_object [options]\n"
 #endif
 			"Options:\n"
-			"  --console         Don't use the GUI (by default the camera will be\n"
-			"                    started automatically). Option --objects must also be\n"
-			"                    used with valid objects.\n"
-			"  --objects \"path\"   Directory of the objects to detect.\n"
-			"  --config \"path\"    Path to configuration file (default: %s).\n"
-			"  --scene \"path\"     Path to a scene image file.\n"
-			"  --help   Show usage.\n", Settings::iniDefaultPath().toStdString().c_str());
+			"  --console              Don't use the GUI (by default the camera will be\n"
+			"                           started automatically). Option --objects must also be\n"
+			"                           used with valid objects.\n"
+			"  --objects \"path\"       Directory of the objects to detect.\n"
+			"  --config \"path\"        Path to configuration file (default: %s).\n"
+			"  --scene \"path\"         Path to a scene image file.\n"
+			"  --params               Show all parameters.\n"
+			"  --My/Parameter \"value\" Set find-Object's parameter (look --params for parameters' name).\n"
+			"                           It will override the one in --config. Example to set 4 threads:\n"
+			"                           $ find_object --General/threads 4\n"
+			"  --help                 Show usage.\n", Settings::iniDefaultPath().toStdString().c_str());
 	if(JsonWriter::available())
 	{
-		printf("  --json \"path\"      Path to an output JSON file (only in --console mode with --scene).\n");
+		printf("  --json \"path\"          Path to an output JSON file (only in --console mode with --scene).\n");
 	}
 	exit(-1);
 }
@@ -96,6 +102,7 @@ int main(int argc, char* argv[])
 	QString scenePath = "";
 	QString configPath = Settings::iniDefaultPath();
 	QString jsonPath;
+	ParametersMap customParameters;
 
 	for(int i=1; i<argc; ++i)
 	{
@@ -201,6 +208,46 @@ int main(int argc, char* argv[])
 				continue;
 			}
 		}
+		if(strcmp(argv[i], "--params") == 0)
+		{
+			ParametersMap parameters = Settings::getDefaultParameters();
+			for(ParametersMap::iterator iter=parameters.begin(); iter!=parameters.end(); ++iter)
+			{
+				std::string str = "Param: " + iter.key().toStdString() + " = \"" + iter.value().toString().toStdString() + "\"";
+				std::cout <<
+						str <<
+						std::setw(60 - str.size()) <<
+						" [" <<
+						Settings::getDescriptions().value(iter.key()).toStdString().c_str() <<
+						"]" <<
+						std::endl;
+			}
+			UINFO("Node will now exit after showing default Find-Object's parameters because "
+					 "argument \"--params\" is detected!");
+			exit(0);
+		}
+
+		// Check for custom parameters:
+		ParametersMap parameters = Settings::getDefaultParameters();
+		QString name = argv[i];
+		if(name.size() > 2)
+		{
+			//strip the "--"
+			name.remove(0, 2);
+			if(parameters.contains(name))
+			{
+				++i;
+				if(i < argc)
+				{
+					customParameters.insert(name, argv[i]);
+				}
+				else
+				{
+					showUsage();
+				}
+				continue;
+			}
+		}
 
 		UERROR("Unrecognized option : %s", argv[i]);
 		showUsage();
@@ -215,6 +262,10 @@ int main(int argc, char* argv[])
 	{
 		UINFO("   JSON path: \"%s\"", jsonPath.toStdString().c_str());
 	}
+	for(ParametersMap::iterator iter= customParameters.begin(); iter!=customParameters.end(); ++iter)
+	{
+		UINFO("   Param \"%s\"=\"%s\"", iter.key().toStdString().c_str(), iter.value().toString().toStdString().c_str());
+	}
 
 	//////////////////////////
 	// parse options END
@@ -222,6 +273,12 @@ int main(int argc, char* argv[])
 
 	// Load settings, should be loaded before creating other objects
 	Settings::init(configPath);
+
+	// Override custom parameters:
+	for(ParametersMap::iterator iter= customParameters.begin(); iter!=customParameters.end(); ++iter)
+	{
+		Settings::setParameter(iter.key(), iter.value());
+	}
 
 	// Create FindObject
 	FindObject * findObject = new FindObject();
