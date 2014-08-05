@@ -13,7 +13,7 @@
 #include <QtCore/QTextStream>
 
 #ifdef WITH_JSONCPP
-#include <jsoncpp/json/writer.h>
+#include <json/writer.h>
 #endif
 
 bool JsonWriter::available()
