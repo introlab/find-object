@@ -100,7 +100,7 @@
      </layout>
     </item>
     <item>
-     <widget class="ObjWidget" name="imageView_source" native="true"/>
+     <widget class="find_object::ObjWidget" name="imageView_source" native="true"/>
     </item>
     <item>
      <layout class="QHBoxLayout" name="horizontalLayout">
@@ -276,7 +276,7 @@
       <number>0</number>
      </property>
      <item>
-      <widget class="ParametersToolBox" name="toolBox">
+      <widget class="find_object::ParametersToolBox" name="toolBox">
        <property name="currentIndex">
         <number>0</number>
        </property>
@@ -787,13 +787,13 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>ObjWidget</class>
+   <class>find_object::ObjWidget</class>
    <extends>QWidget</extends>
    <header>find_object/ObjWidget.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>
-   <class>ParametersToolBox</class>
+   <class>find_object::ParametersToolBox</class>
    <extends>QToolBox</extends>
    <header>ParametersToolBox.h</header>
    <container>1</container>

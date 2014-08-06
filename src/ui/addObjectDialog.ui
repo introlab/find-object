@@ -42,10 +42,10 @@
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_2">
      <item>
-      <widget class="ObjWidget" name="cameraView" native="true"/>
+      <widget class="find_object::ObjWidget" name="cameraView" native="true"/>
      </item>
      <item>
-      <widget class="ObjWidget" name="objectView" native="true"/>
+      <widget class="find_object::ObjWidget" name="objectView" native="true"/>
      </item>
     </layout>
    </item>
@@ -98,7 +98,7 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>ObjWidget</class>
+   <class>find_object::ObjWidget</class>
    <extends>QWidget</extends>
    <header>find_object/ObjWidget.h</header>
    <container>1</container>
