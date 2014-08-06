@@ -88,6 +88,7 @@ void CameraTcpServer::incomingConnection(int socketDescriptor)
 		UWARN("A client is already connected. Only one connection allowed at the same time.");
 		QTcpSocket socket;
 		socket.setSocketDescriptor(socketDescriptor);
+		socket.close(); // close without sending an acknowledge
 	}
 	else
 	{
@@ -96,7 +97,7 @@ void CameraTcpServer::incomingConnection(int socketDescriptor)
 		connect(socket, SIGNAL(error(QAbstractSocket::SocketError)), this, SLOT(displayError(QAbstractSocket::SocketError)));
 		connect(socket, SIGNAL(disconnected()), this, SLOT(connectionLost()));
 		socket->setSocketDescriptor(socketDescriptor);
-		socket->write(QByteArray("1"));
+		socket->write(QByteArray("1")); // send acknowledge
 	}
 }
 
