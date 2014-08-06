@@ -148,6 +148,9 @@ int main(int argc, char * argv[])
 
 	QObject::connect(&response, SIGNAL(detectionReceived()), &app, SLOT(quit()));
 	QObject::connect(&response, SIGNAL(disconnected()), &app, SLOT(quit()));
+	QObject::connect(&request, SIGNAL(disconnected()), &app, SLOT(quit()));
+	QObject::connect(&response, SIGNAL(error(QAbstractSocket::SocketError)), &app, SLOT(quit()));
+	QObject::connect(&request, SIGNAL(error(QAbstractSocket::SocketError)), &app, SLOT(quit()));
 
 	request.connectToHost(ipAddress, portOut);
 	response.connectToHost(ipAddress, portIn);
@@ -164,7 +167,6 @@ int main(int argc, char * argv[])
 		return -1;
 	}
 
-
 	// publish image
 	std::vector<unsigned char> buf;
 	cv::imencode(".png", image, buf);
@@ -176,48 +178,58 @@ int main(int argc, char * argv[])
 	out.writeRawData((char*)buf.data(), (int)buf.size());
 	out.device()->seek(0);
 	out << (quint64)(block.size() - sizeof(quint64));
-	request.write(block);
-	printf("Image published, waiting for response...\n");
-	QTime time;
-	time.start();
 
-	// wait for response
-	app.exec();
-
-	if(response.dataReceived())
+	if(request.waitForReadyRead())
 	{
-		printf("Response received! (%d ms)\n", time.elapsed());
-		// print detected objects
-		if(response.info().objDetected_.size())
+		qint64 bytes = request.write(block);
+		printf("Image published (%d bytes), waiting for response...\n", (int)bytes);
+		QTime time;
+		time.start();
+
+		// wait for response
+		app.exec();
+
+		if(response.dataReceived())
 		{
-			QList<int> ids = response.info().objDetected_.uniqueKeys();
-			for(int i=0; i<ids.size(); ++i)
+			printf("Response received! (%d ms)\n", time.elapsed());
+			// print detected objects
+			if(response.info().objDetected_.size())
 			{
-				int count = response.info().objDetected_.count(ids[i]);
-				if(count == 1)
+				QList<int> ids = response.info().objDetected_.uniqueKeys();
+				for(int i=0; i<ids.size(); ++i)
 				{
-					printf("Object %d detected.\n", ids[i]);
+					int count = response.info().objDetected_.count(ids[i]);
+					if(count == 1)
+					{
+						printf("Object %d detected.\n", ids[i]);
+					}
+					else
+					{
+						printf("Object %d detected %d times.\n", ids[i], count);
+					}
 				}
-				else
-				{
-					printf("Object %d detected %d times.\n", ids[i], count);
-				}
+			}
+			else
+			{
+				printf("No objects detected.\n");
+			}
+			// write json
+			if(!jsonPath.isEmpty() && JsonWriter::available())
+			{
+				JsonWriter::write(response.info(), jsonPath);
+				printf("JSON written to \"%s\"\n", jsonPath.toStdString().c_str());
 			}
 		}
 		else
 		{
-			printf("No objects detected.\n");
-		}
-		// write json
-		if(!jsonPath.isEmpty() && JsonWriter::available())
-		{
-			JsonWriter::write(response.info(), jsonPath);
-			printf("JSON written to \"%s\"\n", jsonPath.toStdString().c_str());
+			printf("Failed to receive a response...\n");
+			return -1;
 		}
 	}
 	else
 	{
-		printf("Failed to receive a response...\n");
+		printf("Server is busy...\n");
+		return -1;
 	}
 
 	return 0;

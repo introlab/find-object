@@ -99,7 +99,7 @@ int main(int argc, char * argv[])
 	}
 	server.connectToHost(ipAddress, port);
 
-	if(!server.waitForConnected())
+	if(!server.waitForReadyRead())
 	{
 		printf("ERROR: Unable to connect to %s:%d\n", ipAddress.toStdString().c_str(), port);
 		return -1;

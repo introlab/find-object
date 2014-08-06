@@ -17,14 +17,11 @@ CameraTcpServer::CameraTcpServer(quint16 port, QObject *parent) :
 	QTcpServer(parent),
     blockSize_(0)
 {
-	this->setMaxPendingConnections(1);
 	if (!this->listen(QHostAddress::Any, port))
 	{
 		UERROR("Unable to start the Camera TCP server: %s", this->errorString().toStdString().c_str());
 		return;
 	}
-
-	connect(this, SIGNAL(newConnection()), this, SLOT(addClient()));
 }
 
 cv::Mat CameraTcpServer::getImage()
@@ -83,22 +80,23 @@ quint16 CameraTcpServer::getPort() const
 	return this->serverPort();
 }
 
-void CameraTcpServer::addClient()
+void CameraTcpServer::incomingConnection(int socketDescriptor)
 {
-	QTcpSocket * client = this->nextPendingConnection();
-
 	QList<QTcpSocket*> clients = this->findChildren<QTcpSocket*>();
-	if(clients.size() > 1)
+	if(clients.size() >= 1)
 	{
 		UWARN("A client is already connected. Only one connection allowed at the same time.");
-		client->close();
-		client->deleteLater();
+		QTcpSocket socket;
+		socket.setSocketDescriptor(socketDescriptor);
 	}
 	else
 	{
-		connect(client, SIGNAL(readyRead()), this, SLOT(readReceivedData()));
-		connect(client, SIGNAL(error(QAbstractSocket::SocketError)), this, SLOT(displayError(QAbstractSocket::SocketError)));
-		connect(client, SIGNAL(disconnected()), this, SLOT(connectionLost()));
+		QTcpSocket * socket = new QTcpSocket(this);
+		connect(socket, SIGNAL(readyRead()), this, SLOT(readReceivedData()));
+		connect(socket, SIGNAL(error(QAbstractSocket::SocketError)), this, SLOT(displayError(QAbstractSocket::SocketError)));
+		connect(socket, SIGNAL(disconnected()), this, SLOT(connectionLost()));
+		socket->setSocketDescriptor(socketDescriptor);
+		socket->write(QByteArray("1"));
 	}
 }
 

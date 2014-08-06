@@ -23,13 +23,13 @@ public:
 	QHostAddress getHostAddress() const;
 	quint16 getPort() const;
 
+protected:
+	virtual void incomingConnection ( int socketDescriptor );
+
 private Q_SLOTS:
 	void readReceivedData();
 	void displayError(QAbstractSocket::SocketError socketError);
 	void connectionLost();
-
-private Q_SLOTS:
-	void addClient();
 
 private:
 	quint64 blockSize_;
