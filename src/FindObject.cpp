@@ -17,6 +17,7 @@
 #include <QtCore/QFileInfo>
 #include <QtCore/QStringList>
 #include <QtCore/QTime>
+#include <QtGui/QGraphicsRectItem>
 #include <stdio.h>
 
 FindObject::FindObject(QObject * parent) :
@@ -510,7 +511,8 @@ public:
 				matches_(matches),
 				objectId_(objectId),
 				kptsA_(kptsA),
-				kptsB_(kptsB)
+				kptsB_(kptsB),
+				code_(DetectionInfo::kRejectedUndef)
 	{
 		Q_ASSERT(matches && kptsA && kptsB);
 	}
@@ -523,6 +525,7 @@ public:
 	QMultiMap<int, int> getInliers() const {return inliers_;}
 	QMultiMap<int, int> getOutliers() const {return outliers_;}
 	const cv::Mat & getHomography() const {return h_;}
+	DetectionInfo::RejectedCode rejectedCode() const {return code_;}
 
 protected:
 	virtual void run()
@@ -565,14 +568,19 @@ protected:
 				}
 			}
 
-			// ignore homography when all features are inliers
 			if(inliers_.size() == (int)outlierMask_.size() && !h_.empty())
 			{
 				if(Settings::getHomography_ignoreWhenAllInliers() || cv::countNonZero(h_) < 1)
 				{
+					// ignore homography when all features are inliers
 					h_ = cv::Mat();
+					code_ = DetectionInfo::kRejectedAllInliers;
 				}
 			}
+		}
+		else
+		{
+			code_ = DetectionInfo::kRejectedLowMatches;
 		}
 
 		//UINFO("Homography Object %d time=%d ms", objectIndex_, time.elapsed());
@@ -582,6 +590,7 @@ private:
 	int objectId_;
 	const std::vector<cv::KeyPoint> * kptsA_;
 	const std::vector<cv::KeyPoint> * kptsB_;
+	DetectionInfo::RejectedCode code_;
 
 	std::vector<int> indexesA_;
 	std::vector<int> indexesB_;
@@ -860,65 +869,129 @@ bool FindObject::detect(const cv::Mat & image, DetectionInfo & info)
 						threads[j]->wait();
 
 						int id = threads[j]->getObjectId();
-
-						if(!threads[j]->getHomography().empty())
+						QTransform hTransform;
+						DetectionInfo::RejectedCode code = DetectionInfo::kRejectedUndef;
+						if(threads[j]->getHomography().empty())
 						{
-							if(threads[j]->getInliers().size() >= Settings::getHomography_minimumInliers())
+							code = threads[j]->rejectedCode();
+						}
+						if(code == DetectionInfo::kRejectedUndef &&
+						   threads[j]->getInliers().size() < Settings::getHomography_minimumInliers()	)
+						{
+							code = DetectionInfo::kRejectedLowInliers;
+						}
+						if(code == DetectionInfo::kRejectedUndef)
+						{
+							const cv::Mat & H = threads[j]->getHomography();
+							hTransform = QTransform(
+								H.at<double>(0,0), H.at<double>(1,0), H.at<double>(2,0),
+								H.at<double>(0,1), H.at<double>(1,1), H.at<double>(2,1),
+								H.at<double>(0,2), H.at<double>(1,2), H.at<double>(2,2));
+
+							// is homography valid?
+							// Here we use mapToScene() from QGraphicsItem instead
+							// of QTransform::map() because if the homography is not valid,
+							// huge errors are set by the QGraphicsItem and not by QTransform::map();
+							QRectF objectRect = objects_.value(id)->rect();
+							QGraphicsRectItem item(objectRect);
+							item.setTransform(hTransform);
+							QPolygonF rectH = item.mapToScene(item.rect());
+
+							// If a point is outside of 2x times the surface of the scene, homography is invalid.
+							for(int p=0; p<rectH.size(); ++p)
 							{
-								const cv::Mat & H = threads[j]->getHomography();
-								QTransform hTransform(
-									H.at<double>(0,0), H.at<double>(1,0), H.at<double>(2,0),
-									H.at<double>(0,1), H.at<double>(1,1), H.at<double>(2,1),
-									H.at<double>(0,2), H.at<double>(1,2), H.at<double>(2,2));
-
-								int distance = Settings::getGeneral_multiDetectionRadius(); // in pixels
-								if(Settings::getGeneral_multiDetection())
+								if(rectH.at(p).x() < -image.cols || rectH.at(p).x() > image.cols*2 ||
+								   rectH.at(p).y() < -image.rows || rectH.at(p).y() > image.rows*2)
 								{
-									// Get the outliers and recompute homography with them
-									matchesList.push_back(threads[j]->getOutliers());
-									matchesId.push_back(id);
+									code= DetectionInfo::kRejectedNotValid;
+									break;
+								}
+							}
 
-									// compute distance from previous added same objects...
-									QMultiMap<int, QTransform>::iterator objIter = info.objDetected_.find(id);
-									for(;objIter!=info.objDetected_.end() && objIter.key() == id; ++objIter)
+							// angle
+							if(code == DetectionInfo::kRejectedUndef &&
+							   Settings::getHomography_minAngle() > 0)
+							{
+								for(int a=0; a<rectH.size(); ++a)
+								{
+									//  Find the smaller angle
+									QLineF ab(rectH.at(a).x(), rectH.at(a).y(), rectH.at((a+1)%4).x(), rectH.at((a+1)%4).y());
+									QLineF cb(rectH.at((a+1)%4).x(), rectH.at((a+1)%4).y(), rectH.at((a+2)%4).x(), rectH.at((a+2)%4).y());
+									float angle =  ab.angle(cb);
+									float minAngle = (float)Settings::getHomography_minAngle();
+									if(angle < minAngle ||
+									   angle > 180.0-minAngle)
 									{
-										qreal dx = objIter.value().m31() - hTransform.m31();
-										qreal dy = objIter.value().m32() - hTransform.m32();
-										int d = (int)sqrt(dx*dx + dy*dy);
-										if(d < distance)
-										{
-											distance = d;
-										}
+										code = DetectionInfo::kRejectedByAngle;
+										break;
+									}
+								}
+							}
+
+							// multi detection
+							if(code == DetectionInfo::kRejectedUndef &&
+							   Settings::getGeneral_multiDetection())
+							{
+								int distance = Settings::getGeneral_multiDetectionRadius(); // in pixels
+								// Get the outliers and recompute homography with them
+								matchesList.push_back(threads[j]->getOutliers());
+								matchesId.push_back(id);
+
+								// compute distance from previous added same objects...
+								QMultiMap<int, QTransform>::iterator objIter = info.objDetected_.find(id);
+								for(;objIter!=info.objDetected_.end() && objIter.key() == id; ++objIter)
+								{
+									qreal dx = objIter.value().m31() - hTransform.m31();
+									qreal dy = objIter.value().m32() - hTransform.m32();
+									int d = (int)sqrt(dx*dx + dy*dy);
+									if(d < distance)
+									{
+										distance = d;
 									}
 								}
 
-								if(distance >= Settings::getGeneral_multiDetectionRadius())
+								if(distance < Settings::getGeneral_multiDetectionRadius())
 								{
-									QRect rect = objects_.value(id)->rect();
-									info.objDetected_.insert(id, hTransform);
-									info.objDetectedSizes_.insert(id, rect.size());
-									info.objDetectedInliers_.insert(id, threads[j]->getInliers());
-									info.objDetectedOutliers_.insert(id, threads[j]->getOutliers());
-									info.objDetectedInliersCount_.insert(id, threads[j]->getInliers().size());
-									info.objDetectedOutliersCount_.insert(id, threads[j]->getOutliers().size());
-									info.objDetectedFilenames_.insert(id, objects_.value(id)->filename());
-								}
-								else
-								{
-									info.rejectedInliers_.insert(id, threads[j]->getInliers());
-									info.rejectedOutliers_.insert(id, threads[j]->getOutliers());
+									code = DetectionInfo::kRejectedSuperposed;
 								}
 							}
-							else
+
+							// Corners visible
+							if(code == DetectionInfo::kRejectedUndef &&
+							   Settings::getHomography_allCornersVisible())
 							{
-								info.rejectedInliers_.insert(id, threads[j]->getInliers());
-								info.rejectedOutliers_.insert(id, threads[j]->getOutliers());
+								// Now verify if all corners are in the scene
+								QRectF sceneRect(0,0,image.cols, image.rows);
+								for(int p=0; p<rectH.size(); ++p)
+								{
+									if(!sceneRect.contains(QPointF(rectH.at(p).x(), rectH.at(p).y())))
+									{
+										code = DetectionInfo::kRejectedCornersOutside;
+										break;
+									}
+								}
 							}
+						}
+
+						if(code == DetectionInfo::kRejectedUndef)
+						{
+							// Accepted!
+							//std::cout << "H= " << threads[j]->getHomography() << std::endl;
+
+							info.objDetected_.insert(id, hTransform);
+							info.objDetectedSizes_.insert(id, objects_.value(id)->rect().size());
+							info.objDetectedInliers_.insert(id, threads[j]->getInliers());
+							info.objDetectedOutliers_.insert(id, threads[j]->getOutliers());
+							info.objDetectedInliersCount_.insert(id, threads[j]->getInliers().size());
+							info.objDetectedOutliersCount_.insert(id, threads[j]->getOutliers().size());
+							info.objDetectedFilenames_.insert(id, objects_.value(id)->filename());
 						}
 						else
 						{
+							//Rejected!
 							info.rejectedInliers_.insert(id, threads[j]->getInliers());
 							info.rejectedOutliers_.insert(id, threads[j]->getOutliers());
+							info.rejectedCodes_.insert(id, code);
 						}
 					}
 				}

@@ -193,6 +193,7 @@ class FINDOBJECT_EXP Settings
 	PARAMETER(General, vocabularyIncremental, bool, false, "The vocabulary is created incrementally. When new objects are added, their descriptors are compared to those already in vocabulary to find if the visual word already exist or not. \"NearestNeighbor/nndrRatio\" is used to compare descriptors.");
 	PARAMETER(General, vocabularyUpdateMinWords, int, 2000, "When the vocabulary is incremental (see \"General/vocabularyIncremental\"), after X words added to vocabulary, the internal index is updated with new words. This parameter lets avoiding to reconstruct the whole nearest neighbor index after each time descriptors of an object are added to vocabulary. 0 means no incremental update.");
 	PARAMETER(General, sendNoObjDetectedEvents, bool, false, "When there are no objects detected, send an empty object detection event.");
+	PARAMETER(General, autoPauseOnDetection, bool, false, "Auto pause the camera when an object is detected.");
 
 	PARAMETER(Homography, homographyComputed, bool, true, "Compute homography? On ROS, this is required to publish objects detected.");
 	PARAMETER(Homography, method, QString, "1:LMEDS;RANSAC", "Type of the robust estimation algorithm: least-median algorithm or RANSAC algorithm.");
@@ -200,6 +201,8 @@ class FINDOBJECT_EXP Settings
 	PARAMETER(Homography, minimumInliers, int, 10, "Minimum inliers to accept the homography. Value must be >= 4.");
 	PARAMETER(Homography, ignoreWhenAllInliers, bool, false, "Ignore homography when all features are inliers (sometimes when the homography doesn't converge, it returns the best homography with all features as inliers).");
 	PARAMETER(Homography, rectBorderWidth, int, 4, "Homography rectangle border width.");
+	PARAMETER(Homography, allCornersVisible, bool, false, "All corners of the detected object must be visible in the scene.");
+	PARAMETER(Homography, minAngle, int, 0, "(Degrees) Homography minimum angle. Set 0 to disable. When the angle is very small, this is a good indication that the homography is wrong. A good value is over 60 degrees.");
 
 public:
 	virtual ~Settings(){}

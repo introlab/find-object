@@ -32,6 +32,7 @@
 #include <QtCore/QFile>
 #include <QtCore/QBuffer>
 #include <QtCore/QThread>
+#include <QtCore/QLineF>
 
 #include <QtGui/QFileDialog>
 #include <QtGui/QMessageBox>
@@ -129,7 +130,7 @@ MainWindow::MainWindow(FindObject * findObject, Camera * camera, QWidget * paren
 	ui_->menuView->addAction(ui_->dockWidget_plot->toggleViewAction());
 	connect(ui_->toolBox, SIGNAL(parametersChanged(const QStringList &)), this, SLOT(notifyParametersChanged(const QStringList &)));
 
-	ui_->imageView_source->setGraphicsViewMode(false);
+	ui_->imageView_source->setGraphicsViewMode(true);
 	ui_->imageView_source->setTextLabel(tr("Press \"space\" to start the camera..."));
 	ui_->imageView_source->setMirrorView(Settings::getGeneral_mirrorView());
 	connect((QCheckBox*)ui_->toolBox->getParameterWidget(Settings::kGeneral_mirrorView()),
@@ -963,20 +964,37 @@ void MainWindow::update(const cv::Mat & image)
 				QLabel * label = ui_->dockWidget_objects->findChild<QLabel*>(QString("%1detection").arg(id));
 				QMultiMap<int, int> rejectedInliers = info.rejectedInliers_.value(id);
 				QMultiMap<int, int> rejectedOutliers = info.rejectedOutliers_.value(id);
-				if(jter.value().size() < Settings::getHomography_minimumInliers())
+				int rejectedCode = info.rejectedCodes_.value(id);
+				if(rejectedCode == DetectionInfo::kRejectedLowMatches)
 				{
 					label->setText(QString("Too low matches (%1)").arg(jter.value().size()));
 				}
-				else if(rejectedInliers.size() >= Settings::getHomography_minimumInliers())
+				else if(rejectedCode == DetectionInfo::kRejectedAllInliers)
 				{
 					label->setText(QString("Ignored, all inliers (%1 in %2 out)").arg(rejectedInliers.size()).arg(rejectedOutliers.size()));
 				}
-				else
+				else if(rejectedCode == DetectionInfo::kRejectedNotValid)
+				{
+					label->setText(QString("Not valid homography (%1 in %2 out)").arg(rejectedInliers.size()).arg(rejectedOutliers.size()));
+				}
+				else if(rejectedCode == DetectionInfo::kRejectedLowInliers)
 				{
 					label->setText(QString("Too low inliers (%1 in %2 out)").arg(rejectedInliers.size()).arg(rejectedOutliers.size()));
 				}
-
+				else if(rejectedCode == DetectionInfo::kRejectedCornersOutside)
+				{
+					label->setText(QString("Corners not visible (%1 in %2 out)").arg(rejectedInliers.size()).arg(rejectedOutliers.size()));
+				}
+				else if(rejectedCode == DetectionInfo::kRejectedByAngle)
+				{
+					label->setText(QString("Angle too small (%1 in %2 out)").arg(rejectedInliers.size()).arg(rejectedOutliers.size()));
+				}
 			}
+		}
+
+		if(camera_->isRunning() && Settings::getGeneral_autoPauseOnDetection() && info.objDetected_.size())
+		{
+			this->pauseProcessing();
 		}
 
 		// Add homography rectangles when homographies are computed

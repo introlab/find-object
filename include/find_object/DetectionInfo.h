@@ -18,7 +18,24 @@
 class DetectionInfo
 {
 public:
-	enum TimeStamp{kTimeKeypointDetection, kTimeDescriptorExtraction, kTimeIndexing, kTimeMatching, kTimeHomography, kTimeTotal};
+	enum TimeStamp{
+		kTimeKeypointDetection,
+		kTimeDescriptorExtraction,
+		kTimeIndexing,
+		kTimeMatching,
+		kTimeHomography,
+		kTimeTotal
+	};
+	enum RejectedCode{
+		kRejectedUndef,
+		kRejectedLowMatches,
+		kRejectedLowInliers,
+		kRejectedSuperposed,
+		kRejectedAllInliers,
+		kRejectedNotValid,
+		kRejectedCornersOutside,
+		kRejectedByAngle
+	};
 
 public:
 	DetectionInfo() :
@@ -27,6 +44,7 @@ public:
 	{}
 
 public:
+	// Those maps have the same size
 	QMultiMap<int, QTransform> objDetected_;
 	QMultiMap<int, QSize> objDetectedSizes_; // Object ID <width, height> match the number of detected objects
 	QMultiMap<int, QString > objDetectedFilenames_; // Object ID <filename> match the number of detected objects
@@ -40,8 +58,12 @@ public:
 	cv::Mat sceneDescriptors_;
 	QMultiMap<int, int> sceneWords_;
 	QMap<int, QMultiMap<int, int> > matches_; // ObjectID Map< ObjectDescriptorIndex, SceneDescriptorIndex >, match the number of objects
+
+	// Those maps have the same size
 	QMultiMap<int, QMultiMap<int, int> > rejectedInliers_; // ObjectID Map< ObjectDescriptorIndex, SceneDescriptorIndex >
 	QMultiMap<int, QMultiMap<int, int> > rejectedOutliers_; // ObjectID Map< ObjectDescriptorIndex, SceneDescriptorIndex >
+	QMultiMap<int, RejectedCode> rejectedCodes_; // ObjectID rejected code
+
 	float minMatchedDistance_;
 	float maxMatchedDistance_;
 };

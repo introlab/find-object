@@ -48,7 +48,35 @@ void RectItem::showDescription()
 			placeHolder_->setBrush(QBrush(QColor ( 0, 0, 0, 170 ))); // Black transparent background
 			QGraphicsTextItem * text = new QGraphicsTextItem(placeHolder_);
 			text->setDefaultTextColor(this->pen().color().rgb());
-			text->setPlainText(tr("Object=%1").arg(id_));
+			QTransform t = this->transform();
+			QPolygonF rectH = this->mapToScene(this->rect());
+			float angle = 90.0f;
+			for(int a=0; a<rectH.size(); ++a)
+			{
+				//  Find the smaller angle
+				QLineF ab(rectH.at(a).x(), rectH.at(a).y(), rectH.at((a+1)%4).x(), rectH.at((a+1)%4).y());
+				QLineF cb(rectH.at((a+1)%4).x(), rectH.at((a+1)%4).y(), rectH.at((a+2)%4).x(), rectH.at((a+2)%4).y());
+				float angleTmp =  ab.angle(cb);
+				if(angleTmp > 90.0f)
+				{
+					angleTmp  = 180.0f - angleTmp;
+				}
+				if(angleTmp < angle)
+				{
+					angle = angleTmp;
+				}
+			}
+			text->setPlainText(tr(
+					"Object=%1\n"
+					"Homography= [\n"
+					"            %2 %3 %4\n"
+					"            %5 %6 %7\n"
+					"            %8 %9 %10]\n"
+					"Angle=%11").arg(id_)
+					.arg(t.m11()).arg(t.m12()).arg(t.m13())
+					.arg(t.m21()).arg(t.m22()).arg(t.m23())
+					.arg(t.m31()).arg(t.m32()).arg(t.m33())
+					.arg(angle));
 			placeHolder_->setRect(text->boundingRect());
 		}
 
