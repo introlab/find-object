@@ -49,7 +49,7 @@ public:
 	quint16 getPort() const;
 
 public Q_SLOTS:
-	void publishDetectionInfo(const DetectionInfo & info);
+	void publishDetectionInfo(const find_object::DetectionInfo & info);
 
 private Q_SLOTS:
 	void addClient();

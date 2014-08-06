@@ -294,7 +294,7 @@ void MainWindow::setupTCPServer()
 		delete tcpServer_;
 	}
 	tcpServer_ = new TcpServer(Settings::getGeneral_port(), this);
-	connect(this, SIGNAL(objectsFound(DetectionInfo)), tcpServer_, SLOT(publishDetectionInfo(DetectionInfo)));
+	connect(this, SIGNAL(objectsFound(find_object::DetectionInfo)), tcpServer_, SLOT(publishDetectionInfo(find_object::DetectionInfo)));
 	ui_->label_ipAddress->setText(tcpServer_->getHostAddress().toString());
 	ui_->label_port->setNum(tcpServer_->getPort());
 	UINFO("Detection sent on port: %d (IP=%s)", tcpServer_->getPort(), tcpServer_->getHostAddress().toString().toStdString().c_str());
@@ -446,7 +446,7 @@ bool MainWindow::saveObjects()
 	return false;
 }
 
-void MainWindow::removeObject(ObjWidget * object)
+void MainWindow::removeObject(find_object::ObjWidget * object)
 {
 	if(object)
 	{
@@ -735,7 +735,7 @@ void MainWindow::showObject(ObjWidget * obj)
 		vLayout->addLayout(hLayout);
 		vLayout->addWidget(obj);
 		obj->setDeletable(true);
-		connect(obj, SIGNAL(removalTriggered(ObjWidget*)), this, SLOT(removeObject(ObjWidget*)));
+		connect(obj, SIGNAL(removalTriggered(find_object::ObjWidget*)), this, SLOT(removeObject(find_object::ObjWidget*)));
 		connect(obj, SIGNAL(destroyed(QObject *)), title, SLOT(deleteLater()));
 		connect(obj, SIGNAL(destroyed(QObject *)), detectedLabel, SLOT(deleteLater()));
 		connect(obj, SIGNAL(destroyed(QObject *)), detectorDescriptorType, SLOT(deleteLater()));

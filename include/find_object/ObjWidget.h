@@ -96,7 +96,7 @@ protected:
 	virtual void mouseReleaseEvent(QMouseEvent * event);
 
 Q_SIGNALS:
-	void removalTriggered(ObjWidget *);
+	void removalTriggered(find_object::ObjWidget *);
 	void selectionChanged();
 	void roiChanged(const cv::Rect &);
 

@@ -33,8 +33,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "TcpResponse.h"
 #include "find_object/JsonWriter.h"
 
-using namespace find_object;
-
 void showUsage()
 {
 	printf("\ntcpRequest [options] --scene image.png --out # --in #\n"
@@ -42,7 +40,7 @@ void showUsage()
 			"  \"in\" is the port from which the detection is received.\n"
 			"  Options:\n"
 			"    --host #.#.#.#       Set host address.\n");
-	if(JsonWriter::available())
+	if(find_object::JsonWriter::available())
 	{
 		printf("    --json \"path\"      Path to an output JSON file.\n");
 	}
@@ -116,7 +114,7 @@ int main(int argc, char * argv[])
 			continue;
 		}
 
-		if(JsonWriter::available())
+		if(find_object::JsonWriter::available())
 		{
 			if(strcmp(argv[i], "--json") == 0 || strcmp(argv[i], "-json") == 0)
 			{
@@ -236,9 +234,9 @@ int main(int argc, char * argv[])
 				printf("No objects detected.\n");
 			}
 			// write json
-			if(!jsonPath.isEmpty() && JsonWriter::available())
+			if(!jsonPath.isEmpty() && find_object::JsonWriter::available())
 			{
-				JsonWriter::write(response.info(), jsonPath);
+				find_object::JsonWriter::write(response.info(), jsonPath);
 				printf("JSON written to \"%s\"\n", jsonPath.toStdString().c_str());
 			}
 		}

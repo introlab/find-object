@@ -65,7 +65,7 @@ public:
 	void removeObject(int id);
 	void removeAllObjects();
 
-	bool detect(const cv::Mat & image, DetectionInfo & info);
+	bool detect(const cv::Mat & image, find_object::DetectionInfo & info);
 
 	void updateDetectorExtractor();
 	void updateObjects();
@@ -78,7 +78,7 @@ public Q_SLOTS:
 	void detect(const cv::Mat & image); // emit objectsFound()
 
 Q_SIGNALS:
-	void objectsFound(const DetectionInfo &);
+	void objectsFound(const find_object::DetectionInfo &);
 
 private:
 	void clearVocabulary();

@@ -32,8 +32,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QtCore/QPointF>
 #include <QtCore/QTime>
 
-using namespace find_object;
-
 TcpClient::TcpClient(QObject *parent) :
 	QTcpSocket(parent),
     blockSize_(0)
@@ -65,7 +63,7 @@ void TcpClient::readReceivedData()
 
 	blockSize_ = 0;
 
-	DetectionInfo info;
+	find_object::DetectionInfo info;
 	in >> info;
 
 	printf("---\n");

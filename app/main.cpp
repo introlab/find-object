@@ -38,8 +38,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "find_object/JsonWriter.h"
 #include "find_object/utilite/ULogger.h"
 
-using namespace find_object;
-
 bool running = true;
 
 #ifdef WIN32
@@ -108,8 +106,8 @@ void showUsage()
 			"  --My/Parameter \"value\" Set find-Object's parameter (look --params for parameters' name).\n"
 			"                           It will override the one in --config. Example to set 4 threads:\n"
 			"                           $ find_object --General/threads 4\n"
-			"  --help                 Show usage.\n", Settings::iniDefaultPath().toStdString().c_str());
-	if(JsonWriter::available())
+			"  --help                 Show usage.\n", find_object::Settings::iniDefaultPath().toStdString().c_str());
+	if(find_object::JsonWriter::available())
 	{
 		printf("  --json \"path\"          Path to an output JSON file (only in --console mode with --scene).\n");
 	}
@@ -129,9 +127,9 @@ int main(int argc, char* argv[])
 	bool guiMode = true;
 	QString objectsPath = "";
 	QString scenePath = "";
-	QString configPath = Settings::iniDefaultPath();
+	QString configPath = find_object::Settings::iniDefaultPath();
 	QString jsonPath;
-	ParametersMap customParameters;
+	find_object::ParametersMap customParameters;
 
 	for(int i=1; i<argc; ++i)
 	{
@@ -216,7 +214,7 @@ int main(int argc, char* argv[])
 		{
 			showUsage();
 		}
-		if(JsonWriter::available())
+		if(find_object::JsonWriter::available())
 		{
 			if(strcmp(argv[i], "-json") == 0 ||
 			   strcmp(argv[i], "--json") == 0)
@@ -239,15 +237,15 @@ int main(int argc, char* argv[])
 		}
 		if(strcmp(argv[i], "--params") == 0)
 		{
-			ParametersMap parameters = Settings::getDefaultParameters();
-			for(ParametersMap::iterator iter=parameters.begin(); iter!=parameters.end(); ++iter)
+			find_object::ParametersMap parameters = find_object::Settings::getDefaultParameters();
+			for(find_object::ParametersMap::iterator iter=parameters.begin(); iter!=parameters.end(); ++iter)
 			{
 				std::string str = "Param: " + iter.key().toStdString() + " = \"" + iter.value().toString().toStdString() + "\"";
 				std::cout <<
 						str <<
 						std::setw(60 - str.size()) <<
 						" [" <<
-						Settings::getDescriptions().value(iter.key()).toStdString().c_str() <<
+						find_object::Settings::getDescriptions().value(iter.key()).toStdString().c_str() <<
 						"]" <<
 						std::endl;
 			}
@@ -257,7 +255,7 @@ int main(int argc, char* argv[])
 		}
 
 		// Check for custom parameters:
-		ParametersMap parameters = Settings::getDefaultParameters();
+		find_object::ParametersMap parameters = find_object::Settings::getDefaultParameters();
 		QString name = argv[i];
 		if(name.size() > 2)
 		{
@@ -287,11 +285,11 @@ int main(int argc, char* argv[])
 	UINFO("   Objects path: \"%s\"", objectsPath.toStdString().c_str());
 	UINFO("   Scene path: \"%s\"", scenePath.toStdString().c_str());
 	UINFO("   Settings path: \"%s\"", configPath.toStdString().c_str());
-	if(JsonWriter::available())
+	if(find_object::JsonWriter::available())
 	{
 		UINFO("   JSON path: \"%s\"", jsonPath.toStdString().c_str());
 	}
-	for(ParametersMap::iterator iter= customParameters.begin(); iter!=customParameters.end(); ++iter)
+	for(find_object::ParametersMap::iterator iter= customParameters.begin(); iter!=customParameters.end(); ++iter)
 	{
 		UINFO("   Param \"%s\"=\"%s\"", iter.key().toStdString().c_str(), iter.value().toString().toStdString().c_str());
 	}
@@ -301,16 +299,16 @@ int main(int argc, char* argv[])
 	//////////////////////////
 
 	// Load settings, should be loaded before creating other objects
-	Settings::init(configPath);
+	find_object::Settings::init(configPath);
 
 	// Override custom parameters:
-	for(ParametersMap::iterator iter= customParameters.begin(); iter!=customParameters.end(); ++iter)
+	for(find_object::ParametersMap::iterator iter= customParameters.begin(); iter!=customParameters.end(); ++iter)
 	{
-		Settings::setParameter(iter.key(), iter.value());
+		find_object::Settings::setParameter(iter.key(), iter.value());
 	}
 
 	// Create FindObject
-	FindObject * findObject = new FindObject();
+	find_object::FindObject * findObject = new find_object::FindObject();
 
 	// Load objects if path is set
 	int objectsLoaded = 0;
@@ -335,7 +333,7 @@ int main(int argc, char* argv[])
 	if(guiMode)
 	{
 		QApplication app(argc, argv);
-		MainWindow mainWindow(findObject, 0); // ownership transfered
+		find_object::MainWindow mainWindow(findObject, 0); // ownership transfered
 
 		app.connect( &app, SIGNAL( lastWindowClosed() ), &app, SLOT( quit() ) );
 		mainWindow.show();
@@ -348,7 +346,7 @@ int main(int argc, char* argv[])
 		app.exec();
 
 		// Save settings
-		Settings::saveSettings();
+		find_object::Settings::saveSettings();
 	}
 	else
 	{
@@ -366,7 +364,7 @@ int main(int argc, char* argv[])
 			// process the scene and exit
 			QTime time;
 			time.start();
-			DetectionInfo info;
+			find_object::DetectionInfo info;
 			findObject->detect(scene, info);
 
 			if(info.objDetected_.size() > 1)
@@ -377,26 +375,26 @@ int main(int argc, char* argv[])
 			{
 				UINFO("Object %d detected! (%d ms)", (int)info.objDetected_.begin().key(), time.elapsed());
 			}
-			else if(Settings::getGeneral_sendNoObjDetectedEvents())
+			else if(find_object::Settings::getGeneral_sendNoObjDetectedEvents())
 			{
 				UINFO("No objects detected. (%d ms)", time.elapsed());
 			}
 
-			if(!jsonPath.isEmpty() && JsonWriter::available())
+			if(!jsonPath.isEmpty() && find_object::JsonWriter::available())
 			{
-				JsonWriter::write(info, jsonPath);
+				find_object::JsonWriter::write(info, jsonPath);
 				UINFO("JSON written to \"%s\"", jsonPath.toStdString().c_str());
 			}
 		}
 		else
 		{
-			Camera camera;
-			TcpServer tcpServer(Settings::getGeneral_port());
+			find_object::Camera camera;
+			find_object::TcpServer tcpServer(find_object::Settings::getGeneral_port());
 			UINFO("Detection sent on port: %d (IP=%s)", tcpServer.getPort(), tcpServer.getHostAddress().toString().toStdString().c_str());
 
 			// connect stuff:
 			// [FindObject] ---ObjectsDetected---> [TcpServer]
-			QObject::connect(findObject, SIGNAL(objectsFound(DetectionInfo)), &tcpServer, SLOT(publishDetectionInfo(DetectionInfo)));
+			QObject::connect(findObject, SIGNAL(objectsFound(find_object::DetectionInfo)), &tcpServer, SLOT(publishDetectionInfo(find_object::DetectionInfo)));
 
 			// [Camera] ---Image---> [FindObject]
 			QObject::connect(&camera, SIGNAL(imageReceived(const cv::Mat &)), findObject, SLOT(detect(const cv::Mat &)));

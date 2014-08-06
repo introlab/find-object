@@ -33,14 +33,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QtNetwork/QTcpSocket>
 #include <QtGui/QTransform>
 
-using namespace find_object;
-
 ImagesTcpServer::ImagesTcpServer(float hz, const QString & path, QObject * parent) :
 	QTcpSocket(parent)
 {
 	// Set camera parameters
-	Settings::setCamera_4imageRate(hz);
-	Settings::setCamera_5mediaPath(path);
+	find_object::Settings::setCamera_4imageRate(hz);
+	find_object::Settings::setCamera_5mediaPath(path);
 
 	connect(&camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(publishImage(const cv::Mat &)));
 	connect(this, SIGNAL(connected()), this, SLOT(startCamera()));

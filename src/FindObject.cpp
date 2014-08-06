@@ -48,7 +48,7 @@ FindObject::FindObject(QObject * parent) :
 	detector_(Settings::createKeypointDetector()),
 	extractor_(Settings::createDescriptorExtractor())
 {
-	qRegisterMetaType<DetectionInfo>("DetectionInfo");
+	qRegisterMetaType<find_object::DetectionInfo>("find_object::DetectionInfo");
 	Q_ASSERT(detector_ != 0 && extractor_ != 0);
 }
 
@@ -655,7 +655,7 @@ void FindObject::detect(const cv::Mat & image)
 	}
 }
 
-bool FindObject::detect(const cv::Mat & image, DetectionInfo & info)
+bool FindObject::detect(const cv::Mat & image, find_object::DetectionInfo & info)
 {
 	QTime totalTime;
 	totalTime.start();

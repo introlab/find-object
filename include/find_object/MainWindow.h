@@ -66,7 +66,7 @@ class FINDOBJECT_EXP MainWindow : public QMainWindow
 	Q_OBJECT
 
 public:
-	MainWindow(FindObject * findObject, Camera * camera = 0, QWidget * parent = 0);
+	MainWindow(find_object::FindObject * findObject, find_object::Camera * camera = 0, QWidget * parent = 0);
 	virtual ~MainWindow();
 
 	void setSourceImageText(const QString & text);
@@ -91,7 +91,7 @@ private Q_SLOTS:
 	void setupCameraFromVideoFile();
 	void setupCameraFromImagesDirectory();
 	void setupCameraFromTcpIp();
-	void removeObject(ObjWidget * object);
+	void removeObject(find_object::ObjWidget * object);
 	void removeAllObjects();
 	void updateObjectsSize();
 	void updateMirrorView();
@@ -102,7 +102,7 @@ private Q_SLOTS:
 	void rectHovered(int objId);
 
 Q_SIGNALS:
-	void objectsFound(const DetectionInfo &);
+	void objectsFound(const find_object::DetectionInfo &);
 
 private:
 	bool loadSettings(const QString & path);
@@ -111,8 +111,8 @@ private:
 	int saveObjects(const QString & dirPath);
 	void setupTCPServer();
 	bool addObjectFromFile(const QString & filePath);
-	void showObject(ObjWidget * obj);
-	void updateObjectSize(ObjWidget * obj);
+	void showObject(find_object::ObjWidget * obj);
+	void updateObjectSize(find_object::ObjWidget * obj);
 	void updateVocabulary();
 
 private:
@@ -122,7 +122,7 @@ private:
 	rtabmap::PdfPlotCurve * likelihoodCurve_;
 	rtabmap::PdfPlotCurve * inliersCurve_;
 	AboutDialog * aboutDialog_;
-	QMap<int, ObjWidget*> objWidgets_;
+	QMap<int, find_object::ObjWidget*> objWidgets_;
 	QTime updateRate_;
 	QTime refreshStartTime_;
 	int lowestRefreshRate_;
