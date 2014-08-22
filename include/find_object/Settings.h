@@ -97,6 +97,8 @@ class FINDOBJECT_EXP Settings
 	PARAMETER(Feature2D, 1Detector, QString, "7:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK" , "Keypoint detector.");
 	PARAMETER(Feature2D, 2Descriptor, QString, "3:Brief;ORB;SIFT;SURF;BRISK;FREAK", "Keypoint descriptor.");
 	PARAMETER(Feature2D, 3MaxFeatures, int, 0, "Maximum features per image. If the number of features extracted is over this threshold, only X features with the highest response are kept. 0 means all features are kept.");
+	PARAMETER(Feature2D, 4Affine, bool, false, "(ASIFT) Extract features on multiple affine transformations of the image.");
+	PARAMETER(Feature2D, 5AffineCount, int, 6, "(ASIFT) Higher the value, more affine transformations will be done.");
 
 	PARAMETER(Feature2D, Brief_bytes, int, 32, "Bytes is a length of descriptor in bytes. It can be equal 16, 32 or 64 bytes.");
 
@@ -205,7 +207,7 @@ class FINDOBJECT_EXP Settings
 	PARAMETER(General, autoStartCamera, bool, false, "Automatically start the camera when the application is opened.");
 	PARAMETER(General, autoUpdateObjects, bool, true, "Automatically update objects on every parameter changes, otherwise you would need to press \"Update objects\" on the objects panel.");
 	PARAMETER(General, nextObjID, uint, 1, "Next object ID to use.");
-	PARAMETER(General, imageFormats, QString, "*.png *.jpg *.bmp *.tiff *.ppm", "Image formats supported.");
+	PARAMETER(General, imageFormats, QString, "*.png *.jpg *.bmp *.tiff *.ppm *.pgm", "Image formats supported.");
 	PARAMETER(General, videoFormats, QString, "*.avi *.m4v *.mp4", "Video formats supported.");
 	PARAMETER(General, mirrorView, bool, true, "Flip the camera image horizontally (like all webcam applications).");
 	PARAMETER(General, invertedSearch, bool, true, "Instead of matching descriptors from the objects to those in a vocabulary created with descriptors extracted from the scene, we create a vocabulary from all the objects' descriptors and we match scene's descriptors to this vocabulary. It is the inverted search mode.");
@@ -283,7 +285,9 @@ public:
 	KeypointDetector(cv::FeatureDetector * featureDetector);
 	KeypointDetector(GPUFeature2D * gpuFeature2D);
 
-	void detect(const cv::Mat & image, std::vector<cv::KeyPoint> & keypoints);
+	void detect(const cv::Mat & image,
+			std::vector<cv::KeyPoint> & keypoints,
+			const cv::Mat & mask = cv::Mat());
 
 private:
 	cv::FeatureDetector * featureDetector_;

@@ -53,6 +53,13 @@ class DescriptorExtractor;
 class FINDOBJECT_EXP FindObject : public QObject
 {
 	Q_OBJECT;
+public:
+	static void affineSkew(float tilt,
+				float phi,
+				const cv::Mat & image,
+				cv::Mat & skewImage,
+				cv::Mat & skewMask,
+				cv::Mat & Ai);
 
 public:
 	FindObject(QObject * parent = 0);

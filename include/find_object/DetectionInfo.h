@@ -42,6 +42,7 @@ public:
 	enum TimeStamp{
 		kTimeKeypointDetection,
 		kTimeDescriptorExtraction,
+		kTimeSkewAffine,
 		kTimeIndexing,
 		kTimeMatching,
 		kTimeHomography,

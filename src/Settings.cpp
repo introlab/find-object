@@ -38,8 +38,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <opencv2/nonfree/gpu.hpp>
 #include <opencv2/gpu/gpu.hpp>
 
-#define VERBOSE 0
-
 namespace find_object {
 
 ParametersMap Settings::defaultParameters_;
@@ -199,7 +197,8 @@ public:
 	virtual ~GPUFeature2D() {}
 
 	virtual void detectKeypoints(const cv::Mat & image,
-			std::vector<cv::KeyPoint> & keypoints) = 0;
+			std::vector<cv::KeyPoint> & keypoints,
+			const cv::Mat & mask = cv::Mat()) = 0;
 
 	virtual void computeDescriptors(const cv::Mat & image,
 			std::vector<cv::KeyPoint> & keypoints,
@@ -225,12 +224,15 @@ public:
 	}
 	virtual ~GPUSURF() {}
 
-    void detectKeypoints(const cv::Mat & image, std::vector<cv::KeyPoint> & keypoints)
+    void detectKeypoints(const cv::Mat & image,
+    		std::vector<cv::KeyPoint> & keypoints,
+    		const cv::Mat & mask = cv::Mat())
     {
     	cv::gpu::GpuMat imgGpu(image);
+    	cv::gpu::GpuMat maskGpu(mask);
 		try
 		{
-			surf_(imgGpu, cv::gpu::GpuMat(), keypoints);
+			surf_(imgGpu, maskGpu, keypoints);
 		}
 		catch(cv::Exception &e)
 		{
@@ -292,10 +294,13 @@ public:
 	virtual ~GPUFAST() {}
 
 protected:
-	void detectKeypoints(const cv::Mat & image, std::vector<cv::KeyPoint> & keypoints)
+	void detectKeypoints(const cv::Mat & image,
+			std::vector<cv::KeyPoint> & keypoints,
+			const cv::Mat & mask = cv::Mat())
     {
     	cv::gpu::GpuMat imgGpu(image);
-    	fast_(imgGpu, cv::gpu::GpuMat(), keypoints);
+    	cv::gpu::GpuMat maskGpu(mask);
+    	fast_(imgGpu, maskGpu, keypoints);
     }
 	void computeDescriptors( const cv::Mat& image,
 		std::vector<cv::KeyPoint>& keypoints,
@@ -335,12 +340,15 @@ public:
 	virtual ~GPUORB() {}
 
 protected:
-	void detectKeypoints(const cv::Mat & image, std::vector<cv::KeyPoint> & keypoints)
+	void detectKeypoints(const cv::Mat & image,
+			std::vector<cv::KeyPoint> & keypoints,
+			const cv::Mat & mask = cv::Mat())
     {
     	cv::gpu::GpuMat imgGpu(image);
+    	cv::gpu::GpuMat maskGpu(mask);
     	try
     	{
-    		orb_(imgGpu, cv::gpu::GpuMat(), keypoints);
+    		orb_(imgGpu, maskGpu, keypoints);
     	}
     	catch(cv::Exception &e)
 		{
@@ -411,7 +419,7 @@ KeypointDetector * Settings::createKeypointDetector()
 								getFeature2D_Dense_initImgBound(),
 								getFeature2D_Dense_varyXyStepWithScale(),
 								getFeature2D_Dense_varyImgBoundWithScale());
-						if(VERBOSE)printf("Settings::createFeaturesDetector() type=%s\n", strategies.at(index).toStdString().c_str());
+						UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 					}
 					break;
 				case 1:
@@ -422,14 +430,14 @@ KeypointDetector * Settings::createKeypointDetector()
 							detectorGPU = new GPUFAST(
 									getFeature2D_Fast_threshold(),
 									getFeature2D_Fast_nonmaxSuppression());
-							if(VERBOSE)printf("Settings::createFeaturesDetector() type=%s GPU\n", strategies.at(index).toStdString().c_str());
+							UDEBUG("type=%s GPU", strategies.at(index).toStdString().c_str());
 						}
 						else
 						{
 							detector = new cv::FastFeatureDetector(
 									getFeature2D_Fast_threshold(),
 									getFeature2D_Fast_nonmaxSuppression());
-							if(VERBOSE)printf("Settings::createFeaturesDetector() type=%s\n", strategies.at(index).toStdString().c_str());
+							UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 						}
 					}
 					break;
@@ -443,7 +451,7 @@ KeypointDetector * Settings::createKeypointDetector()
 								getFeature2D_GFTT_blockSize(),
 								getFeature2D_GFTT_useHarrisDetector(),
 								getFeature2D_GFTT_k());
-						if(VERBOSE)printf("Settings::createFeaturesDetector() type=%s\n", strategies.at(index).toStdString().c_str());
+						UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 					}
 					break;
 				case 3:
@@ -459,7 +467,7 @@ KeypointDetector * Settings::createKeypointDetector()
 								getFeature2D_MSER_areaThreshold(),
 								getFeature2D_MSER_minMargin(),
 								getFeature2D_MSER_edgeBlurSize());
-						if(VERBOSE)printf("Settings::createFeaturesDetector() type=%s\n", strategies.at(index).toStdString().c_str());
+						UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 					}
 					break;
 				case 4:
@@ -478,7 +486,7 @@ KeypointDetector * Settings::createKeypointDetector()
 									getFeature2D_ORB_patchSize(),
 									getFeature2D_Fast_threshold(),
 									getFeature2D_Fast_nonmaxSuppression());
-							if(VERBOSE)printf("Settings::createFeaturesDetector() type=%s (GPU)\n", strategies.at(index).toStdString().c_str());
+							UDEBUG("type=%s (GPU)", strategies.at(index).toStdString().c_str());
 						}
 						else
 						{
@@ -491,7 +499,7 @@ KeypointDetector * Settings::createKeypointDetector()
 									getFeature2D_ORB_WTA_K(),
 									getFeature2D_ORB_scoreType(),
 									getFeature2D_ORB_patchSize());
-							if(VERBOSE)printf("Settings::createFeaturesDetector() type=%s\n", strategies.at(index).toStdString().c_str());
+							UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 						}
 					}
 					break;
@@ -504,7 +512,7 @@ KeypointDetector * Settings::createKeypointDetector()
 								getFeature2D_SIFT_contrastThreshold(),
 								getFeature2D_SIFT_edgeThreshold(),
 								getFeature2D_SIFT_sigma());
-						if(VERBOSE)printf("Settings::createFeaturesDetector() type=%s\n", strategies.at(index).toStdString().c_str());
+						UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 					}
 					break;
 				case 6:
@@ -516,7 +524,7 @@ KeypointDetector * Settings::createKeypointDetector()
 								getFeature2D_Star_lineThresholdProjected(),
 								getFeature2D_Star_lineThresholdBinarized(),
 								getFeature2D_Star_suppressNonmaxSize());
-						if(VERBOSE)printf("Settings::createFeaturesDetector() type=%s\n", strategies.at(index).toStdString().c_str());
+						UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 					}
 					break;
 				case 7:
@@ -531,7 +539,7 @@ KeypointDetector * Settings::createKeypointDetector()
 									getFeature2D_SURF_extended(),
 									getFeature2D_SURF_keypointsRatio(),
 									getFeature2D_SURF_upright());
-							if(VERBOSE)printf("Settings::createFeaturesDetector() type=%s (GPU)\n", strategies.at(index).toStdString().c_str());
+							UDEBUG("type=%s (GPU)", strategies.at(index).toStdString().c_str());
 						}
 						else
 						{
@@ -541,7 +549,7 @@ KeypointDetector * Settings::createKeypointDetector()
 								getFeature2D_SURF_nOctaveLayers(),
 								getFeature2D_SURF_extended(),
 								getFeature2D_SURF_upright());
-							if(VERBOSE)printf("Settings::createFeaturesDetector() type=%s\n", strategies.at(index).toStdString().c_str());
+							UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 						}
 					}
 					break;
@@ -552,7 +560,7 @@ KeypointDetector * Settings::createKeypointDetector()
 								getFeature2D_BRISK_thresh(),
 								getFeature2D_BRISK_octaves(),
 								getFeature2D_BRISK_patternScale());
-						if(VERBOSE)printf("Settings::createFeaturesDetector() type=%s\n", strategies.at(index).toStdString().c_str());
+						UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 					}
 					break;
 				default:
@@ -595,7 +603,7 @@ DescriptorExtractor * Settings::createDescriptorExtractor()
 					{
 						extractor = new cv::BriefDescriptorExtractor(
 								getFeature2D_Brief_bytes());
-						if(VERBOSE)printf("Settings::createDescriptorsExtractor() type=%s\n", strategies.at(index).toStdString().c_str());
+						UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 					}
 					break;
 				case 1:
@@ -614,7 +622,7 @@ DescriptorExtractor * Settings::createDescriptorExtractor()
 									getFeature2D_ORB_patchSize(),
 									getFeature2D_Fast_threshold(),
 									getFeature2D_Fast_nonmaxSuppression());
-							if(VERBOSE)printf("Settings::createDescriptorsExtractor() type=%s (GPU)\n", strategies.at(index).toStdString().c_str());
+							UDEBUG("type=%s (GPU)", strategies.at(index).toStdString().c_str());
 						}
 						else
 						{
@@ -627,7 +635,7 @@ DescriptorExtractor * Settings::createDescriptorExtractor()
 									getFeature2D_ORB_WTA_K(),
 									getFeature2D_ORB_scoreType(),
 									getFeature2D_ORB_patchSize());
-							if(VERBOSE)printf("Settings::createDescriptorsExtractor() type=%s\n", strategies.at(index).toStdString().c_str());
+							UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 						}
 					}
 					break;
@@ -640,7 +648,7 @@ DescriptorExtractor * Settings::createDescriptorExtractor()
 								getFeature2D_SIFT_contrastThreshold(),
 								getFeature2D_SIFT_edgeThreshold(),
 								getFeature2D_SIFT_sigma());
-						if(VERBOSE)printf("Settings::createDescriptorsExtractor() type=%s\n", strategies.at(index).toStdString().c_str());
+						UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 					}
 					break;
 				case 3:
@@ -655,7 +663,7 @@ DescriptorExtractor * Settings::createDescriptorExtractor()
 									getFeature2D_SURF_extended(),
 									getFeature2D_SURF_keypointsRatio(),
 									getFeature2D_SURF_upright());
-							if(VERBOSE)printf("Settings::createDescriptorsExtractor() type=%s (GPU)\n", strategies.at(index).toStdString().c_str());
+							UDEBUG("type=%s (GPU)", strategies.at(index).toStdString().c_str());
 						}
 						else
 						{
@@ -665,7 +673,7 @@ DescriptorExtractor * Settings::createDescriptorExtractor()
 									getFeature2D_SURF_nOctaveLayers(),
 									getFeature2D_SURF_extended(),
 									getFeature2D_SURF_upright());
-							if(VERBOSE)printf("Settings::createDescriptorsExtractor() type=%s\n", strategies.at(index).toStdString().c_str());
+							UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 						}
 					}
 					break;
@@ -676,7 +684,7 @@ DescriptorExtractor * Settings::createDescriptorExtractor()
 								getFeature2D_BRISK_thresh(),
 								getFeature2D_BRISK_octaves(),
 								getFeature2D_BRISK_patternScale());
-						if(VERBOSE)printf("Settings::createDescriptorsExtractor() type=%s\n", strategies.at(index).toStdString().c_str());
+						UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 					}
 					break;
 				case 5:
@@ -687,7 +695,7 @@ DescriptorExtractor * Settings::createDescriptorExtractor()
 								getFeature2D_FREAK_scaleNormalized(),
 								getFeature2D_FREAK_patternScale(),
 								getFeature2D_FREAK_nOctaves());
-						if(VERBOSE)printf("Settings::createDescriptorsExtractor() type=%s\n", strategies.at(index).toStdString().c_str());
+						UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 					}
 					break;
 				default:
@@ -745,14 +753,14 @@ cv::flann::IndexParams * Settings::createFlannIndexParams()
 				case 0:
 					if(strategies.at(index).compare("Linear") == 0)
 					{
-						if(VERBOSE)printf("Settings::getFlannIndexParams() type=%s\n", "Linear");
+						UDEBUG("type=%s", "Linear");
 						params = new cv::flann::LinearIndexParams();
 					}
 					break;
 				case 1:
 					if(strategies.at(index).compare("KDTree") == 0)
 					{
-						if(VERBOSE)printf("Settings::getFlannIndexParams() type=%s\n", "KDTree");
+						UDEBUG("type=%s", "KDTree");
 						params = new cv::flann::KDTreeIndexParams(
 								getNearestNeighbor_KDTree_trees());
 					}
@@ -772,7 +780,7 @@ cv::flann::IndexParams * Settings::createFlannIndexParams()
 								centers_init = (cvflann::flann_centers_init_t)index;
 							}
 						}
-						if(VERBOSE)printf("Settings::getFlannIndexParams() type=%s\n", "KMeans");
+						UDEBUG("type=%s", "KMeans");
 						params = new cv::flann::KMeansIndexParams(
 								getNearestNeighbor_KMeans_branching(),
 								getNearestNeighbor_KMeans_iterations(),
@@ -795,7 +803,7 @@ cv::flann::IndexParams * Settings::createFlannIndexParams()
 								centers_init = (cvflann::flann_centers_init_t)index;
 							}
 						}
-						if(VERBOSE)printf("Settings::getFlannIndexParams() type=%s\n", "Composite");
+						UDEBUG("type=%s", "Composite");
 						params = new cv::flann::CompositeIndexParams(
 								getNearestNeighbor_Composite_trees(),
 								getNearestNeighbor_Composite_branching(),
@@ -807,7 +815,7 @@ cv::flann::IndexParams * Settings::createFlannIndexParams()
 				case 4:
 					if(strategies.at(index).compare("Autotuned") == 0)
 					{
-						if(VERBOSE)printf("Settings::getFlannIndexParams() type=%s\n", "Autotuned");
+						UDEBUG("type=%s", "Autotuned");
 						params = new cv::flann::AutotunedIndexParams(
 								getNearestNeighbor_Autotuned_target_precision(),
 								getNearestNeighbor_Autotuned_build_weight(),
@@ -818,7 +826,7 @@ cv::flann::IndexParams * Settings::createFlannIndexParams()
 				case 5:
 					if(strategies.at(index).compare("Lsh") == 0)
 					{
-						if(VERBOSE)printf("Settings::getFlannIndexParams() type=%s\n", "Lsh");
+						UDEBUG("type=%s", "Lsh");
 						params = new cv::flann::LshIndexParams(
 								getNearestNeighbor_Lsh_table_number(),
 								getNearestNeighbor_Lsh_key_size(),
@@ -858,7 +866,6 @@ cvflann::flann_distance_t Settings::getFlannDistanceType()
 			}
 		}
 	}
-	if(VERBOSE)printf("Settings::getFlannDistanceType() distance=%d\n", distance);
 	return distance;
 }
 
@@ -896,7 +903,7 @@ int Settings::getHomographyMethod()
 			}
 		}
 	}
-	if(VERBOSE)printf("Settings::getHomographyMethod() method=%d\n", method);
+	UDEBUG("method=%d", method);
 	return method;
 }
 
@@ -912,15 +919,17 @@ KeypointDetector::KeypointDetector(GPUFeature2D * gpuFeature2D) :
 {
 	Q_ASSERT(gpuFeature2D_!=0);
 }
-void KeypointDetector::detect(const cv::Mat & image, std::vector<cv::KeyPoint> & keypoints)
+void KeypointDetector::detect(const cv::Mat & image,
+		std::vector<cv::KeyPoint> & keypoints,
+		const cv::Mat & mask)
 {
 	if(featureDetector_)
 	{
-		featureDetector_->detect(image, keypoints);
+		featureDetector_->detect(image, keypoints, mask);
 	}
 	else // assume GPU
 	{
-		gpuFeature2D_->detectKeypoints(image, keypoints);
+		gpuFeature2D_->detectKeypoints(image, keypoints, mask);
 	}
 }
 

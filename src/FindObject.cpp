@@ -202,19 +202,170 @@ std::vector<cv::KeyPoint> limitKeypoints(const std::vector<cv::KeyPoint> & keypo
 	return kptsKept;
 }
 
+
+// taken from ASIFT example https://github.com/Itseez/opencv/blob/master/samples/python2/asift.py
+// affine - is an affine transform matrix from skew_img to img
+void FindObject::affineSkew(
+		float tilt,
+		float phi,
+		const cv::Mat & image,
+		cv::Mat & skewImage,
+		cv::Mat & skewMask,
+		cv::Mat & Ai)
+{
+    float h = image.rows;
+    float w = image.cols;
+    cv::Mat A = cv::Mat::zeros(2,3,CV_32FC1);
+    A.at<float>(0,0) = A.at<float>(1,1) = 1;
+    skewMask = cv::Mat::ones(h, w, CV_8U) * 255;
+    if(phi != 0.0)
+    {
+        phi = phi*CV_PI/180.0f; // deg2rad
+        float s = std::sin(phi);
+        float c = std::cos(phi);
+        cv::Mat A22 = (cv::Mat_<float>(2, 2) <<
+        		c, -s,
+        		s, c);
+        cv::Mat cornersIn = (cv::Mat_<float>(4, 2) <<
+        		0,0,
+        		w,0,
+        		w,h,
+        		0,h);
+        cv::Mat cornersOut = cornersIn * A22.t();
+        cv::Rect rect = cv::boundingRect(cornersOut.reshape(2,4));
+        A = (cv::Mat_<float>(2, 3) <<
+				c, -s, -rect.x,
+				s, c, -rect.y);
+        cv::warpAffine(image, skewImage, A, cv::Size(rect.width, rect.height), cv::INTER_LINEAR, cv::BORDER_REPLICATE);
+    }
+    else
+    {
+    	skewImage = image;
+    }
+    if(tilt != 1.0)
+    {
+        float s = 0.8*std::sqrt(tilt*tilt-1);
+        cv::Mat out, out2;
+        cv::GaussianBlur(skewImage, out, cv::Size(0, 0), s, 0.01);
+        cv::resize(out, out2, cv::Size(0, 0), 1.0/tilt, 1.0, cv::INTER_NEAREST);
+        skewImage = out2;
+        A.row(0) /= tilt;
+    }
+    if(phi != 0.0 || tilt != 1.0)
+    {
+    	cv::Mat mask = skewMask;
+        cv::warpAffine(mask, skewMask, A, skewImage.size(), cv::INTER_NEAREST);
+    }
+    cv::invertAffineTransform(A, Ai);
+}
+
+class AffineExtractionThread : public QThread
+{
+public:
+	AffineExtractionThread(
+			KeypointDetector * detector,
+			DescriptorExtractor * extractor,
+			const cv::Mat & image,
+			float tilt,
+			float phi) :
+		detector_(detector),
+		extractor_(extractor),
+		image_(image),
+		tilt_(tilt),
+		phi_(phi),
+		timeSkewAffine_(0),
+		timeDetection_(0),
+		timeExtraction_(0)
+	{
+		UASSERT(detector && extractor);
+	}
+	const cv::Mat & image() const {return image_;}
+	const std::vector<cv::KeyPoint> & keypoints() const {return keypoints_;}
+	const cv::Mat & descriptors() const {return descriptors_;}
+
+	int timeSkewAffine() const {return timeSkewAffine_;}
+	int timeDetection() const {return timeDetection_;}
+	int timeExtraction() const {return timeExtraction_;}
+
+protected:
+	virtual void run()
+	{
+		QTime timeStep;
+		timeStep.start();
+		cv::Mat skewImage, skewMask, Ai;
+		FindObject::affineSkew(tilt_, phi_, image_, skewImage, skewMask, Ai);
+		timeSkewAffine_=timeStep.restart();
+
+		//Detect features
+		detector_->detect(skewImage, keypoints_, skewMask);
+
+		if(keypoints_.size())
+		{
+			int maxFeatures = Settings::getFeature2D_3MaxFeatures();
+			if(maxFeatures > 0 && (int)keypoints_.size() > maxFeatures)
+			{
+				keypoints_ = limitKeypoints(keypoints_, maxFeatures);
+			}
+			timeDetection_=timeStep.restart();
+
+			//Extract descriptors
+			extractor_->compute(skewImage, keypoints_, descriptors_);
+			timeExtraction_=timeStep.restart();
+
+			// Transform points to original image coordinates
+			for(unsigned int i=0; i<keypoints_.size(); ++i)
+			{
+				cv::Mat p = (cv::Mat_<float>(3, 1) << keypoints_[i].pt.x, keypoints_[i].pt.y, 1);
+				cv::Mat pa = Ai * p;
+				keypoints_[i].pt.x = pa.at<float>(0,0);
+				keypoints_[i].pt.y = pa.at<float>(1,0);
+			}
+		}
+		else
+		{
+			timeDetection_=timeStep.restart();
+		}
+	}
+private:
+	KeypointDetector * detector_;
+	DescriptorExtractor * extractor_;
+	cv::Mat image_;
+	float tilt_;
+	float phi_;
+	std::vector<cv::KeyPoint> keypoints_;
+	cv::Mat descriptors_;
+
+	int timeSkewAffine_;
+	int timeDetection_;
+	int timeExtraction_;
+};
+
 class ExtractFeaturesThread : public QThread
 {
 public:
-	ExtractFeaturesThread(int objectId, const cv::Mat & image) :
+	ExtractFeaturesThread(
+			KeypointDetector * detector,
+			DescriptorExtractor * extractor,
+			int objectId,
+			const cv::Mat & image) :
+		detector_(detector),
+		extractor_(extractor),
 		objectId_(objectId),
-		image_(image)
+		image_(image),
+		timeSkewAffine_(0),
+		timeDetection_(0),
+		timeExtraction_(0)
 	{
-
+		UASSERT(detector && extractor);
 	}
 	int objectId() const {return objectId_;}
 	const cv::Mat & image() const {return image_;}
 	const std::vector<cv::KeyPoint> & keypoints() const {return keypoints_;}
 	const cv::Mat & descriptors() const {return descriptors_;}
+
+	int timeSkewAffine() const {return timeSkewAffine_;}
+	int timeDetection() const {return timeDetection_;}
+	int timeExtraction() const {return timeExtraction_;}
 
 protected:
 	virtual void run()
@@ -222,41 +373,104 @@ protected:
 		QTime time;
 		time.start();
 		UINFO("Extracting descriptors from object %d...", objectId_);
-		KeypointDetector * detector = Settings::createKeypointDetector();
-		keypoints_.clear();
-		descriptors_ = cv::Mat();
-		detector->detect(image_, keypoints_);
-		delete detector;
 
-		if(keypoints_.size())
+		QTime timeStep;
+		timeStep.start();
+
+		if(!Settings::getFeature2D_4Affine())
 		{
-			int maxFeatures = Settings::getFeature2D_3MaxFeatures();
-			if(maxFeatures > 0 && (int)keypoints_.size() > maxFeatures)
-			{
-				int previousCount = (int)keypoints_.size();
-				keypoints_ = limitKeypoints(keypoints_, maxFeatures);
-				UINFO("obj=%d, %d keypoints removed, (kept %d), min/max response=%f/%f", objectId_, previousCount-(int)keypoints_.size(), (int)keypoints_.size(), keypoints_.size()?keypoints_.back().response:0.0f, keypoints_.size()?keypoints_.front().response:0.0f);
-			}
+			keypoints_.clear();
+			descriptors_ = cv::Mat();
+			detector_->detect(image_, keypoints_);
 
-			DescriptorExtractor * extractor = Settings::createDescriptorExtractor();
-			extractor->compute(image_, keypoints_, descriptors_);
-			delete extractor;
-			if((int)keypoints_.size() != descriptors_.rows)
+			if(keypoints_.size())
 			{
-				UERROR("obj=%d kpt=%d != descriptors=%d", objectId_, (int)keypoints_.size(), descriptors_.rows);
+				int maxFeatures = Settings::getFeature2D_3MaxFeatures();
+				if(maxFeatures > 0 && (int)keypoints_.size() > maxFeatures)
+				{
+					int previousCount = (int)keypoints_.size();
+					keypoints_ = limitKeypoints(keypoints_, maxFeatures);
+					UDEBUG("obj=%d, %d keypoints removed, (kept %d), min/max response=%f/%f", objectId_, previousCount-(int)keypoints_.size(), (int)keypoints_.size(), keypoints_.size()?keypoints_.back().response:0.0f, keypoints_.size()?keypoints_.front().response:0.0f);
+				}
+				timeDetection_+=timeStep.restart();
+
+				extractor_->compute(image_, keypoints_, descriptors_);
+				timeExtraction_+=timeStep.restart();
+
+				if((int)keypoints_.size() != descriptors_.rows)
+				{
+					UERROR("obj=%d kpt=%d != descriptors=%d", objectId_, (int)keypoints_.size(), descriptors_.rows);
+				}
+			}
+			else
+			{
+				timeDetection_+=timeStep.restart();
+				UWARN("no features detected in object %d !?!", objectId_);
 			}
 		}
 		else
 		{
-			UWARN("no features detected in object %d !?!", objectId_);
+			//ASIFT
+			std::vector<float> tilts;
+			std::vector<float> phis;
+			tilts.push_back(1.0f);
+			phis.push_back(0.0f);
+			int nTilt = Settings::getFeature2D_5AffineCount();
+			for(int t=1; t<nTilt; ++t)
+			{
+				float tilt = std::pow(2.0f, 0.5f*float(t));
+				float inc = 72.0f / float(tilt);
+				for(float phi=0.0f; phi<180.0f; phi+=inc)
+				{
+					tilts.push_back(tilt);
+					phis.push_back(phi);
+				}
+			}
+
+			//multi-threaded
+			unsigned int threadCounts = Settings::getGeneral_threads();
+			if(threadCounts == 0)
+			{
+				threadCounts = tilts.size();
+			}
+
+			for(unsigned int i=0; i<tilts.size(); i+=threadCounts)
+			{
+				QVector<AffineExtractionThread*> threads;
+
+				for(unsigned int k=i; k<i+threadCounts && k<tilts.size(); ++k)
+				{
+					threads.push_back(new AffineExtractionThread(detector_, extractor_, image_, tilts[k], phis[k]));
+					threads.back()->start();
+				}
+
+				for(int k=0; k<threads.size(); ++k)
+				{
+					threads[k]->wait();
+
+					keypoints_.insert(keypoints_.end(), threads[k]->keypoints().begin(), threads[k]->keypoints().end());
+					descriptors_.push_back(threads[k]->descriptors());
+
+					timeSkewAffine_ += threads[k]->timeSkewAffine();
+					timeDetection_ += threads[k]->timeDetection();
+					timeExtraction_ += threads[k]->timeExtraction();
+				}
+			}
 		}
+
 		UINFO("%d descriptors extracted from object %d (in %d ms)", descriptors_.rows, objectId_, time.elapsed());
 	}
 private:
+	KeypointDetector * detector_;
+	DescriptorExtractor * extractor_;
 	int objectId_;
 	cv::Mat image_;
 	std::vector<cv::KeyPoint> keypoints_;
 	cv::Mat descriptors_;
+
+	int timeSkewAffine_;
+	int timeDetection_;
+	int timeExtraction_;
 };
 
 void FindObject::updateObjects()
@@ -278,7 +492,7 @@ void FindObject::updateObjects()
 			QVector<ExtractFeaturesThread*> threads;
 			for(int k=i; k<i+threadCounts && k<objectsList.size(); ++k)
 			{
-				threads.push_back(new ExtractFeaturesThread(objectsList.at(k)->id(), objectsList.at(k)->image()));
+				threads.push_back(new ExtractFeaturesThread(detector_, extractor_, objectsList.at(k)->id(), objectsList.at(k)->image()));
 				threads.back()->start();
 			}
 
@@ -677,30 +891,15 @@ bool FindObject::detect(const cv::Mat & image, find_object::DetectionInfo & info
 			grayscaleImg =  image;
 		}
 
-		QTime time;
-		time.start();
-
-		// EXTRACT KEYPOINTS
-		detector_->detect(grayscaleImg, info.sceneKeypoints_);
-		info.timeStamps_.insert(DetectionInfo::kTimeKeypointDetection, time.restart());
-
-		bool emptyScene = info.sceneKeypoints_.size() == 0;
-		if(info.sceneKeypoints_.size())
-		{
-			int maxFeatures = Settings::getFeature2D_3MaxFeatures();
-			if(maxFeatures > 0 && (int)info.sceneKeypoints_.size() > maxFeatures)
-			{
-				info.sceneKeypoints_ = limitKeypoints(info.sceneKeypoints_, maxFeatures);
-			}
-
-			// EXTRACT DESCRIPTORS
-			extractor_->compute(grayscaleImg, info.sceneKeypoints_, info.sceneDescriptors_);
-			if((int)info.sceneKeypoints_.size() != info.sceneDescriptors_.rows)
-			{
-				UERROR("kpt=%d != descriptors=%d", (int)info.sceneKeypoints_.size(), info.sceneDescriptors_.rows);
-			}
-		}
-		info.timeStamps_.insert(DetectionInfo::kTimeDescriptorExtraction, time.restart());
+		// DETECT FEATURES AND EXTRACT DESCRIPTORS
+		ExtractFeaturesThread extractThread(detector_, extractor_, -1, grayscaleImg);
+		extractThread.start();
+		extractThread.wait();
+		info.sceneKeypoints_ = extractThread.keypoints();
+		info.sceneDescriptors_ = extractThread.descriptors();
+		info.timeStamps_.insert(DetectionInfo::kTimeKeypointDetection, extractThread.timeDetection());
+		info.timeStamps_.insert(DetectionInfo::kTimeDescriptorExtraction, extractThread.timeExtraction());
+		info.timeStamps_.insert(DetectionInfo::kTimeSkewAffine, extractThread.timeSkewAffine());
 
 		bool consistentNNData = (vocabulary_->size()!=0 && vocabulary_->wordToObjects().begin().value()!=-1 && Settings::getGeneral_invertedSearch()) ||
 								((vocabulary_->size()==0 || vocabulary_->wordToObjects().begin().value()==-1) && !Settings::getGeneral_invertedSearch());
@@ -713,6 +912,8 @@ bool FindObject::detect(const cv::Mat & image, find_object::DetectionInfo & info
 		   objectsDescriptors_.begin().value().type() == info.sceneDescriptors_.type()) // binary descriptor issue, if the dataTree is not yet updated with modified settings
 		{
 			success = true;
+			QTime time;
+			time.start();
 
 			QMultiMap<int, int> words;
 
@@ -778,7 +979,10 @@ bool FindObject::detect(const cv::Mat & image, find_object::DetectionInfo & info
 							matched = false;
 						}
 					}
-					if(!matched && !Settings::getNearestNeighbor_3nndrRatioUsed() && !Settings::getNearestNeighbor_5minDistanceUsed())
+					if(!matched &&
+					   !Settings::getNearestNeighbor_3nndrRatioUsed() &&
+					   !Settings::getNearestNeighbor_5minDistanceUsed() &&
+					   dists.at<float>(i,0) >= 0.0f)
 					{
 						matched = true; // no criterion, match to the nearest descriptor
 					}
@@ -1024,7 +1228,7 @@ bool FindObject::detect(const cv::Mat & image, find_object::DetectionInfo & info
 		{
 			UWARN("Cannot search, objects must be updated");
 		}
-		else if(emptyScene)
+		else if(info.sceneKeypoints_.size() == 0)
 		{
 			// Accept but warn the user
 			UWARN("No features detected in the scene!?!");

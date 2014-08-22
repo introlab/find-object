@@ -786,6 +786,7 @@ void MainWindow::updateVocabulary()
 	QApplication::processEvents();
 
 	QTime time;
+	time.start();
 	findObject_->updateVocabulary();
 
 	if(findObject_->vocabulary()->size())
@@ -946,9 +947,13 @@ void MainWindow::update(const cv::Mat & image)
 	if(findObject_->detect(sceneImage_, info))
 	{
 		ui_->label_timeDetection->setNum(info.timeStamps_.value(DetectionInfo::kTimeKeypointDetection, 0));
+		ui_->label_timeSkewAffine->setNum(info.timeStamps_.value(DetectionInfo::kTimeSkewAffine, 0));
 		ui_->label_timeExtraction->setNum(info.timeStamps_.value(DetectionInfo::kTimeDescriptorExtraction, 0));
 		ui_->imageView_source->setData(info.sceneKeypoints_, cvtCvMat2QImage(sceneImage_));
-		ui_->label_timeIndexing->setNum(info.timeStamps_.value(DetectionInfo::kTimeIndexing, 0));
+		if(!findObject_->vocabulary()->size())
+		{
+			ui_->label_timeIndexing->setNum(info.timeStamps_.value(DetectionInfo::kTimeIndexing, 0));
+		}
 		ui_->label_timeMatching->setNum(info.timeStamps_.value(DetectionInfo::kTimeMatching, 0));
 		ui_->label_timeHomographies->setNum(info.timeStamps_.value(DetectionInfo::kTimeHomography, 0));
 
@@ -1135,7 +1140,13 @@ void MainWindow::update(const cv::Mat & image)
 	}
 	else
 	{
-		this->statusBar()->showMessage(tr("Cannot search, objects must be updated!"));
+		if(findObject_->vocabulary()->size())
+		{
+			this->statusBar()->showMessage(tr("Cannot search, objects must be updated!"));
+		}
+		ui_->label_timeDetection->setNum(info.timeStamps_.value(DetectionInfo::kTimeKeypointDetection, 0));
+		ui_->label_timeSkewAffine->setNum(info.timeStamps_.value(DetectionInfo::kTimeSkewAffine, 0));
+		ui_->label_timeExtraction->setNum(info.timeStamps_.value(DetectionInfo::kTimeDescriptorExtraction, 0));
 		ui_->imageView_source->setData(info.sceneKeypoints_, cvtCvMat2QImage(sceneImage_));
 	}
 

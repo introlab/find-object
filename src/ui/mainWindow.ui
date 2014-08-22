@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>826</width>
-    <height>506</height>
+    <height>523</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -344,7 +344,7 @@
           <x>0</x>
           <y>0</y>
           <width>198</width>
-          <height>376</height>
+          <height>393</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_objects">
@@ -449,83 +449,83 @@
         <number>0</number>
        </property>
        <item row="4" column="1">
-        <widget class="QLabel" name="label_timeMatching">
-         <property name="text">
-          <string>000</string>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="2">
-        <widget class="QLabel" name="label_9">
-         <property name="text">
-          <string>ms</string>
-         </property>
-        </widget>
-       </item>
-       <item row="4" column="2">
-        <widget class="QLabel" name="label_10">
-         <property name="text">
-          <string>ms</string>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="0">
-        <widget class="QLabel" name="label_8">
-         <property name="text">
-          <string>Descriptors indexing</string>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="1">
         <widget class="QLabel" name="label_timeIndexing">
          <property name="text">
           <string>000</string>
          </property>
         </widget>
        </item>
+       <item row="5" column="1">
+        <widget class="QLabel" name="label_timeMatching">
+         <property name="text">
+          <string>000</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="2">
+        <widget class="QLabel" name="label_9">
+         <property name="text">
+          <string>ms</string>
+         </property>
+        </widget>
+       </item>
        <item row="5" column="2">
+        <widget class="QLabel" name="label_10">
+         <property name="text">
+          <string>ms</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0">
+        <widget class="QLabel" name="label_8">
+         <property name="text">
+          <string>Descriptors indexing</string>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="2">
         <widget class="QLabel" name="label_12">
          <property name="text">
           <string>ms</string>
          </property>
         </widget>
        </item>
-       <item row="7" column="1">
+       <item row="8" column="1">
         <widget class="QLabel" name="label_minMatchedDistance">
          <property name="text">
           <string>000</string>
          </property>
         </widget>
        </item>
-       <item row="7" column="0">
+       <item row="8" column="0">
         <widget class="QLabel" name="label_13">
          <property name="text">
           <string>Min matched distance</string>
          </property>
         </widget>
        </item>
-       <item row="8" column="0">
+       <item row="9" column="0">
         <widget class="QLabel" name="label_14">
          <property name="text">
           <string>Max matched distance</string>
          </property>
         </widget>
        </item>
-       <item row="8" column="1">
+       <item row="9" column="1">
         <widget class="QLabel" name="label_maxMatchedDistance">
          <property name="text">
           <string>000</string>
          </property>
         </widget>
        </item>
-       <item row="5" column="0">
+       <item row="6" column="0">
         <widget class="QLabel" name="label_11">
          <property name="text">
           <string>Homograhies</string>
          </property>
         </widget>
        </item>
-       <item row="2" column="0">
+       <item row="3" column="0">
         <widget class="QLabel" name="label_2">
          <property name="text">
           <string>Descriptors extraction</string>
@@ -539,14 +539,14 @@
          </property>
         </widget>
        </item>
-       <item row="2" column="1">
+       <item row="3" column="1">
         <widget class="QLabel" name="label_timeExtraction">
          <property name="text">
           <string>000</string>
          </property>
         </widget>
        </item>
-       <item row="2" column="2">
+       <item row="3" column="2">
         <widget class="QLabel" name="label_4">
          <property name="text">
           <string>ms</string>
@@ -567,7 +567,7 @@
          </property>
         </widget>
        </item>
-       <item row="4" column="0">
+       <item row="5" column="0">
         <widget class="QLabel" name="label_7">
          <property name="text">
           <string>Descriptors matching</string>
@@ -595,80 +595,101 @@
          </property>
         </widget>
        </item>
-       <item row="9" column="0">
+       <item row="10" column="0">
         <widget class="QLabel" name="label_17">
          <property name="text">
           <string>Vocabulary size</string>
          </property>
         </widget>
        </item>
-       <item row="9" column="1">
+       <item row="10" column="1">
         <widget class="QLabel" name="label_vocabularySize">
          <property name="text">
           <string>000</string>
          </property>
         </widget>
        </item>
-       <item row="10" column="0">
+       <item row="11" column="0">
         <widget class="QLabel" name="label_18">
          <property name="text">
           <string>IP address</string>
          </property>
         </widget>
        </item>
-       <item row="11" column="0">
+       <item row="12" column="0">
         <widget class="QLabel" name="label_19">
          <property name="text">
           <string>Output detection port</string>
          </property>
         </widget>
        </item>
-       <item row="10" column="1">
+       <item row="11" column="1">
         <widget class="QLabel" name="label_ipAddress">
          <property name="text">
           <string>0.0.0.0</string>
          </property>
         </widget>
        </item>
-       <item row="11" column="1">
+       <item row="12" column="1">
         <widget class="QLabel" name="label_port">
          <property name="text">
           <string>0</string>
          </property>
         </widget>
        </item>
-       <item row="6" column="0">
+       <item row="7" column="0">
         <widget class="QLabel" name="label_20">
          <property name="text">
           <string>Objects detected</string>
          </property>
         </widget>
        </item>
-       <item row="6" column="1">
+       <item row="7" column="1">
         <widget class="QLabel" name="label_objectsDetected">
          <property name="text">
           <string>000</string>
          </property>
         </widget>
        </item>
-       <item row="5" column="1">
+       <item row="6" column="1">
         <widget class="QLabel" name="label_timeHomographies">
          <property name="text">
           <string>000</string>
          </property>
         </widget>
        </item>
-       <item row="12" column="0">
+       <item row="13" column="0">
         <widget class="QLabel" name="label_21">
          <property name="text">
           <string>Input image port</string>
          </property>
         </widget>
        </item>
-       <item row="12" column="1">
+       <item row="13" column="1">
         <widget class="QLabel" name="label_port_image">
          <property name="text">
-          <string>NA</string>
+          <string>-</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="label_22">
+         <property name="text">
+          <string>Affine transforms</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QLabel" name="label_timeSkewAffine">
+         <property name="text">
+          <string>000</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="2">
+        <widget class="QLabel" name="label_23">
+         <property name="text">
+          <string>ms</string>
          </property>
         </widget>
        </item>

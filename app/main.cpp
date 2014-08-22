@@ -102,6 +102,7 @@ void showUsage()
 			"  --objects \"path\"       Directory of the objects to detect.\n"
 			"  --config \"path\"        Path to configuration file (default: %s).\n"
 			"  --scene \"path\"         Path to a scene image file.\n"
+			"  --debug                Show debug log.\n"
 			"  --params               Show all parameters.\n"
 			"  --My/Parameter \"value\" Set find-Object's parameter (look --params for parameters' name).\n"
 			"                           It will override the one in --config. Example to set 4 threads:\n"
@@ -207,6 +208,13 @@ int main(int argc, char* argv[])
 		   strcmp(argv[i], "--console") == 0)
 		{
 			guiMode = false;
+			continue;
+		}
+		if(strcmp(argv[i], "-debug") == 0 ||
+		   strcmp(argv[i], "--debug") == 0)
+		{
+			ULogger::setPrintWhere(true);
+			ULogger::setLevel(ULogger::kDebug);
 			continue;
 		}
 		if(strcmp(argv[i], "-help") == 0 ||
