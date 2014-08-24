@@ -394,7 +394,17 @@ protected:
 				}
 				timeDetection_+=timeStep.restart();
 
-				extractor_->compute(image_, keypoints_, descriptors_);
+				try
+				{
+					extractor_->compute(image_, keypoints_, descriptors_);
+				}
+				catch(cv::Exception & e)
+				{
+					UERROR("Descriptor exception: %s. Maybe some keypoints are invalid "
+							"for the selected descriptor extractor.", e.what());
+					descriptors_ = cv::Mat();
+					keypoints_.clear();
+				}
 				timeExtraction_+=timeStep.restart();
 
 				if((int)keypoints_.size() != descriptors_.rows)
