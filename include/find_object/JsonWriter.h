@@ -28,11 +28,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef JSONWRITER_H_
 #define JSONWRITER_H_
 
+#include "find_object/FindObjectExp.h" // DLL export/import defines
+
 #include "find_object/DetectionInfo.h"
 
 namespace find_object {
 
-class JsonWriter
+class FINDOBJECT_EXP JsonWriter
 {
 public:
 	static bool available();
