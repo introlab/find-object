@@ -58,6 +58,7 @@ SET(SRC_FILES
 	./utilite/UFile.cpp
 	./utilite/UConversion.cpp
 	./rtabmap/PdfPlot.cpp
+	./json/jsoncpp.cpp
 	${moc_srcs} 
 	${moc_uis} 
 	${srcs_qrc}
@@ -76,18 +77,6 @@ SET(LIBRARIES
     ${QT_LIBRARIES} 
     ${OpenCV_LIBS} 
 )
-
-IF(JSONCPP_FOUND)
-	SET(INCLUDE_DIRS
-	    ${INCLUDE_DIRS} 
-	    ${JSONCPP_INCLUDE_DIRS} 
-	)
-	SET(LIBRARIES
-	    ${LIBRARIES} 
-	    ${JSONCPP_LIBRARIES} 
-	)
-	ADD_DEFINITIONS("-DWITH_JSONCPP")
-ENDIF(JSONCPP_FOUND)
 
 #include files
 INCLUDE_DIRECTORIES(${INCLUDE_DIRS})

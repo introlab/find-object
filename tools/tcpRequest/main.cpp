@@ -39,11 +39,8 @@ void showUsage()
 			"  \"out\" is the port to which the image is sent.\n"
 			"  \"in\" is the port from which the detection is received.\n"
 			"  Options:\n"
-			"    --host #.#.#.#       Set host address.\n");
-	if(find_object::JsonWriter::available())
-	{
-		printf("    --json \"path\"      Path to an output JSON file.\n");
-	}
+			"    --host #.#.#.#       Set host address.\n"
+			"    --json \"path\"      Path to an output JSON file.\n");
 	exit(-1);
 }
 
@@ -114,22 +111,19 @@ int main(int argc, char * argv[])
 			continue;
 		}
 
-		if(find_object::JsonWriter::available())
+		if(strcmp(argv[i], "--json") == 0 || strcmp(argv[i], "-json") == 0)
 		{
-			if(strcmp(argv[i], "--json") == 0 || strcmp(argv[i], "-json") == 0)
+			++i;
+			if(i < argc)
 			{
-				++i;
-				if(i < argc)
-				{
-					jsonPath = argv[i];
-				}
-				else
-				{
-					printf("error parsing --json\n");
-					showUsage();
-				}
-				continue;
+				jsonPath = argv[i];
 			}
+			else
+			{
+				printf("error parsing --json\n");
+				showUsage();
+			}
+			continue;
 		}
 
 		printf("Unrecognized option: %s\n", argv[i]);
@@ -234,7 +228,7 @@ int main(int argc, char * argv[])
 				printf("No objects detected.\n");
 			}
 			// write json
-			if(!jsonPath.isEmpty() && find_object::JsonWriter::available())
+			if(!jsonPath.isEmpty())
 			{
 				find_object::JsonWriter::write(response.info(), jsonPath);
 				printf("JSON written to \"%s\"\n", jsonPath.toStdString().c_str());

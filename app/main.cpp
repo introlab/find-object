@@ -99,7 +99,8 @@ void showUsage()
 			"  --console              Don't use the GUI (by default the camera will be\n"
 			"                           started automatically). Option --objects must also be\n"
 			"                           used with valid objects.\n"
-			"  --objects \"path\"       Directory of the objects to detect.\n"
+			"  --object \"path\"        Path to an object to detect.\n"
+			"  --objects \"path\"       Directory of the objects to detect (--object is ignored).\n"
 			"  --config \"path\"        Path to configuration file (default: %s).\n"
 			"  --scene \"path\"         Path to a scene image file.\n"
 			"  --debug                Show debug log.\n"
@@ -107,11 +108,9 @@ void showUsage()
 			"  --My/Parameter \"value\" Set find-Object's parameter (look --params for parameters' name).\n"
 			"                           It will override the one in --config. Example to set 4 threads:\n"
 			"                           $ find_object --General/threads 4\n"
-			"  --help                 Show usage.\n", find_object::Settings::iniDefaultPath().toStdString().c_str());
-	if(find_object::JsonWriter::available())
-	{
-		printf("  --json \"path\"          Path to an output JSON file (only in --console mode with --scene).\n");
-	}
+			"  --json \"path\"          Path to an output JSON file (only in --console mode with --scene).\n"
+			"  --help                 Show usage.\n"
+			, find_object::Settings::iniDefaultPath().toStdString().c_str());
 	exit(-1);
 }
 
@@ -127,6 +126,7 @@ int main(int argc, char* argv[])
 	//////////////////////////
 	bool guiMode = true;
 	QString objectsPath = "";
+	QString objectPath = "";
 	QString scenePath = "";
 	QString configPath = find_object::Settings::iniDefaultPath();
 	QString jsonPath;
@@ -150,6 +150,29 @@ int main(int argc, char* argv[])
 				if(!QDir(objectsPath).exists())
 				{
 					UERROR("Objects path not valid : %s", objectsPath.toStdString().c_str());
+					showUsage();
+				}
+			}
+			else
+			{
+				showUsage();
+			}
+			continue;
+		}
+		if(strcmp(argv[i], "-object") == 0 ||
+		   strcmp(argv[i], "--object") == 0)
+		{
+			++i;
+			if(i < argc)
+			{
+				objectPath = argv[i];
+				if(objectPath.contains('~'))
+				{
+					objectPath.replace('~', QDir::homePath());
+				}
+				if(!QFile(objectPath).exists())
+				{
+					UERROR("Object path not valid : %s", objectPath.toStdString().c_str());
 					showUsage();
 				}
 			}
@@ -222,26 +245,23 @@ int main(int argc, char* argv[])
 		{
 			showUsage();
 		}
-		if(find_object::JsonWriter::available())
+		if(strcmp(argv[i], "-json") == 0 ||
+		   strcmp(argv[i], "--json") == 0)
 		{
-			if(strcmp(argv[i], "-json") == 0 ||
-			   strcmp(argv[i], "--json") == 0)
+			++i;
+			if(i < argc)
 			{
-				++i;
-				if(i < argc)
+				jsonPath = argv[i];
+				if(jsonPath.contains('~'))
 				{
-					jsonPath = argv[i];
-					if(jsonPath.contains('~'))
-					{
-						jsonPath.replace('~', QDir::homePath());
-					}
+					jsonPath.replace('~', QDir::homePath());
 				}
-				else
-				{
-					showUsage();
-				}
-				continue;
 			}
+			else
+			{
+				showUsage();
+			}
+			continue;
 		}
 		if(strcmp(argv[i], "--params") == 0)
 		{
@@ -293,10 +313,8 @@ int main(int argc, char* argv[])
 	UINFO("   Objects path: \"%s\"", objectsPath.toStdString().c_str());
 	UINFO("   Scene path: \"%s\"", scenePath.toStdString().c_str());
 	UINFO("   Settings path: \"%s\"", configPath.toStdString().c_str());
-	if(find_object::JsonWriter::available())
-	{
-		UINFO("   JSON path: \"%s\"", jsonPath.toStdString().c_str());
-	}
+	UINFO("   JSON path: \"%s\"", jsonPath.toStdString().c_str());
+
 	for(find_object::ParametersMap::iterator iter= customParameters.begin(); iter!=customParameters.end(); ++iter)
 	{
 		UINFO("   Param \"%s\"=\"%s\"", iter.key().toStdString().c_str(), iter.value().toString().toStdString().c_str());
@@ -326,6 +344,20 @@ int main(int argc, char* argv[])
 		if(!objectsLoaded)
 		{
 			UWARN("No objects loaded from \"%s\"", objectsPath.toStdString().c_str());
+		}
+	}
+	else if(!objectPath.isEmpty())
+	{
+		const find_object::ObjSignature * obj = findObject->addObject(objectPath);
+		if(obj)
+		{
+			++objectsLoaded;
+			findObject->updateObjects();
+			findObject->updateVocabulary();
+		}
+		else
+		{
+			UWARN("No object loaded from \"%s\"", objectsPath.toStdString().c_str());
 		}
 	}
 	cv::Mat scene;
@@ -388,7 +420,7 @@ int main(int argc, char* argv[])
 				UINFO("No objects detected. (%d ms)", time.elapsed());
 			}
 
-			if(!jsonPath.isEmpty() && find_object::JsonWriter::available())
+			if(!jsonPath.isEmpty())
 			{
 				find_object::JsonWriter::write(info, jsonPath);
 				UINFO("JSON written to \"%s\"", jsonPath.toStdString().c_str());

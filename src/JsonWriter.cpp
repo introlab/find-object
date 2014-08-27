@@ -31,24 +31,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QtCore/QFile>
 #include <QtCore/QTextStream>
 
-#ifdef WITH_JSONCPP
-#include <json/writer.h>
-#endif
+#include "json/json.h"
 
 namespace find_object {
 
-bool JsonWriter::available()
-{
-#ifdef WITH_JSONCPP
-	return true;
-#else
-	return false;
-#endif
-}
-
 void JsonWriter::write(const DetectionInfo & info, const QString & path)
 {
-#ifdef WITH_JSONCPP
 	if(!path.isEmpty())
 	{
 		Json::Value root;
@@ -121,9 +109,6 @@ void JsonWriter::write(const DetectionInfo & info, const QString & path)
 		out << styledWriter.write(root).c_str();
 		file.close();
 	}
-#else
-	UERROR("Not built with JSON support!");
-#endif
 }
 
 } // namespace find_object

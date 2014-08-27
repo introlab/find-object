@@ -37,7 +37,6 @@ namespace find_object {
 class FINDOBJECT_EXP JsonWriter
 {
 public:
-	static bool available();
 	static void write(const DetectionInfo & info, const QString & path);
 };
 
