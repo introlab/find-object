@@ -77,10 +77,6 @@ QString Settings::iniPath()
 void Settings::init(const QString & fileName)
 {
 	iniPath_ = fileName;
-	if(fileName.isEmpty())
-	{
-		iniPath_ = iniDefaultPath();
-	}
 	loadSettings(iniPath_);
 }
 
@@ -91,26 +87,35 @@ void Settings::loadSettings(const QString & fileName)
 	{
 		path = iniPath();
 	}
-	QSettings ini(path, QSettings::IniFormat);
-	for(ParametersMap::const_iterator iter = defaultParameters_.begin(); iter!=defaultParameters_.end(); ++iter)
+	if(!path.isEmpty())
 	{
-		const QString & key = iter.key();
-		QVariant value = ini.value(key, QVariant());
-		if(value.isValid())
+		QSettings ini(path, QSettings::IniFormat);
+		for(ParametersMap::const_iterator iter = defaultParameters_.begin(); iter!=defaultParameters_.end(); ++iter)
 		{
-			QString str = value.toString();
-			if(str.contains(";") && str.size() != getParameter(key).toString().size())
+			const QString & key = iter.key();
+			QVariant value = ini.value(key, QVariant());
+			if(value.isValid())
 			{
-				// If a string list is modified, update the value
-				// (assuming that index < 10... one character for index)
-				QChar index = str.at(0);
-				str = getParameter(key).toString();
-				str[0] = index.toAscii();
-				value = QVariant(str);
-				UINFO("Updated list of parameter \"%s\"", key.toStdString().c_str());
+				QString str = value.toString();
+				if(str.contains(";") && str.size() != getParameter(key).toString().size())
+				{
+					// If a string list is modified, update the value
+					// (assuming that index < 10... one character for index)
+					QChar index = str.at(0);
+					str = getParameter(key).toString();
+					str[0] = index.toAscii();
+					value = QVariant(str);
+					UINFO("Updated list of parameter \"%s\"", key.toStdString().c_str());
+				}
+				setParameter(key, value);
 			}
-			setParameter(key, value);
 		}
+		UINFO("Settings loaded from %s.", path.toStdString().c_str());
+	}
+	else
+	{
+		parameters_ = defaultParameters_;
+		UINFO("Settings set to defaults.");
 	}
 
 	if(cv::gpu::getCudaEnabledDeviceCount() == 0)
@@ -119,8 +124,6 @@ void Settings::loadSettings(const QString & fileName)
 		Settings::setFeature2D_Fast_gpu(false);
 		Settings::setFeature2D_ORB_gpu(false);
 	}
-
-	UINFO("Settings loaded from %s", path.toStdString().c_str());
 }
 
 void Settings::loadWindowSettings(QByteArray & windowGeometry, QByteArray & windowState, const QString & fileName)
@@ -131,21 +134,24 @@ void Settings::loadWindowSettings(QByteArray & windowGeometry, QByteArray & wind
 		path = iniPath();
 	}
 
-	QSettings ini(path, QSettings::IniFormat);
-
-	QVariant value = ini.value("windowGeometry", QVariant());
-	if(value.isValid())
+	if(!path.isEmpty())
 	{
-		windowGeometry = value.toByteArray();
-	}
+		QSettings ini(path, QSettings::IniFormat);
 
-	value = ini.value("windowState", QVariant());
-	if(value.isValid())
-	{
-		windowState = value.toByteArray();
-	}
+		QVariant value = ini.value("windowGeometry", QVariant());
+		if(value.isValid())
+		{
+			windowGeometry = value.toByteArray();
+		}
 
-	UINFO("Window settings loaded from %s", path.toStdString().c_str());
+		value = ini.value("windowState", QVariant());
+		if(value.isValid())
+		{
+			windowState = value.toByteArray();
+		}
+
+		UINFO("Window settings loaded from %s", path.toStdString().c_str());
+	}
 }
 
 void Settings::saveSettings(const QString & fileName)
@@ -155,20 +161,23 @@ void Settings::saveSettings(const QString & fileName)
 	{
 		path = iniPath();
 	}
-	QSettings ini(path, QSettings::IniFormat);
-	for(ParametersMap::const_iterator iter = parameters_.begin(); iter!=parameters_.end(); ++iter)
+	if(!path.isEmpty())
 	{
-		QString type = Settings::getParametersType().value(iter.key());
-		if(type.compare("float") == 0)
+		QSettings ini(path, QSettings::IniFormat);
+		for(ParametersMap::const_iterator iter = parameters_.begin(); iter!=parameters_.end(); ++iter)
 		{
-			ini.setValue(iter.key(), QString::number(iter.value().toFloat(),'g',6));
+			QString type = Settings::getParametersType().value(iter.key());
+			if(type.compare("float") == 0)
+			{
+				ini.setValue(iter.key(), QString::number(iter.value().toFloat(),'g',6));
+			}
+			else
+			{
+				ini.setValue(iter.key(), iter.value());
+			}
 		}
-		else
-		{
-			ini.setValue(iter.key(), iter.value());
-		}
+		UINFO("Settings saved to %s", path.toStdString().c_str());
 	}
-	UINFO("Settings saved to %s", path.toStdString().c_str());
 }
 
 void Settings::saveWindowSettings(const QByteArray & windowGeometry, const QByteArray & windowState, const QString & fileName)
@@ -178,16 +187,19 @@ void Settings::saveWindowSettings(const QByteArray & windowGeometry, const QByte
 	{
 		path = iniPath();
 	}
-	QSettings ini(path, QSettings::IniFormat);
-	if(!windowGeometry.isEmpty())
+	if(!path.isEmpty())
 	{
-		ini.setValue("windowGeometry", windowGeometry);
+		QSettings ini(path, QSettings::IniFormat);
+		if(!windowGeometry.isEmpty())
+		{
+			ini.setValue("windowGeometry", windowGeometry);
+		}
+		if(!windowState.isEmpty())
+		{
+			ini.setValue("windowState", windowState);
+		}
+		UINFO("Window settings saved to %s", path.toStdString().c_str());
 	}
-	if(!windowState.isEmpty())
-	{
-		ini.setValue("windowState", windowState);
-	}
-	UINFO("Window settings saved to %s", path.toStdString().c_str());
 }
 
 class GPUFeature2D

@@ -146,7 +146,7 @@ void ObjWidget::setId(int id)
 void ObjWidget::setGraphicsViewMode(bool on)
 {
 	graphicsViewMode_->setChecked(on);
-	graphicsView_->setVisible(on);
+	graphicsView_->setVisible(on && graphicsView_->scene()->items().size());
 	autoScale_->setEnabled(on);
 	//update items' color
 	if(on)
@@ -172,6 +172,7 @@ void ObjWidget::setGraphicsViewMode(bool on)
 	else
 	{
 		graphicsView_->resetTransform();
+		graphicsView_->setTransform(QTransform().scale(this->isMirrorView()?-1.0:1.0, 1.0));
 	}
 }
 
@@ -187,6 +188,7 @@ void ObjWidget::setAutoScale(bool autoScale)
 		else
 		{
 			graphicsView_->resetTransform();
+			graphicsView_->setTransform(QTransform().scale(this->isMirrorView()?-1.0:1.0, 1.0));
 		}
 	}
 }
@@ -747,27 +749,30 @@ void ObjWidget::setupGraphicsView()
 {
 	if(!pixmap_.isNull())
 	{
+		graphicsView_->setVisible(true);
 		graphicsView_->scene()->setSceneRect(pixmap_.rect());
 		QList<KeypointItem*> items;
-		if(pixmap_.width() > 0 && pixmap_.height() > 0)
+
+		QRectF sceneRect = graphicsView_->sceneRect();
+
+		QGraphicsPixmapItem * pixmapItem = graphicsView_->scene()->addPixmap(pixmap_);
+		pixmapItem->setVisible(this->isImageShown());
+		this->drawKeypoints();
+
+		for(int i=0; i<rectItems_.size(); ++i)
 		{
-			QRectF sceneRect = graphicsView_->sceneRect();
+			graphicsView_->scene()->addItem(rectItems_.at(i));
+		}
 
-			QGraphicsPixmapItem * pixmapItem = graphicsView_->scene()->addPixmap(pixmap_);
-			pixmapItem->setVisible(this->isImageShown());
-			this->drawKeypoints();
-
-			for(int i=0; i<rectItems_.size(); ++i)
-			{
-				graphicsView_->scene()->addItem(rectItems_.at(i));
-			}
-
-			if(autoScale_->isChecked())
-			{
-				graphicsView_->fitInView(sceneRect, Qt::KeepAspectRatio);
-			}
+		if(autoScale_->isChecked())
+		{
+			graphicsView_->fitInView(sceneRect, Qt::KeepAspectRatio);
 		}
 		graphicsViewInitialized_ = true;
+	}
+	else
+	{
+		graphicsView_->setVisible(false);
 	}
 }
 

@@ -441,7 +441,7 @@ protected:
 			unsigned int threadCounts = Settings::getGeneral_threads();
 			if(threadCounts == 0)
 			{
-				threadCounts = tilts.size();
+				threadCounts = (unsigned int)tilts.size();
 			}
 
 			for(unsigned int i=0; i<tilts.size(); i+=threadCounts)

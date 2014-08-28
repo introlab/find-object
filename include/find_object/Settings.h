@@ -90,7 +90,7 @@ class FINDOBJECT_EXP Settings
 	PARAMETER(Camera, 4imageRate, double, 2.0, "Image rate in Hz (0 Hz means as fast as possible)."); // Hz
 	PARAMETER(Camera, 5mediaPath, QString, "", "Video file or directory of images. If set, the camera is not used. See General->videoFormats and General->imageFormats for available formats.");
 	PARAMETER(Camera, 6useTcpCamera, bool, false, "Use TCP/IP input camera.");
-	PARAMETER(Camera, 8port, int, 5000, "The images server's port when useTcpCamera is checked. Only one client at the same time is allowed.");
+	PARAMETER(Camera, 8port, int, 0, "The images server's port when useTcpCamera is checked. Only one client at the same time is allowed.");
 	PARAMETER(Camera, 9queueSize, int, 1, "Maximum images buffered from TCP. If 0, all images are buffered.");
 
 	//List format : [Index:item0;item1;item3;...]
@@ -219,7 +219,7 @@ class FINDOBJECT_EXP Settings
 	PARAMETER(General, autoScroll, bool, true, "Auto scroll to detected object in Objects panel.");
 	PARAMETER(General, vocabularyIncremental, bool, false, "The vocabulary is created incrementally. When new objects are added, their descriptors are compared to those already in vocabulary to find if the visual word already exist or not. \"NearestNeighbor/nndrRatio\" is used to compare descriptors.");
 	PARAMETER(General, vocabularyUpdateMinWords, int, 2000, "When the vocabulary is incremental (see \"General/vocabularyIncremental\"), after X words added to vocabulary, the internal index is updated with new words. This parameter lets avoiding to reconstruct the whole nearest neighbor index after each time descriptors of an object are added to vocabulary. 0 means no incremental update.");
-	PARAMETER(General, sendNoObjDetectedEvents, bool, false, "When there are no objects detected, send an empty object detection event.");
+	PARAMETER(General, sendNoObjDetectedEvents, bool, true, "When there are no objects detected, send an empty object detection event.");
 	PARAMETER(General, autoPauseOnDetection, bool, false, "Auto pause the camera when an object is detected.");
 
 	PARAMETER(Homography, homographyComputed, bool, true, "Compute homography? On ROS, this is required to publish objects detected.");
@@ -239,7 +239,7 @@ public:
 	static QString iniDefaultFileName() {return "config.ini";}
 	static QString iniPath();
 
-	static void init(const QString & fileName = QString());
+	static void init(const QString & fileName);
 
 	static void loadSettings(const QString & fileName = QString());
 	static void loadWindowSettings(QByteArray & windowGeometry, QByteArray & windowState, const QString & fileName = QString());

@@ -102,9 +102,12 @@ void showUsage()
 			"  --object \"path\"        Path to an object to detect.\n"
 			"  --objects \"path\"       Directory of the objects to detect (--object is ignored).\n"
 			"  --config \"path\"        Path to configuration file (default: %s).\n"
+			"                           If set to \"\", default parameters are used "
+			"                           without saving modified parameters on closing.\n"
 			"  --scene \"path\"         Path to a scene image file.\n"
 			"  --debug                Show debug log.\n"
 			"  --params               Show all parameters.\n"
+			"  --defaults             Use default parameters (--config is ignored).\n"
 			"  --My/Parameter \"value\" Set find-Object's parameter (look --params for parameters' name).\n"
 			"                           It will override the one in --config. Example to set 4 threads:\n"
 			"                           $ find_object --General/threads 4\n"
@@ -216,7 +219,7 @@ int main(int argc, char* argv[])
 				{
 					configPath.replace('~', QDir::homePath());
 				}
-				if(!QFile::exists(configPath))
+				if(!configPath.isEmpty() && !QFile::exists(configPath))
 				{
 					UWARN("Configuration file \"%s\" doesn't exist, it will be created with default values...", configPath.toStdString().c_str());
 				}
@@ -310,10 +313,20 @@ int main(int argc, char* argv[])
 
 	UINFO("Options:");
 	UINFO("   GUI mode = %s", guiMode?"true":"false");
-	UINFO("   Objects path: \"%s\"", objectsPath.toStdString().c_str());
+	if(!objectsPath.isEmpty())
+	{
+		UINFO("   Objects path: \"%s\"", objectsPath.toStdString().c_str());
+	}
+	else if(!objectPath.isEmpty())
+	{
+		UINFO("   Object path: \"%s\"", objectPath.toStdString().c_str());
+	}
 	UINFO("   Scene path: \"%s\"", scenePath.toStdString().c_str());
+	if(!guiMode)
+	{
+		UINFO("   JSON path: \"%s\"", jsonPath.toStdString().c_str());
+	}
 	UINFO("   Settings path: \"%s\"", configPath.toStdString().c_str());
-	UINFO("   JSON path: \"%s\"", jsonPath.toStdString().c_str());
 
 	for(find_object::ParametersMap::iterator iter= customParameters.begin(); iter!=customParameters.end(); ++iter)
 	{

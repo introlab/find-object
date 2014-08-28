@@ -40,7 +40,8 @@ void showUsage()
 			"  \"in\" is the port from which the detection is received.\n"
 			"  Options:\n"
 			"    --host #.#.#.#       Set host address.\n"
-			"    --json \"path\"      Path to an output JSON file.\n");
+			"    --json \"path\"        Path to an output JSON file.\n"
+			"    --help               Show this help.\n");
 	exit(-1);
 }
 
@@ -124,6 +125,12 @@ int main(int argc, char * argv[])
 				showUsage();
 			}
 			continue;
+		}
+
+		if(strcmp(argv[i], "-help") == 0 ||
+		   strcmp(argv[i], "--help") == 0)
+		{
+			showUsage();
 		}
 
 		printf("Unrecognized option: %s\n", argv[i]);
