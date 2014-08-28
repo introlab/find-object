@@ -15,6 +15,8 @@ SET(LIBRARIES
 #include files
 INCLUDE_DIRECTORIES(${INCLUDE_DIRS})
 
+SET(SRC_FILES main.cpp)
+
 # For Apple set the icns file containing icons
 IF(APPLE AND BUILD_AS_BUNDLE)
   # set how it shows up in the Info.plist file
@@ -40,11 +42,11 @@ ENDIF(WIN32)
 
 # create an executable file
 IF(APPLE AND BUILD_AS_BUNDLE)
-  ADD_EXECUTABLE(find_object_app MACOSX_BUNDLE main.cpp)
+  ADD_EXECUTABLE(find_object_app MACOSX_BUNDLE ${SRC_FILES})
 ELSEIF(MINGW)
-  ADD_EXECUTABLE(find_object_app WIN32 main.cpp)
+  ADD_EXECUTABLE(find_object_app WIN32 ${SRC_FILES})
 ELSE()
-  ADD_EXECUTABLE(find_object_app main.cpp)
+  ADD_EXECUTABLE(find_object_app ${SRC_FILES})
 ENDIF()
 # Linking with Qt libraries
 TARGET_LINK_LIBRARIES(find_object_app find_object ${LIBRARIES})

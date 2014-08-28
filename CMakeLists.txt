@@ -86,10 +86,7 @@ ADD_DEFINITIONS(-DQT_NO_KEYWORDS) # To avoid conflicts with boost signals used i
 
 ####### OSX BUNDLE CMAKE_INSTALL_PREFIX #######
 OPTION(BUILD_AS_BUNDLE "Set to ON to build as bundle (DragNDrop)" OFF)
-IF(APPLE AND BUILD_AS_BUNDLE)
-    #Force to Off, easiest to package into the bundle
-    SET( BUILD_SHARED_LIBS OFF )
-  
+IF(APPLE AND BUILD_AS_BUNDLE) 
     # Required when packaging, and set CMAKE_INSTALL_PREFIX to "/".
     SET(CPACK_SET_DESTDIR TRUE) 
   
