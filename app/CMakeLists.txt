@@ -66,7 +66,7 @@ ENDIF()
 # Installation stuff
 #--------------------------- 
 INSTALL(TARGETS find_object_app
-        RUNTIME DESTINATION bin COMPONENT runtime
+        RUNTIME DESTINATION "${INSTALL_BIN_DIR}" COMPONENT runtime
         BUNDLE DESTINATION "${CMAKE_BUNDLE_LOCATION}" COMPONENT runtime)
         
 #---------------------------
@@ -109,7 +109,7 @@ IF((APPLE AND BUILD_AS_BUNDLE) OR WIN32)
   # directories to look for dependencies
   SET(DIRS ${QT_LIBRARY_DIRS} ${PROJECT_SOURCE_DIR}/bin)
   IF(APPLE)
-    SET(DIRS ${DIRS} /usr/local)
+    SET(DIRS ${DIRS} /usr/local /usr/local/lib)
   ENDIF(APPLE)
 
   # Now the work of copying dependencies into the bundle/package
