@@ -137,6 +137,13 @@ int main(int argc, char* argv[])
 
 	for(int i=1; i<argc; ++i)
 	{
+#ifdef __APPLE__
+		if(QString(argv[i]).startsWith("-psn"))
+		{
+			//safely ignore
+			continue;
+		}
+#endif
 		if(strcmp(argv[i], "-objs") == 0 ||
 		   strcmp(argv[i], "--objs") == 0 ||
 		   strcmp(argv[i], "-objects") == 0 ||
@@ -474,4 +481,5 @@ int main(int argc, char* argv[])
 
 		delete findObject;
 	}
+	return 0;
 }
