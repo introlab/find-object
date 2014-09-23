@@ -85,8 +85,8 @@ typedef unsigned int uint;
 class FINDOBJECT_EXP Settings
 {
 	PARAMETER(Camera, 1deviceId, int, 0, "Device ID (default 0).");
-	PARAMETER(Camera, 2imageWidth, int, 640, "Image width (0 means default width from camera).");
-	PARAMETER(Camera, 3imageHeight, int, 480, "Image height (0 means default height from camera).");
+	PARAMETER(Camera, 2imageWidth, int, 0, "Image width (0 means default width from camera).");
+	PARAMETER(Camera, 3imageHeight, int, 0, "Image height (0 means default height from camera).");
 	PARAMETER(Camera, 4imageRate, double, 2.0, "Image rate in Hz (0 Hz means as fast as possible)."); // Hz
 	PARAMETER(Camera, 5mediaPath, QString, "", "Video file or directory of images. If set, the camera is not used. See General->videoFormats and General->imageFormats for available formats.");
 	PARAMETER(Camera, 6useTcpCamera, bool, false, "Use TCP/IP input camera.");
