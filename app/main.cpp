@@ -106,6 +106,7 @@ void showUsage()
 			"                           without saving modified parameters on closing.\n"
 			"  --scene \"path\"         Path to a scene image file.\n"
 			"  --debug                Show debug log.\n"
+			"  --debug-time           Show debug log with time.\n"
 			"  --params               Show all parameters.\n"
 			"  --defaults             Use default parameters (--config is ignored).\n"
 			"  --My/Parameter \"value\" Set find-Object's parameter (look --params for parameters' name).\n"
@@ -248,6 +249,14 @@ int main(int argc, char* argv[])
 		{
 			ULogger::setPrintWhere(true);
 			ULogger::setLevel(ULogger::kDebug);
+			continue;
+		}
+		if(strcmp(argv[i], "-debug-time") == 0 ||
+		   strcmp(argv[i], "--debug-time") == 0)
+		{
+			ULogger::setPrintWhere(true);
+			ULogger::setLevel(ULogger::kDebug);
+			ULogger::setPrintTime(true);
 			continue;
 		}
 		if(strcmp(argv[i], "-help") == 0 ||

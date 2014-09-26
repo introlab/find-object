@@ -902,6 +902,7 @@ bool FindObject::detect(const cv::Mat & image, find_object::DetectionInfo & info
 		}
 
 		// DETECT FEATURES AND EXTRACT DESCRIPTORS
+		UDEBUG("DETECT FEATURES AND EXTRACT DESCRIPTORS FROM THE SCENE");
 		ExtractFeaturesThread extractThread(detector_, extractor_, -1, grayscaleImg);
 		extractThread.start();
 		extractThread.wait();
@@ -915,6 +916,7 @@ bool FindObject::detect(const cv::Mat & image, find_object::DetectionInfo & info
 								((vocabulary_->size()==0 || vocabulary_->wordToObjects().begin().value()==-1) && !Settings::getGeneral_invertedSearch());
 
 		// COMPARE
+		UDEBUG("COMPARE");
 		if(!objectsDescriptors_.empty() &&
 			info.sceneKeypoints_.size() &&
 		   consistentNNData &&
@@ -930,6 +932,7 @@ bool FindObject::detect(const cv::Mat & image, find_object::DetectionInfo & info
 			if(!Settings::getGeneral_invertedSearch())
 			{
 				// CREATE INDEX for the scene
+				UDEBUG("CREATE INDEX FOR THE SCENE");
 				vocabulary_->clear();
 				words = vocabulary_->addWords(info.sceneDescriptors_, -1, Settings::getGeneral_vocabularyIncremental());
 				if(!Settings::getGeneral_vocabularyIncremental())
@@ -949,6 +952,7 @@ bool FindObject::detect(const cv::Mat & image, find_object::DetectionInfo & info
 				cv::Mat results;
 				cv::Mat dists;
 				// DO NEAREST NEIGHBOR
+				UDEBUG("DO NEAREST NEIGHBOR");
 				int k = Settings::getNearestNeighbor_3nndrRatioUsed()?2:1;
 				if(!Settings::getGeneral_invertedSearch())
 				{
@@ -966,6 +970,7 @@ bool FindObject::detect(const cv::Mat & image, find_object::DetectionInfo & info
 				}
 
 				// PROCESS RESULTS
+				UDEBUG("PROCESS RESULTS");
 				// Get all matches for each object
 				for(int i=0; i<dists.rows; ++i)
 				{
@@ -1039,6 +1044,7 @@ bool FindObject::detect(const cv::Mat & image, find_object::DetectionInfo & info
 			else
 			{
 				//multi-threaded, match objects to scene
+				UDEBUG("MULTI-THREADED, MATCH OBJECTS TO SCENE");
 				int threadCounts = Settings::getGeneral_threads();
 				if(threadCounts == 0)
 				{
@@ -1082,6 +1088,7 @@ bool FindObject::detect(const cv::Mat & image, find_object::DetectionInfo & info
 			if(Settings::getHomography_homographyComputed())
 			{
 				// HOMOGRAPHY
+				UDEBUG("COMPUTE HOMOGRAPHY");
 				int threadCounts = Settings::getGeneral_threads();
 				if(threadCounts == 0)
 				{
