@@ -94,8 +94,13 @@ class FINDOBJECT_EXP Settings
 	PARAMETER(Camera, 9queueSize, int, 1, "Maximum images buffered from TCP. If 0, all images are buffered.");
 
 	//List format : [Index:item0;item1;item3;...]
+#ifdef WITH_NONFREE
 	PARAMETER(Feature2D, 1Detector, QString, "7:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK" , "Keypoint detector.");
 	PARAMETER(Feature2D, 2Descriptor, QString, "3:Brief;ORB;SIFT;SURF;BRISK;FREAK", "Keypoint descriptor.");
+#else
+	PARAMETER(Feature2D, 1Detector, QString, "1:Dense;Fast;GFTT;MSER;ORB;Star;BRISK" , "Keypoint detector.");
+	PARAMETER(Feature2D, 2Descriptor, QString, "0:Brief;ORB;BRISK;FREAK", "Keypoint descriptor.");
+#endif
 	PARAMETER(Feature2D, 3MaxFeatures, int, 0, "Maximum features per image. If the number of features extracted is over this threshold, only X features with the highest response are kept. 0 means all features are kept.");
 	PARAMETER(Feature2D, 4Affine, bool, false, "(ASIFT) Extract features on multiple affine transformations of the image.");
 	PARAMETER(Feature2D, 5AffineCount, int, 6, "(ASIFT) Higher the value, more affine transformations will be done.");
@@ -142,17 +147,12 @@ class FINDOBJECT_EXP Settings
 	PARAMETER(Feature2D, MSER_minMargin, double, 0.003, "");
 	PARAMETER(Feature2D, MSER_edgeBlurSize, int, 5, "");
 
+#ifdef WITH_NONFREE
 	PARAMETER(Feature2D, SIFT_nfeatures, int, 0, "The number of best features to retain. The features are ranked by their scores (measured in SIFT algorithm as the local contrast).");
 	PARAMETER(Feature2D, SIFT_nOctaveLayers, int, 3, "The number of layers in each octave. 3 is the value used in D. Lowe paper. The number of octaves is computed automatically from the image resolution.");
 	PARAMETER(Feature2D, SIFT_contrastThreshold, double, 0.04, "The contrast threshold used to filter out weak features in semi-uniform (low-contrast) regions. The larger the threshold, the less features are produced by the detector.");
 	PARAMETER(Feature2D, SIFT_edgeThreshold, double, 10, "The threshold used to filter out edge-like features. Note that the its meaning is different from the contrastThreshold, i.e. the larger the edgeThreshold, the less features are filtered out (more features are retained).");
 	PARAMETER(Feature2D, SIFT_sigma, double, 1.6, "The sigma of the Gaussian applied to the input image at the octave #0. If your image is captured with a weak camera with soft lenses, you might want to reduce the number.");
-
-	PARAMETER(Feature2D, Star_maxSize, int, 45, "");
-	PARAMETER(Feature2D, Star_responseThreshold, int, 30, "");
-	PARAMETER(Feature2D, Star_lineThresholdProjected, int, 10, "");
-	PARAMETER(Feature2D, Star_lineThresholdBinarized, int, 8, "");
-	PARAMETER(Feature2D, Star_suppressNonmaxSize, int, 5, "");
 
 	PARAMETER(Feature2D, SURF_hessianThreshold, double, 600.0, "Threshold for hessian keypoint detector used in SURF.");
 	PARAMETER(Feature2D, SURF_nOctaves, int, 4, "Number of pyramid octaves the keypoint detector will use.");
@@ -161,6 +161,13 @@ class FINDOBJECT_EXP Settings
 	PARAMETER(Feature2D, SURF_upright, bool, false, "Up-right or rotated features flag (true - do not compute orientation of features; false - compute orientation).");
 	PARAMETER(Feature2D, SURF_gpu, bool, false, "GPU-SURF: Use GPU version of SURF. This option is enabled only if OpenCV is built with CUDA and GPUs are detected.");
 	PARAMETER(Feature2D, SURF_keypointsRatio, float, 0.01f, "Used with SURF GPU.");
+#endif
+
+	PARAMETER(Feature2D, Star_maxSize, int, 45, "");
+	PARAMETER(Feature2D, Star_responseThreshold, int, 30, "");
+	PARAMETER(Feature2D, Star_lineThresholdProjected, int, 10, "");
+	PARAMETER(Feature2D, Star_lineThresholdBinarized, int, 8, "");
+	PARAMETER(Feature2D, Star_suppressNonmaxSize, int, 5, "");
 
 	PARAMETER(Feature2D, BRISK_thresh, int, 30, "FAST/AGAST detection threshold score.");
 	PARAMETER(Feature2D, BRISK_octaves, int, 3, "Detection octaves. Use 0 to do single scale.");
@@ -171,16 +178,23 @@ class FINDOBJECT_EXP Settings
 	PARAMETER(Feature2D, FREAK_patternScale, float, 22.0f, "Scaling of the description pattern.");
 	PARAMETER(Feature2D, FREAK_nOctaves, int, 4, "Number of octaves covered by the detected keypoints.");
 
-	PARAMETER(NearestNeighbor, 1Strategy, QString, "1:Linear;KDTree;KMeans;Composite;Autotuned;Lsh", "Nearest neighbor strategy.");
+#ifdef WITH_NONFREE
+	PARAMETER(NearestNeighbor, 1Strategy, QString, "1:Linear;KDTree;KMeans;Composite;Autotuned;Lsh;BruteForce", "Nearest neighbor strategy.");
 	PARAMETER(NearestNeighbor, 2Distance_type, QString, "0:EUCLIDEAN_L2;MANHATTAN_L1;MINKOWSKI;MAX;HIST_INTERSECT;HELLINGER;CHI_SQUARE_CS;KULLBACK_LEIBLER_KL;HAMMING", "Distance type.");
+#else
+	PARAMETER(NearestNeighbor, 1Strategy, QString, "6:Linear;KDTree;KMeans;Composite;Autotuned;Lsh;BruteForce", "Nearest neighbor strategy.");
+	PARAMETER(NearestNeighbor, 2Distance_type, QString, "1:EUCLIDEAN_L2;MANHATTAN_L1;MINKOWSKI;MAX;HIST_INTERSECT;HELLINGER;CHI_SQUARE_CS;KULLBACK_LEIBLER_KL;HAMMING", "Distance type.");
+#endif
 	PARAMETER(NearestNeighbor, 3nndrRatioUsed, bool, true, "Nearest neighbor distance ratio approach to accept the best match.");
 	PARAMETER(NearestNeighbor, 4nndrRatio, float, 0.8f, "Nearest neighbor distance ratio.");
 	PARAMETER(NearestNeighbor, 5minDistanceUsed, bool, false, "Minimum distance with the nearest descriptor to accept a match.");
 	PARAMETER(NearestNeighbor, 6minDistance, float, 1.6f, "Minimum distance. You can look at top of this panel where minimum and maximum distances are shown to properly set this parameter depending of the descriptor used.");
 
-	PARAMETER(NearestNeighbor, 7search_checks, int, 32, "The number of times the tree(s) in the index should be recursively traversed. A higher value for this parameter would give better search precision, but also take more time. If automatic configuration was used when the index was created, the number of checks required to achieve the specified precision was also computed, in which case this parameter is ignored.");
-	PARAMETER(NearestNeighbor, 8search_eps, float, 0, "");
-	PARAMETER(NearestNeighbor, 9search_sorted, bool, true, "");
+	PARAMETER(NearestNeighbor, BruteForce_gpu, bool, false, "Brute force GPU");
+
+	PARAMETER(NearestNeighbor, search_checks, int, 32, "The number of times the tree(s) in the index should be recursively traversed. A higher value for this parameter would give better search precision, but also take more time. If automatic configuration was used when the index was created, the number of checks required to achieve the specified precision was also computed, in which case this parameter is ignored.");
+	PARAMETER(NearestNeighbor, search_eps, float, 0, "");
+	PARAMETER(NearestNeighbor, search_sorted, bool, true, "");
 
 	PARAMETER(NearestNeighbor, KDTree_trees, int, 4, "The number of parallel kd-trees to use. Good values are in the range [1..16].");
 
@@ -261,6 +275,7 @@ public:
 	static QString currentDetectorType();
 	static QString currentNearestNeighborType();
 
+	static bool isBruteForceNearestNeighbor();
 	static cv::flann::IndexParams * createFlannIndexParams();
 	static cvflann::flann_distance_t getFlannDistanceType();
 	static cv::flann::SearchParams getFlannSearchParams();

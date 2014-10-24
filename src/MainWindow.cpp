@@ -135,14 +135,18 @@ MainWindow::MainWindow(FindObject * findObject, Camera * camera, QWidget * paren
 
 	if(cv::gpu::getCudaEnabledDeviceCount() == 0)
 	{
+#ifdef WITH_NONFREE
 		ui_->toolBox->updateParameter(Settings::kFeature2D_SURF_gpu());
-		ui_->toolBox->updateParameter(Settings::kFeature2D_Fast_gpu());
-		ui_->toolBox->updateParameter(Settings::kFeature2D_ORB_gpu());
 		ui_->toolBox->getParameterWidget(Settings::kFeature2D_SURF_gpu())->setEnabled(false);
 		ui_->toolBox->getParameterWidget(Settings::kFeature2D_SURF_keypointsRatio())->setEnabled(false);
+#endif
+		ui_->toolBox->updateParameter(Settings::kFeature2D_Fast_gpu());
+		ui_->toolBox->updateParameter(Settings::kFeature2D_ORB_gpu());
+		ui_->toolBox->updateParameter(Settings::kNearestNeighbor_BruteForce_gpu());
 		ui_->toolBox->getParameterWidget(Settings::kFeature2D_Fast_gpu())->setEnabled(false);
 		ui_->toolBox->getParameterWidget(Settings::kFeature2D_Fast_keypointsRatio())->setEnabled(false);
 		ui_->toolBox->getParameterWidget(Settings::kFeature2D_ORB_gpu())->setEnabled(false);
+		ui_->toolBox->getParameterWidget(Settings::kNearestNeighbor_BruteForce_gpu())->setEnabled(false);
 	}
 
 	connect((QDoubleSpinBox*)ui_->toolBox->getParameterWidget(Settings::kCamera_4imageRate()),

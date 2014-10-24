@@ -33,9 +33,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QtCore/QStringList>
 #include <QtCore/QDir>
 #include <stdio.h>
-#include <opencv2/nonfree/features2d.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
+#ifdef WITH_NONFREE
+#include <opencv2/nonfree/features2d.hpp>
 #include <opencv2/nonfree/gpu.hpp>
+#endif
 #include <opencv2/gpu/gpu.hpp>
 
 namespace find_object {
@@ -120,9 +122,12 @@ void Settings::loadSettings(const QString & fileName)
 
 	if(cv::gpu::getCudaEnabledDeviceCount() == 0)
 	{
+#ifdef WITH_NONFREE
 		Settings::setFeature2D_SURF_gpu(false);
+#endif
 		Settings::setFeature2D_Fast_gpu(false);
 		Settings::setFeature2D_ORB_gpu(false);
+		Settings::setNearestNeighbor_BruteForce_gpu(false);
 	}
 }
 
@@ -217,6 +222,7 @@ public:
 			cv::Mat & descriptors) = 0;
 };
 
+#ifdef WITH_NONFREE
 class GPUSURF : public GPUFeature2D
 {
 public:
@@ -291,6 +297,7 @@ public:
 private:
     cv::gpu::SURF_GPU surf_; // HACK: static because detectImpl() is const!
 };
+#endif
 
 class GPUFAST : public GPUFeature2D
 {
@@ -416,168 +423,151 @@ KeypointDetector * Settings::createKeypointDetector()
 		if(ok)
 		{
 			QStringList strategies = split.last().split(';');
+#ifdef WITH_NONFREE
 			if(strategies.size() == 9 && index>=0 && index<9)
+#else
+			if(strategies.size() == 7 && index>=0 && index<7)
+#endif
 			{
-				switch(index)
+				if(strategies.at(index).compare("Dense") == 0)
 				{
-				case 0:
-					if(strategies.at(index).compare("Dense") == 0)
+					detector = new cv::DenseFeatureDetector(
+							getFeature2D_Dense_initFeatureScale(),
+							getFeature2D_Dense_featureScaleLevels(),
+							getFeature2D_Dense_featureScaleMul(),
+							getFeature2D_Dense_initXyStep(),
+							getFeature2D_Dense_initImgBound(),
+							getFeature2D_Dense_varyXyStepWithScale(),
+							getFeature2D_Dense_varyImgBoundWithScale());
+					UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
+				}
+				else if(strategies.at(index).compare("Fast") == 0)
+				{
+					if(getFeature2D_Fast_gpu() && cv::gpu::getCudaEnabledDeviceCount())
 					{
-						detector = new cv::DenseFeatureDetector(
-								getFeature2D_Dense_initFeatureScale(),
-								getFeature2D_Dense_featureScaleLevels(),
-								getFeature2D_Dense_featureScaleMul(),
-								getFeature2D_Dense_initXyStep(),
-								getFeature2D_Dense_initImgBound(),
-								getFeature2D_Dense_varyXyStepWithScale(),
-								getFeature2D_Dense_varyImgBoundWithScale());
+						detectorGPU = new GPUFAST(
+								getFeature2D_Fast_threshold(),
+								getFeature2D_Fast_nonmaxSuppression());
+						UDEBUG("type=%s GPU", strategies.at(index).toStdString().c_str());
+					}
+					else
+					{
+						detector = new cv::FastFeatureDetector(
+								getFeature2D_Fast_threshold(),
+								getFeature2D_Fast_nonmaxSuppression());
 						UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 					}
-					break;
-				case 1:
-					if(strategies.at(index).compare("Fast") == 0)
+				}
+				else if(strategies.at(index).compare("GFTT") == 0)
+				{
+					detector = new cv::GFTTDetector(
+							getFeature2D_GFTT_maxCorners(),
+							getFeature2D_GFTT_qualityLevel(),
+							getFeature2D_GFTT_minDistance(),
+							getFeature2D_GFTT_blockSize(),
+							getFeature2D_GFTT_useHarrisDetector(),
+							getFeature2D_GFTT_k());
+					UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
+				}
+				else if(strategies.at(index).compare("MSER") == 0)
+				{
+					detector = new cv::MSER(
+							getFeature2D_MSER_delta(),
+							getFeature2D_MSER_minArea(),
+							getFeature2D_MSER_maxArea(),
+							getFeature2D_MSER_maxVariation(),
+							getFeature2D_MSER_minDiversity(),
+							getFeature2D_MSER_maxEvolution(),
+							getFeature2D_MSER_areaThreshold(),
+							getFeature2D_MSER_minMargin(),
+							getFeature2D_MSER_edgeBlurSize());
+					UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
+				}
+				else if(strategies.at(index).compare("ORB") == 0)
+				{
+					if(getFeature2D_ORB_gpu() && cv::gpu::getCudaEnabledDeviceCount())
 					{
-						if(getFeature2D_Fast_gpu() && cv::gpu::getCudaEnabledDeviceCount())
-						{
-							detectorGPU = new GPUFAST(
-									getFeature2D_Fast_threshold(),
-									getFeature2D_Fast_nonmaxSuppression());
-							UDEBUG("type=%s GPU", strategies.at(index).toStdString().c_str());
-						}
-						else
-						{
-							detector = new cv::FastFeatureDetector(
-									getFeature2D_Fast_threshold(),
-									getFeature2D_Fast_nonmaxSuppression());
-							UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
-						}
+						detectorGPU = new GPUORB(
+								getFeature2D_ORB_nFeatures(),
+								getFeature2D_ORB_scaleFactor(),
+								getFeature2D_ORB_nLevels(),
+								getFeature2D_ORB_edgeThreshold(),
+								getFeature2D_ORB_firstLevel(),
+								getFeature2D_ORB_WTA_K(),
+								getFeature2D_ORB_scoreType(),
+								getFeature2D_ORB_patchSize(),
+								getFeature2D_Fast_threshold(),
+								getFeature2D_Fast_nonmaxSuppression());
+						UDEBUG("type=%s (GPU)", strategies.at(index).toStdString().c_str());
 					}
-					break;
-				case 2:
-					if(strategies.at(index).compare("GFTT") == 0)
+					else
 					{
-						detector = new cv::GFTTDetector(
-								getFeature2D_GFTT_maxCorners(),
-								getFeature2D_GFTT_qualityLevel(),
-								getFeature2D_GFTT_minDistance(),
-								getFeature2D_GFTT_blockSize(),
-								getFeature2D_GFTT_useHarrisDetector(),
-								getFeature2D_GFTT_k());
+						detector = new cv::ORB(
+								getFeature2D_ORB_nFeatures(),
+								getFeature2D_ORB_scaleFactor(),
+								getFeature2D_ORB_nLevels(),
+								getFeature2D_ORB_edgeThreshold(),
+								getFeature2D_ORB_firstLevel(),
+								getFeature2D_ORB_WTA_K(),
+								getFeature2D_ORB_scoreType(),
+								getFeature2D_ORB_patchSize());
 						UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 					}
-					break;
-				case 3:
-					if(strategies.at(index).compare("MSER") == 0)
+				}
+				else if(strategies.at(index).compare("Star") == 0)
+				{
+					detector = new cv::StarFeatureDetector(
+							getFeature2D_Star_maxSize(),
+							getFeature2D_Star_responseThreshold(),
+							getFeature2D_Star_lineThresholdProjected(),
+							getFeature2D_Star_lineThresholdBinarized(),
+							getFeature2D_Star_suppressNonmaxSize());
+					UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
+				}
+				else if(strategies.at(index).compare("BRISK") == 0)
+				{
+					detector = new cv::BRISK(
+							getFeature2D_BRISK_thresh(),
+							getFeature2D_BRISK_octaves(),
+							getFeature2D_BRISK_patternScale());
+					UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
+				}
+#ifdef WITH_NONFREE
+				else if(strategies.at(index).compare("SIFT") == 0)
+				{
+					detector = new cv::SIFT(
+							getFeature2D_SIFT_nfeatures(),
+							getFeature2D_SIFT_nOctaveLayers(),
+							getFeature2D_SIFT_contrastThreshold(),
+							getFeature2D_SIFT_edgeThreshold(),
+							getFeature2D_SIFT_sigma());
+					UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
+				}
+				else if(strategies.at(index).compare("SURF") == 0)
+				{
+					if(getFeature2D_SURF_gpu() && cv::gpu::getCudaEnabledDeviceCount())
 					{
-						detector = new cv::MSER(
-								getFeature2D_MSER_delta(),
-								getFeature2D_MSER_minArea(),
-								getFeature2D_MSER_maxArea(),
-								getFeature2D_MSER_maxVariation(),
-								getFeature2D_MSER_minDiversity(),
-								getFeature2D_MSER_maxEvolution(),
-								getFeature2D_MSER_areaThreshold(),
-								getFeature2D_MSER_minMargin(),
-								getFeature2D_MSER_edgeBlurSize());
-						UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
-					}
-					break;
-				case 4:
-					if(strategies.at(index).compare("ORB") == 0)
-					{
-						if(getFeature2D_ORB_gpu() && cv::gpu::getCudaEnabledDeviceCount())
-						{
-							detectorGPU = new GPUORB(
-									getFeature2D_ORB_nFeatures(),
-									getFeature2D_ORB_scaleFactor(),
-									getFeature2D_ORB_nLevels(),
-									getFeature2D_ORB_edgeThreshold(),
-									getFeature2D_ORB_firstLevel(),
-									getFeature2D_ORB_WTA_K(),
-									getFeature2D_ORB_scoreType(),
-									getFeature2D_ORB_patchSize(),
-									getFeature2D_Fast_threshold(),
-									getFeature2D_Fast_nonmaxSuppression());
-							UDEBUG("type=%s (GPU)", strategies.at(index).toStdString().c_str());
-						}
-						else
-						{
-							detector = new cv::ORB(
-									getFeature2D_ORB_nFeatures(),
-									getFeature2D_ORB_scaleFactor(),
-									getFeature2D_ORB_nLevels(),
-									getFeature2D_ORB_edgeThreshold(),
-									getFeature2D_ORB_firstLevel(),
-									getFeature2D_ORB_WTA_K(),
-									getFeature2D_ORB_scoreType(),
-									getFeature2D_ORB_patchSize());
-							UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
-						}
-					}
-					break;
-				case 5:
-					if(strategies.at(index).compare("SIFT") == 0)
-					{
-						detector = new cv::SIFT(
-								getFeature2D_SIFT_nfeatures(),
-								getFeature2D_SIFT_nOctaveLayers(),
-								getFeature2D_SIFT_contrastThreshold(),
-								getFeature2D_SIFT_edgeThreshold(),
-								getFeature2D_SIFT_sigma());
-						UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
-					}
-					break;
-				case 6:
-					if(strategies.at(index).compare("Star") == 0)
-					{
-						detector = new cv::StarFeatureDetector(
-								getFeature2D_Star_maxSize(),
-								getFeature2D_Star_responseThreshold(),
-								getFeature2D_Star_lineThresholdProjected(),
-								getFeature2D_Star_lineThresholdBinarized(),
-								getFeature2D_Star_suppressNonmaxSize());
-						UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
-					}
-					break;
-				case 7:
-					if(strategies.at(index).compare("SURF") == 0)
-					{
-						if(getFeature2D_SURF_gpu() && cv::gpu::getCudaEnabledDeviceCount())
-						{
-							detectorGPU = new GPUSURF(
-									getFeature2D_SURF_hessianThreshold(),
-									getFeature2D_SURF_nOctaves(),
-									getFeature2D_SURF_nOctaveLayers(),
-									getFeature2D_SURF_extended(),
-									getFeature2D_SURF_keypointsRatio(),
-									getFeature2D_SURF_upright());
-							UDEBUG("type=%s (GPU)", strategies.at(index).toStdString().c_str());
-						}
-						else
-						{
-							detector = new cv::SURF(
+						detectorGPU = new GPUSURF(
 								getFeature2D_SURF_hessianThreshold(),
 								getFeature2D_SURF_nOctaves(),
 								getFeature2D_SURF_nOctaveLayers(),
 								getFeature2D_SURF_extended(),
+								getFeature2D_SURF_keypointsRatio(),
 								getFeature2D_SURF_upright());
-							UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
-						}
+						UDEBUG("type=%s (GPU)", strategies.at(index).toStdString().c_str());
 					}
-					break;
-				case 8:
-					if(strategies.at(index).compare("BRISK") == 0)
+					else
 					{
-						detector = new cv::BRISK(
-								getFeature2D_BRISK_thresh(),
-								getFeature2D_BRISK_octaves(),
-								getFeature2D_BRISK_patternScale());
+						detector = new cv::SURF(
+							getFeature2D_SURF_hessianThreshold(),
+							getFeature2D_SURF_nOctaves(),
+							getFeature2D_SURF_nOctaveLayers(),
+							getFeature2D_SURF_extended(),
+							getFeature2D_SURF_upright());
 						UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 					}
-					break;
-				default:
-					break;
 				}
+#endif
 			}
 		}
 	}
@@ -606,113 +596,102 @@ DescriptorExtractor * Settings::createDescriptorExtractor()
 		if(ok)
 		{
 			QStringList strategies = split.last().split(';');
+#ifdef WITH_NONFREE
 			if(strategies.size() == 6 && index>=0 && index<6)
+#else
+			if(strategies.size() == 4 && index>=0 && index<4)
+#endif
 			{
-				switch(index)
+				if(strategies.at(index).compare("Brief") == 0)
 				{
-				case 0:
-					if(strategies.at(index).compare("Brief") == 0)
-					{
-						extractor = new cv::BriefDescriptorExtractor(
-								getFeature2D_Brief_bytes());
-						UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
-					}
-					break;
-				case 1:
-					if(strategies.at(index).compare("ORB") == 0)
-					{
-						if(getFeature2D_ORB_gpu() && cv::gpu::getCudaEnabledDeviceCount())
-						{
-							extractorGPU = new GPUORB(
-									getFeature2D_ORB_nFeatures(),
-									getFeature2D_ORB_scaleFactor(),
-									getFeature2D_ORB_nLevels(),
-									getFeature2D_ORB_edgeThreshold(),
-									getFeature2D_ORB_firstLevel(),
-									getFeature2D_ORB_WTA_K(),
-									getFeature2D_ORB_scoreType(),
-									getFeature2D_ORB_patchSize(),
-									getFeature2D_Fast_threshold(),
-									getFeature2D_Fast_nonmaxSuppression());
-							UDEBUG("type=%s (GPU)", strategies.at(index).toStdString().c_str());
-						}
-						else
-						{
-							extractor = new cv::ORB(
-									getFeature2D_ORB_nFeatures(),
-									getFeature2D_ORB_scaleFactor(),
-									getFeature2D_ORB_nLevels(),
-									getFeature2D_ORB_edgeThreshold(),
-									getFeature2D_ORB_firstLevel(),
-									getFeature2D_ORB_WTA_K(),
-									getFeature2D_ORB_scoreType(),
-									getFeature2D_ORB_patchSize());
-							UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
-						}
-					}
-					break;
-				case 2:
-					if(strategies.at(index).compare("SIFT") == 0)
-					{
-						extractor = new cv::SIFT(
-								getFeature2D_SIFT_nfeatures(),
-								getFeature2D_SIFT_nOctaveLayers(),
-								getFeature2D_SIFT_contrastThreshold(),
-								getFeature2D_SIFT_edgeThreshold(),
-								getFeature2D_SIFT_sigma());
-						UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
-					}
-					break;
-				case 3:
-					if(strategies.at(index).compare("SURF") == 0)
-					{
-						if(getFeature2D_SURF_gpu() && cv::gpu::getCudaEnabledDeviceCount())
-						{
-							extractorGPU = new GPUSURF(
-									getFeature2D_SURF_hessianThreshold(),
-									getFeature2D_SURF_nOctaves(),
-									getFeature2D_SURF_nOctaveLayers(),
-									getFeature2D_SURF_extended(),
-									getFeature2D_SURF_keypointsRatio(),
-									getFeature2D_SURF_upright());
-							UDEBUG("type=%s (GPU)", strategies.at(index).toStdString().c_str());
-						}
-						else
-						{
-							extractor = new cv::SURF(
-									getFeature2D_SURF_hessianThreshold(),
-									getFeature2D_SURF_nOctaves(),
-									getFeature2D_SURF_nOctaveLayers(),
-									getFeature2D_SURF_extended(),
-									getFeature2D_SURF_upright());
-							UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
-						}
-					}
-					break;
-				case 4:
-					if(strategies.at(index).compare("BRISK") == 0)
-					{
-						extractor = new cv::BRISK(
-								getFeature2D_BRISK_thresh(),
-								getFeature2D_BRISK_octaves(),
-								getFeature2D_BRISK_patternScale());
-						UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
-					}
-					break;
-				case 5:
-					if(strategies.at(index).compare("FREAK") == 0)
-					{
-						extractor = new cv::FREAK(
-								getFeature2D_FREAK_orientationNormalized(),
-								getFeature2D_FREAK_scaleNormalized(),
-								getFeature2D_FREAK_patternScale(),
-								getFeature2D_FREAK_nOctaves());
-						UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
-					}
-					break;
-				default:
-					break;
+					extractor = new cv::BriefDescriptorExtractor(
+							getFeature2D_Brief_bytes());
+					UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 				}
+				else if(strategies.at(index).compare("ORB") == 0)
+				{
+					if(getFeature2D_ORB_gpu() && cv::gpu::getCudaEnabledDeviceCount())
+					{
+						extractorGPU = new GPUORB(
+								getFeature2D_ORB_nFeatures(),
+								getFeature2D_ORB_scaleFactor(),
+								getFeature2D_ORB_nLevels(),
+								getFeature2D_ORB_edgeThreshold(),
+								getFeature2D_ORB_firstLevel(),
+								getFeature2D_ORB_WTA_K(),
+								getFeature2D_ORB_scoreType(),
+								getFeature2D_ORB_patchSize(),
+								getFeature2D_Fast_threshold(),
+								getFeature2D_Fast_nonmaxSuppression());
+						UDEBUG("type=%s (GPU)", strategies.at(index).toStdString().c_str());
+					}
+					else
+					{
+						extractor = new cv::ORB(
+								getFeature2D_ORB_nFeatures(),
+								getFeature2D_ORB_scaleFactor(),
+								getFeature2D_ORB_nLevels(),
+								getFeature2D_ORB_edgeThreshold(),
+								getFeature2D_ORB_firstLevel(),
+								getFeature2D_ORB_WTA_K(),
+								getFeature2D_ORB_scoreType(),
+								getFeature2D_ORB_patchSize());
+						UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
+					}
+				}
+				else if(strategies.at(index).compare("BRISK") == 0)
+				{
+					extractor = new cv::BRISK(
+							getFeature2D_BRISK_thresh(),
+							getFeature2D_BRISK_octaves(),
+							getFeature2D_BRISK_patternScale());
+					UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
+				}
+				else if(strategies.at(index).compare("FREAK") == 0)
+				{
+					extractor = new cv::FREAK(
+							getFeature2D_FREAK_orientationNormalized(),
+							getFeature2D_FREAK_scaleNormalized(),
+							getFeature2D_FREAK_patternScale(),
+							getFeature2D_FREAK_nOctaves());
+					UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
+				}
+#ifdef WITH_NONFREE
+				else if(strategies.at(index).compare("SIFT") == 0)
+				{
+					extractor = new cv::SIFT(
+							getFeature2D_SIFT_nfeatures(),
+							getFeature2D_SIFT_nOctaveLayers(),
+							getFeature2D_SIFT_contrastThreshold(),
+							getFeature2D_SIFT_edgeThreshold(),
+							getFeature2D_SIFT_sigma());
+					UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
+				}
+				else if(strategies.at(index).compare("SURF") == 0)
+				{
+					if(getFeature2D_SURF_gpu() && cv::gpu::getCudaEnabledDeviceCount())
+					{
+						extractorGPU = new GPUSURF(
+								getFeature2D_SURF_hessianThreshold(),
+								getFeature2D_SURF_nOctaves(),
+								getFeature2D_SURF_nOctaveLayers(),
+								getFeature2D_SURF_extended(),
+								getFeature2D_SURF_keypointsRatio(),
+								getFeature2D_SURF_upright());
+						UDEBUG("type=%s (GPU)", strategies.at(index).toStdString().c_str());
+					}
+					else
+					{
+						extractor = new cv::SURF(
+								getFeature2D_SURF_hessianThreshold(),
+								getFeature2D_SURF_nOctaves(),
+								getFeature2D_SURF_nOctaveLayers(),
+								getFeature2D_SURF_extended(),
+								getFeature2D_SURF_upright());
+						UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
+					}
+				}
+#endif
 			}
 		}
 	}
@@ -746,6 +725,27 @@ QString Settings::currentNearestNeighborType()
 	return getNearestNeighbor_1Strategy().split(':').last().split(';').at(index);
 }
 
+bool Settings::isBruteForceNearestNeighbor()
+{
+	bool bruteForce = false;
+	QString str = getNearestNeighbor_1Strategy();
+	QStringList split = str.split(':');
+	if(split.size()==2)
+	{
+		bool ok = false;
+		int index = split.first().toInt(&ok);
+		if(ok)
+		{
+			QStringList strategies = split.last().split(';');
+			if(strategies.size() >= 7 && index == 6)
+			{
+				bruteForce = true;
+			}
+		}
+	}
+	return bruteForce;
+}
+
 cv::flann::IndexParams * Settings::createFlannIndexParams()
 {
 	cv::flann::IndexParams * params = 0;
@@ -758,7 +758,7 @@ cv::flann::IndexParams * Settings::createFlannIndexParams()
 		if(ok)
 		{
 			QStringList strategies = split.last().split(';');
-			if(strategies.size() == 6 && index>=0 && index<6)
+			if(strategies.size() >= 6 && index>=0 && index<6)
 			{
 				switch(index)
 				{
@@ -884,9 +884,9 @@ cvflann::flann_distance_t Settings::getFlannDistanceType()
 cv::flann::SearchParams Settings::getFlannSearchParams()
 {
 	return cv::flann::SearchParams(
-			getNearestNeighbor_7search_checks(),
-			getNearestNeighbor_8search_eps(),
-			getNearestNeighbor_9search_sorted());
+			getNearestNeighbor_search_checks(),
+			getNearestNeighbor_search_eps(),
+			getNearestNeighbor_search_sorted());
 }
 
 int Settings::getHomographyMethod()

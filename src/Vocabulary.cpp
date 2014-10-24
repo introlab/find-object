@@ -30,6 +30,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Vocabulary.h"
 #include <QtCore/QVector>
 #include <stdio.h>
+#include <opencv2/gpu/gpu.hpp>
 
 namespace find_object {
 
@@ -67,7 +68,7 @@ QMultiMap<int, int> Vocabulary::addWords(const cv::Mat & descriptors, int object
 		if(!indexedDescriptors_.empty() && indexedDescriptors_.rows >= (int)k)
 		{
 			Q_ASSERT(indexedDescriptors_.type() == descriptors.type() && indexedDescriptors_.cols == descriptors.cols);
-			flannIndex_.knnSearch(descriptors, results, dists, k, Settings::getFlannSearchParams() );
+			this->search(descriptors, results, dists, k);
 
 			if( dists.type() == CV_32S )
 			{
@@ -207,7 +208,7 @@ void Vocabulary::update()
 		notIndexedWordIds_.clear();
 	}
 
-	if(!indexedDescriptors_.empty())
+	if(!indexedDescriptors_.empty() && !Settings::isBruteForceNearestNeighbor())
 	{
 		cv::flann::IndexParams * params = Settings::createFlannIndexParams();
 		flannIndex_.build(indexedDescriptors_, *params, Settings::getFlannDistanceType());
@@ -223,7 +224,46 @@ void Vocabulary::search(const cv::Mat & descriptors, cv::Mat & results, cv::Mat 
 	{
 		Q_ASSERT(descriptors.type() == indexedDescriptors_.type() && descriptors.cols == indexedDescriptors_.cols);
 
-		flannIndex_.knnSearch(descriptors, results, dists, k, Settings::getFlannSearchParams());
+		if(Settings::isBruteForceNearestNeighbor())
+		{
+			std::vector<std::vector<cv::DMatch> > matches;
+			if(Settings::getNearestNeighbor_BruteForce_gpu() && cv::gpu::getCudaEnabledDeviceCount())
+			{
+				cv::gpu::GpuMat newDescriptorsGpu(descriptors);
+				cv::gpu::GpuMat lastDescriptorsGpu(indexedDescriptors_);
+				if(indexedDescriptors_.type()==CV_8U)
+				{
+					cv::gpu::BruteForceMatcher_GPU<cv::Hamming> gpuMatcher;
+					gpuMatcher.knnMatch(newDescriptorsGpu, lastDescriptorsGpu, matches, k);
+				}
+				else
+				{
+					cv::gpu::BruteForceMatcher_GPU<cv::L2<float> > gpuMatcher;
+					gpuMatcher.knnMatch(newDescriptorsGpu, lastDescriptorsGpu, matches, k);
+				}
+			}
+			else
+			{
+				cv::BFMatcher matcher(indexedDescriptors_.type()==CV_8U?cv::NORM_HAMMING:cv::NORM_L2);
+				matcher.knnMatch(descriptors, indexedDescriptors_, matches, k);
+			}
+
+			//convert back to matrix style
+			results = cv::Mat(matches.size(), k, CV_32SC1);
+			dists = cv::Mat(matches.size(), k, CV_32FC1);
+			for(unsigned int i=0; i<matches.size(); ++i)
+			{
+				for(int j=0; j<k; ++j)
+				{
+					results.at<int>(i, j) = matches[i].at(j).trainIdx;
+					dists.at<float>(i, j) = matches[i].at(j).distance;
+				}
+			}
+		}
+		else
+		{
+			flannIndex_.knnSearch(descriptors, results, dists, k, Settings::getFlannSearchParams());
+		}
 
 		if( dists.type() == CV_32S )
 		{

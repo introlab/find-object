@@ -204,6 +204,16 @@ void ParametersToolBox::updateParametersVisibility()
 					else if(!objects[i]->objectName().split('/').at(1).at(0).isDigit())
 					{
 						((QWidget*)objects[i])->setVisible(false);
+						if(nnBox->currentIndex() < 6 && objects[i]->objectName().split('/').at(1).contains("search"))
+						{
+							//show flann search parameters
+							((QWidget*)objects[i])->setVisible(true);
+						}
+					}
+					else if(objects[i]->objectName().split('/').at(1).contains("Distance_type"))
+					{
+						// don't show distance when bruteforce is selected
+						((QWidget*)objects[i])->setVisible(nnBox->currentIndex() != 6);
 					}
 				}
 			}
@@ -494,16 +504,16 @@ void ParametersToolBox::changeParameter(const int & value)
 										  descriptorBox->currentText().compare("Brief") == 0 ||
 										  descriptorBox->currentText().compare("BRISK") == 0 ||
 										  descriptorBox->currentText().compare("FREAK") == 0;
-				if(isBinaryDescriptor && nnBox->currentText().compare("Lsh") != 0)
+				if(isBinaryDescriptor && nnBox->currentText().compare("Lsh") != 0 && nnBox->currentText().compare("BruteForce") != 0)
 				{
 					QMessageBox::warning(this,
 							tr("Warning"),
 							tr("Current selected descriptor type (\"%1\") is binary while nearest neighbor strategy is not (\"%2\").\n"
-							   "Falling back to \"Lsh\" nearest neighbor strategy with Hamming distance (by default).")
+							   "Falling back to \"BruteForce\" nearest neighbor strategy with Hamming distance (by default).")
 							   .arg(descriptorBox->currentText())
 							   .arg(nnBox->currentText()));
 					QString tmp = Settings::getNearestNeighbor_1Strategy();
-					*tmp.begin() = '5'; // set LSH
+					*tmp.begin() = '6'; // set BruteForce
 					Settings::setNearestNeighbor_1Strategy(tmp);
 					tmp = Settings::getNearestNeighbor_2Distance_type();
 					*tmp.begin() = '8'; // set HAMMING
@@ -561,7 +571,7 @@ void ParametersToolBox::changeParameter(const int & value)
 			{
 				QComboBox * nnBox = (QComboBox*)this->getParameterWidget(Settings::kNearestNeighbor_1Strategy());
 				QComboBox * distBox = (QComboBox*)this->getParameterWidget(Settings::kNearestNeighbor_2Distance_type());
-				if(nnBox->currentText().compare("Lsh") != 0 && distBox->currentIndex() > 1)
+				if(nnBox->currentText().compare("BruteForce") != 0 && nnBox->currentText().compare("Lsh") != 0 && distBox->currentIndex() > 1)
 				{
 					QMessageBox::warning(this,
 										tr("Warning"),
