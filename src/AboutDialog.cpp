@@ -28,6 +28,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "AboutDialog.h"
 #include "ui_aboutDialog.h"
 #include <opencv2/core/version.hpp>
+#include "find_object/Version.h"
 
 namespace find_object {
 
@@ -37,7 +38,15 @@ AboutDialog::AboutDialog(QWidget * parent) :
 	ui_ = new Ui_aboutDialog();
 	ui_->setupUi(this);
 	ui_->label_version->setText(PROJECT_VERSION);
-	ui_->label_version_opencv->setText(CV_VERSION);
+
+	QString cv_version = CV_VERSION;
+	#if RTABMAP_NONFREE == 1
+		cv_version.append(" [With nonfree]");
+	#else
+		cv_version.append(" [Without nonfree]");
+	#endif
+
+	ui_->label_version_opencv->setText(cv_version);
 }
 
 AboutDialog::~AboutDialog()

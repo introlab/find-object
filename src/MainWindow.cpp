@@ -135,7 +135,7 @@ MainWindow::MainWindow(FindObject * findObject, Camera * camera, QWidget * paren
 
 	if(cv::gpu::getCudaEnabledDeviceCount() == 0)
 	{
-#ifdef WITH_NONFREE
+#if FINDOBJECT_NONFREE == 1
 		ui_->toolBox->updateParameter(Settings::kFeature2D_SURF_gpu());
 		ui_->toolBox->getParameterWidget(Settings::kFeature2D_SURF_gpu())->setEnabled(false);
 		ui_->toolBox->getParameterWidget(Settings::kFeature2D_SURF_keypointsRatio())->setEnabled(false);

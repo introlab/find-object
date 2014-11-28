@@ -37,6 +37,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QtGui/QVBoxLayout>
 #include <QtGui/QMessageBox>
 #include <stdio.h>
+#include "find_object/utilite/ULogger.h"
 
 namespace find_object {
 
@@ -336,6 +337,27 @@ void ParametersToolBox::addParameter(QVBoxLayout * layout,
 		widget->setObjectName(key);
 		QStringList splitted = value.split(':');
 		widget->addItems(splitted.last().split(';'));
+#if FINDOBJECT_NONFREE == 0
+		if(key.compare(Settings::kFeature2D_1Detector()) == 0)
+		{
+			widget->setItemData(5, 0, Qt::UserRole - 1); // disable SIFT
+			widget->setItemData(7, 0, Qt::UserRole - 1); // disable SURF
+		}
+		if(key.compare(Settings::kFeature2D_2Descriptor()) == 0)
+		{
+			widget->setItemData(2, 0, Qt::UserRole - 1); // disable SIFT
+			widget->setItemData(3, 0, Qt::UserRole - 1); // disable SURF
+		}
+		if(key.compare(Settings::kNearestNeighbor_1Strategy()) == 0)
+		{
+			// disable FLANN approaches (cannot be used with binary descriptors)
+			widget->setItemData(0, 0, Qt::UserRole - 1);
+			widget->setItemData(1, 0, Qt::UserRole - 1);
+			widget->setItemData(2, 0, Qt::UserRole - 1);
+			widget->setItemData(3, 0, Qt::UserRole - 1);
+			widget->setItemData(4, 0, Qt::UserRole - 1);
+		}
+#endif
 		widget->setCurrentIndex(splitted.first().toInt());
 		connect(widget, SIGNAL(currentIndexChanged(int)), this, SLOT(changeParameter(int)));
 		addParameter(layout, key, widget);

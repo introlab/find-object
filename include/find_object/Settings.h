@@ -29,6 +29,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define SETTINGS_H_
 
 #include "find_object/FindObjectExp.h" // DLL export/import defines
+#include "find_object/Version.h" // DLL export/import defines
 
 #include <QtCore/QMap>
 #include <QtCore/QVariant>
@@ -80,6 +81,25 @@ typedef unsigned int uint;
 				descriptions_.insert(#PREFIX "/" #NAME, DESCRIPTION);} \
 		}; \
 		Dummy##PREFIX##_##NAME dummy##PREFIX##_##NAME;
+
+#define PARAMETER_COND(PREFIX, NAME, TYPE, COND, DEFAULT_VALUE1, DEFAULT_VALUE2, DESCRIPTION) \
+	public: \
+		static QString k##PREFIX##_##NAME() {return QString(#PREFIX "/" #NAME);} \
+		static TYPE default##PREFIX##_##NAME() {return COND?DEFAULT_VALUE1:DEFAULT_VALUE2;} \
+		static QString type##PREFIX##_##NAME() {return QString(#TYPE);} \
+		static QString description##PREFIX##_##NAME() {return QString(DESCRIPTION);} \
+		PARAMETER_GETTER_##TYPE(PREFIX, NAME) \
+		static void set##PREFIX##_##NAME(const TYPE & value) {parameters_[#PREFIX "/" #NAME] = value;} \
+	private: \
+		class Dummy##PREFIX##_##NAME { \
+		public: \
+			Dummy##PREFIX##_##NAME() { \
+				defaultParameters_.insert(#PREFIX "/" #NAME, QVariant(COND?DEFAULT_VALUE1:DEFAULT_VALUE2)); \
+				parameters_.insert(#PREFIX "/" #NAME, COND?DEFAULT_VALUE1:DEFAULT_VALUE2); \
+				parametersType_.insert(#PREFIX "/" #NAME, #TYPE); \
+				descriptions_.insert(#PREFIX "/" #NAME, DESCRIPTION);} \
+		}; \
+		Dummy##PREFIX##_##NAME dummy##PREFIX##_##NAME;
 // MACRO END
 
 class FINDOBJECT_EXP Settings
@@ -94,13 +114,9 @@ class FINDOBJECT_EXP Settings
 	PARAMETER(Camera, 9queueSize, int, 1, "Maximum images buffered from TCP. If 0, all images are buffered.");
 
 	//List format : [Index:item0;item1;item3;...]
-#ifdef WITH_NONFREE
-	PARAMETER(Feature2D, 1Detector, QString, "7:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK" , "Keypoint detector.");
-	PARAMETER(Feature2D, 2Descriptor, QString, "3:Brief;ORB;SIFT;SURF;BRISK;FREAK", "Keypoint descriptor.");
-#else
-	PARAMETER(Feature2D, 1Detector, QString, "1:Dense;Fast;GFTT;MSER;ORB;Star;BRISK" , "Keypoint detector.");
-	PARAMETER(Feature2D, 2Descriptor, QString, "0:Brief;ORB;BRISK;FREAK", "Keypoint descriptor.");
-#endif
+
+	PARAMETER_COND(Feature2D, 1Detector, QString, FINDOBJECT_NONFREE, "7:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK" , "1:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK", "Keypoint detector.");
+	PARAMETER_COND(Feature2D, 2Descriptor, QString, FINDOBJECT_NONFREE, "3:Brief;ORB;SIFT;SURF;BRISK;FREAK", "0:Brief;ORB;SIFT;SURF;BRISK;FREAK", "Keypoint descriptor.");
 	PARAMETER(Feature2D, 3MaxFeatures, int, 0, "Maximum features per image. If the number of features extracted is over this threshold, only X features with the highest response are kept. 0 means all features are kept.");
 	PARAMETER(Feature2D, 4Affine, bool, false, "(ASIFT) Extract features on multiple affine transformations of the image.");
 	PARAMETER(Feature2D, 5AffineCount, int, 6, "(ASIFT) Higher the value, more affine transformations will be done.");
@@ -147,7 +163,7 @@ class FINDOBJECT_EXP Settings
 	PARAMETER(Feature2D, MSER_minMargin, double, 0.003, "");
 	PARAMETER(Feature2D, MSER_edgeBlurSize, int, 5, "");
 
-#ifdef WITH_NONFREE
+#if FINDOBJECT_NONFREE == 1
 	PARAMETER(Feature2D, SIFT_nfeatures, int, 0, "The number of best features to retain. The features are ranked by their scores (measured in SIFT algorithm as the local contrast).");
 	PARAMETER(Feature2D, SIFT_nOctaveLayers, int, 3, "The number of layers in each octave. 3 is the value used in D. Lowe paper. The number of octaves is computed automatically from the image resolution.");
 	PARAMETER(Feature2D, SIFT_contrastThreshold, double, 0.04, "The contrast threshold used to filter out weak features in semi-uniform (low-contrast) regions. The larger the threshold, the less features are produced by the detector.");
@@ -178,13 +194,8 @@ class FINDOBJECT_EXP Settings
 	PARAMETER(Feature2D, FREAK_patternScale, float, 22.0f, "Scaling of the description pattern.");
 	PARAMETER(Feature2D, FREAK_nOctaves, int, 4, "Number of octaves covered by the detected keypoints.");
 
-#ifdef WITH_NONFREE
-	PARAMETER(NearestNeighbor, 1Strategy, QString, "1:Linear;KDTree;KMeans;Composite;Autotuned;Lsh;BruteForce", "Nearest neighbor strategy.");
-	PARAMETER(NearestNeighbor, 2Distance_type, QString, "0:EUCLIDEAN_L2;MANHATTAN_L1;MINKOWSKI;MAX;HIST_INTERSECT;HELLINGER;CHI_SQUARE_CS;KULLBACK_LEIBLER_KL;HAMMING", "Distance type.");
-#else
-	PARAMETER(NearestNeighbor, 1Strategy, QString, "6:Linear;KDTree;KMeans;Composite;Autotuned;Lsh;BruteForce", "Nearest neighbor strategy.");
-	PARAMETER(NearestNeighbor, 2Distance_type, QString, "1:EUCLIDEAN_L2;MANHATTAN_L1;MINKOWSKI;MAX;HIST_INTERSECT;HELLINGER;CHI_SQUARE_CS;KULLBACK_LEIBLER_KL;HAMMING", "Distance type.");
-#endif
+	PARAMETER_COND(NearestNeighbor, 1Strategy, QString, FINDOBJECT_NONFREE, "1:Linear;KDTree;KMeans;Composite;Autotuned;Lsh;BruteForce", "6:Linear;KDTree;KMeans;Composite;Autotuned;Lsh;BruteForce", "Nearest neighbor strategy.");
+	PARAMETER_COND(NearestNeighbor, 2Distance_type, QString, FINDOBJECT_NONFREE, "0:EUCLIDEAN_L2;MANHATTAN_L1;MINKOWSKI;MAX;HIST_INTERSECT;HELLINGER;CHI_SQUARE_CS;KULLBACK_LEIBLER_KL;HAMMING", "1:EUCLIDEAN_L2;MANHATTAN_L1;MINKOWSKI;MAX;HIST_INTERSECT;HELLINGER;CHI_SQUARE_CS;KULLBACK_LEIBLER_KL;HAMMING", "Distance type.");
 	PARAMETER(NearestNeighbor, 3nndrRatioUsed, bool, true, "Nearest neighbor distance ratio approach to accept the best match.");
 	PARAMETER(NearestNeighbor, 4nndrRatio, float, 0.8f, "Nearest neighbor distance ratio.");
 	PARAMETER(NearestNeighbor, 5minDistanceUsed, bool, false, "Minimum distance with the nearest descriptor to accept a match.");

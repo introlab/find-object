@@ -34,7 +34,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QtCore/QDir>
 #include <stdio.h>
 #include <opencv2/calib3d/calib3d.hpp>
-#ifdef WITH_NONFREE
+#if FINDOBJECT_NONFREE == 1
 #include <opencv2/nonfree/features2d.hpp>
 #include <opencv2/nonfree/gpu.hpp>
 #endif
@@ -109,6 +109,49 @@ void Settings::loadSettings(const QString & fileName)
 					value = QVariant(str);
 					UINFO("Updated list of parameter \"%s\"", key.toStdString().c_str());
 				}
+#if FINDOBJECT_NONFREE == 0
+				QChar index = str.at(0);
+				if(key.compare(Settings::kFeature2D_1Detector()) == 0)
+				{
+					if(index == '5' || index == '7')
+					{
+						index = Settings::defaultFeature2D_1Detector().at(0);
+						int indexInt = Settings::defaultFeature2D_1Detector().split(':').first().toInt();
+						UWARN("Trying to set \"%s\" to SIFT/SURF but Find-Object isn't built "
+							  "with the nonfree module from OpenCV. Keeping default combo value: %s.",
+							  Settings::kFeature2D_1Detector().toStdString().c_str(),
+							  Settings::defaultFeature2D_1Detector().split(':').last().split(";").at(indexInt).toStdString().c_str());
+					}
+				}
+				if(key.compare(Settings::kFeature2D_2Descriptor()) == 0)
+				{
+					if(index == '2' || index == '3')
+					{
+						index = Settings::defaultFeature2D_2Descriptor().at(0);
+						int indexInt = Settings::defaultFeature2D_2Descriptor().split(':').first().toInt();
+						UWARN("Trying to set \"%s\" to SIFT/SURF but Find-Object isn't built "
+							  "with the nonfree module from OpenCV. Keeping default combo value: %s.",
+							  Settings::kFeature2D_2Descriptor().toStdString().c_str(),
+							  Settings::defaultFeature2D_2Descriptor().split(':').last().split(";").at(indexInt).toStdString().c_str());
+					}
+				}
+				if(key.compare(Settings::kNearestNeighbor_1Strategy()) == 0)
+				{
+					if(index <= '4')
+					{
+						index = Settings::defaultNearestNeighbor_1Strategy().at(0);
+						int indexInt = Settings::defaultNearestNeighbor_1Strategy().split(':').first().toInt();
+						UWARN("Trying to set \"%s\" to one FLANN approach but Find-Object isn't built "
+								  "with the nonfree module from OpenCV and FLANN cannot be used "
+								  "with binary descriptors. Keeping default combo value: %s.",
+								  Settings::kNearestNeighbor_1Strategy().toStdString().c_str(),
+								  Settings::defaultNearestNeighbor_1Strategy().split(':').last().split(";").at(indexInt).toStdString().c_str());
+					}
+				}
+				str = getParameter(key).toString();
+				str[0] = index.toAscii();
+				value = QVariant(str);
+#endif
 				setParameter(key, value);
 			}
 		}
@@ -122,7 +165,7 @@ void Settings::loadSettings(const QString & fileName)
 
 	if(cv::gpu::getCudaEnabledDeviceCount() == 0)
 	{
-#ifdef WITH_NONFREE
+#if FINDOBJECT_NONFREE == 1
 		Settings::setFeature2D_SURF_gpu(false);
 #endif
 		Settings::setFeature2D_Fast_gpu(false);
@@ -222,7 +265,7 @@ public:
 			cv::Mat & descriptors) = 0;
 };
 
-#ifdef WITH_NONFREE
+#if FINDOBJECT_NONFREE == 1
 class GPUSURF : public GPUFeature2D
 {
 public:
@@ -423,12 +466,23 @@ KeypointDetector * Settings::createKeypointDetector()
 		if(ok)
 		{
 			QStringList strategies = split.last().split(';');
-#ifdef WITH_NONFREE
+
 			if(strategies.size() == 9 && index>=0 && index<9)
-#else
-			if(strategies.size() == 7 && index>=0 && index<7)
-#endif
 			{
+
+#if FINDOBJECT_NONFREE == 0
+				//check for nonfree stuff
+				if(strategies.at(index).compare("SIFT") == 0 ||
+				   strategies.at(index).compare("SURF") == 0)
+				{
+					index = Settings::defaultFeature2D_1Detector().split(':').first().toInt();
+					UERROR("Find-Object is not built with OpenCV nonfree module so "
+							"SIFT/SURF cannot be used! Using default \"%s\" instead.",
+							strategies.at(index).toStdString().c_str());
+
+				}
+#endif
+
 				if(strategies.at(index).compare("Dense") == 0)
 				{
 					detector = new cv::DenseFeatureDetector(
@@ -532,7 +586,7 @@ KeypointDetector * Settings::createKeypointDetector()
 							getFeature2D_BRISK_patternScale());
 					UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 				}
-#ifdef WITH_NONFREE
+#if FINDOBJECT_NONFREE == 1
 				else if(strategies.at(index).compare("SIFT") == 0)
 				{
 					detector = new cv::SIFT(
@@ -596,12 +650,22 @@ DescriptorExtractor * Settings::createDescriptorExtractor()
 		if(ok)
 		{
 			QStringList strategies = split.last().split(';');
-#ifdef WITH_NONFREE
 			if(strategies.size() == 6 && index>=0 && index<6)
-#else
-			if(strategies.size() == 4 && index>=0 && index<4)
-#endif
 			{
+
+#if FINDOBJECT_NONFREE == 0
+				//check for nonfree stuff
+				if(strategies.at(index).compare("SIFT") == 0 ||
+				   strategies.at(index).compare("SURF") == 0)
+				{
+					index = Settings::defaultFeature2D_2Descriptor().split(':').first().toInt();
+					UERROR("Find-Object is not built with OpenCV nonfree module so "
+							"SIFT/SURF cannot be used! Using default \"%s\" instead.",
+							strategies.at(index).toStdString().c_str());
+
+				}
+#endif
+
 				if(strategies.at(index).compare("Brief") == 0)
 				{
 					extractor = new cv::BriefDescriptorExtractor(
@@ -656,7 +720,7 @@ DescriptorExtractor * Settings::createDescriptorExtractor()
 							getFeature2D_FREAK_nOctaves());
 					UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 				}
-#ifdef WITH_NONFREE
+#if FINDOBJECT_NONFREE == 1
 				else if(strategies.at(index).compare("SIFT") == 0)
 				{
 					extractor = new cv::SIFT(
