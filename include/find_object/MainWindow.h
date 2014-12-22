@@ -86,7 +86,9 @@ private Q_SLOTS:
 	void loadObjects();
 	bool saveObjects();
 	void addObjectFromScene();
+	void addObjectsFromFiles(const QStringList & fileNames);
 	void addObjectsFromFiles();
+	void loadSceneFromFile(const QStringList & fileNames);
 	void loadSceneFromFile();
 	void setupCameraFromVideoFile();
 	void setupCameraFromImagesDirectory();

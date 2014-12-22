@@ -12,6 +12,7 @@ SET(headers_ui
 	./ParametersToolBox.h
 	./AboutDialog.h
 	./RectItem.h
+	./ImageDropWidget.h
 	./rtabmap/PdfPlot.h
 	./utilite/UPlot.h
 )
@@ -47,6 +48,7 @@ SET(SRC_FILES
 	./ParametersToolBox.cpp
 	./Settings.cpp
 	./ObjWidget.cpp
+	./ImageDropWidget.cpp
 	./FindObject.cpp
 	./AboutDialog.cpp
 	./TcpServer.cpp

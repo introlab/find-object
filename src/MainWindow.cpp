@@ -246,6 +246,10 @@ MainWindow::MainWindow(FindObject * findObject, Camera * camera, QWidget * paren
 		// Set 1 msec to see state on the status bar.
 		QTimer::singleShot(1, this, SLOT(startProcessing()));
 	}
+
+	//Setup drag and drop images
+	connect(ui_->imageDrop_objects, SIGNAL(imagesReceived(const QStringList &)), this, SLOT(addObjectsFromFiles(const QStringList &)));
+	connect(ui_->imageDrop_scene, SIGNAL(imagesReceived(const QStringList &)), this, SLOT(loadSceneFromFile(const QStringList &)));
 }
 
 MainWindow::~MainWindow()
@@ -570,9 +574,8 @@ void MainWindow::addObjectFromScene()
 	delete dialog;
 }
 
-void MainWindow::addObjectsFromFiles()
+void MainWindow::addObjectsFromFiles(const QStringList & fileNames)
 {
-	QStringList fileNames = QFileDialog::getOpenFileNames(this, tr("Add objects..."), Settings::workingDirectory(), tr("Image Files (%1)").arg(Settings::getGeneral_imageFormats()));
 	if(fileNames.size())
 	{
 		for(int i=0; i<fileNames.size(); ++i)
@@ -582,6 +585,11 @@ void MainWindow::addObjectsFromFiles()
 		objectsModified_ = true;
 		updateObjects();
 	}
+}
+
+void MainWindow::addObjectsFromFiles()
+{
+	addObjectsFromFiles(QFileDialog::getOpenFileNames(this, tr("Add objects..."), Settings::workingDirectory(), tr("Image Files (%1)").arg(Settings::getGeneral_imageFormats())));
 }
 
 bool MainWindow::addObjectFromFile(const QString & filePath)
@@ -599,6 +607,20 @@ bool MainWindow::addObjectFromFile(const QString & filePath)
 	{
 		QMessageBox::critical(this, tr("Error adding object"), tr("Failed to add object from \"%1\"").arg(filePath));
 		return false;
+	}
+}
+
+void MainWindow::loadSceneFromFile(const QStringList & fileNames)
+{
+	//take the first
+	if(fileNames.size())
+	{
+		cv::Mat img = cv::imread(fileNames.first().toStdString().c_str());
+		if(!img.empty())
+		{
+			this->update(img);
+			ui_->label_timeRefreshRate->setVisible(false);
+		}
 	}
 }
 
