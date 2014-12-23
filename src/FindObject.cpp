@@ -1143,8 +1143,10 @@ bool FindObject::detect(const cv::Mat & image, find_object::DetectionInfo & info
 							// If a point is outside of 2x times the surface of the scene, homography is invalid.
 							for(int p=0; p<rectH.size(); ++p)
 							{
-								if(rectH.at(p).x() < -image.cols || rectH.at(p).x() > image.cols*2 ||
-								   rectH.at(p).y() < -image.rows || rectH.at(p).y() > image.rows*2)
+								if((rectH.at(p).x() < -image.cols && rectH.at(p).x() < -objectRect.width()) ||
+								   (rectH.at(p).x() > image.cols*2  && rectH.at(p).x() > objectRect.width()*2) ||
+								   (rectH.at(p).y() < -image.rows  && rectH.at(p).x() < -objectRect.height()) ||
+								   (rectH.at(p).y() > image.rows*2  && rectH.at(p).x() > objectRect.height()*2))
 								{
 									code= DetectionInfo::kRejectedNotValid;
 									break;

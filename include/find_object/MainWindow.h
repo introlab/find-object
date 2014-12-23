@@ -98,6 +98,8 @@ private Q_SLOTS:
 	void updateObjectsSize();
 	void updateMirrorView();
 	void showHideControls();
+	void showObjectsFeatures();
+	void hideObjectsFeatures();
 	void updateObjects();
 	void notifyParametersChanged(const QStringList & param);
 	void moveCameraFrame(int frame);

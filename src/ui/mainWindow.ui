@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>881</width>
-    <height>523</height>
+    <height>536</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -251,6 +251,9 @@
     <property name="title">
      <string>View</string>
     </property>
+    <addaction name="actionHide_objects_features"/>
+    <addaction name="actionShow_objects_features"/>
+    <addaction name="separator"/>
    </widget>
    <widget class="QMenu" name="menu">
     <property name="title">
@@ -361,8 +364,8 @@
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>206</width>
-             <height>396</height>
+             <width>222</width>
+             <height>409</height>
             </rect>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_objects">
@@ -426,9 +429,6 @@
          </layout>
         </item>
        </layout>
-       <zorder></zorder>
-       <zorder>verticalSpacer</zorder>
-       <zorder>objects_area</zorder>
       </widget>
      </item>
     </layout>
@@ -514,28 +514,28 @@
          </property>
         </widget>
        </item>
-       <item row="8" column="1">
+       <item row="9" column="1">
         <widget class="QLabel" name="label_minMatchedDistance">
          <property name="text">
           <string>000</string>
          </property>
         </widget>
        </item>
-       <item row="8" column="0">
+       <item row="9" column="0">
         <widget class="QLabel" name="label_13">
          <property name="text">
           <string>Min matched distance</string>
          </property>
         </widget>
        </item>
-       <item row="9" column="0">
+       <item row="10" column="0">
         <widget class="QLabel" name="label_14">
          <property name="text">
           <string>Max matched distance</string>
          </property>
         </widget>
        </item>
-       <item row="9" column="1">
+       <item row="10" column="1">
         <widget class="QLabel" name="label_maxMatchedDistance">
          <property name="text">
           <string>000</string>
@@ -619,56 +619,56 @@
          </property>
         </widget>
        </item>
-       <item row="10" column="0">
+       <item row="11" column="0">
         <widget class="QLabel" name="label_17">
          <property name="text">
           <string>Vocabulary size</string>
          </property>
         </widget>
        </item>
-       <item row="10" column="1">
+       <item row="11" column="1">
         <widget class="QLabel" name="label_vocabularySize">
          <property name="text">
           <string>000</string>
          </property>
         </widget>
        </item>
-       <item row="11" column="0">
+       <item row="12" column="0">
         <widget class="QLabel" name="label_18">
          <property name="text">
           <string>IP address</string>
          </property>
         </widget>
        </item>
-       <item row="12" column="0">
+       <item row="13" column="0">
         <widget class="QLabel" name="label_19">
          <property name="text">
           <string>Output detection port</string>
          </property>
         </widget>
        </item>
-       <item row="11" column="1">
+       <item row="12" column="1">
         <widget class="QLabel" name="label_ipAddress">
          <property name="text">
           <string>0.0.0.0</string>
          </property>
         </widget>
        </item>
-       <item row="12" column="1">
+       <item row="13" column="1">
         <widget class="QLabel" name="label_port">
          <property name="text">
           <string>0</string>
          </property>
         </widget>
        </item>
-       <item row="7" column="0">
+       <item row="8" column="0">
         <widget class="QLabel" name="label_20">
          <property name="text">
           <string>Objects detected</string>
          </property>
         </widget>
        </item>
-       <item row="7" column="1">
+       <item row="8" column="1">
         <widget class="QLabel" name="label_objectsDetected">
          <property name="text">
           <string>000</string>
@@ -682,14 +682,14 @@
          </property>
         </widget>
        </item>
-       <item row="13" column="0">
+       <item row="14" column="0">
         <widget class="QLabel" name="label_21">
          <property name="text">
           <string>Input image port</string>
          </property>
         </widget>
        </item>
-       <item row="13" column="1">
+       <item row="14" column="1">
         <widget class="QLabel" name="label_port_image">
          <property name="text">
           <string>-</string>
@@ -712,6 +712,27 @@
        </item>
        <item row="2" column="2">
         <widget class="QLabel" name="label_23">
+         <property name="text">
+          <string>ms</string>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="0">
+        <widget class="QLabel" name="label_24">
+         <property name="text">
+          <string>Refresh GUI</string>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="1">
+        <widget class="QLabel" name="label_timeRefreshGUI">
+         <property name="text">
+          <string>000</string>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="2">
+        <widget class="QLabel" name="label_25">
          <property name="text">
           <string>ms</string>
          </property>
@@ -827,6 +848,16 @@
    </property>
    <property name="text">
     <string>Camera from TCP/IP...</string>
+   </property>
+  </action>
+  <action name="actionHide_objects_features">
+   <property name="text">
+    <string>Hide objects features</string>
+   </property>
+  </action>
+  <action name="actionShow_objects_features">
+   <property name="text">
+    <string>Show objects features</string>
    </property>
   </action>
  </widget>

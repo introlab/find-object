@@ -160,7 +160,7 @@ MainWindow::MainWindow(FindObject * findObject, Camera * camera, QWidget * paren
 	connect(ui_->toolBox, SIGNAL(parametersChanged(const QStringList &)), this, SLOT(notifyParametersChanged(const QStringList &)));
 
 	ui_->imageView_source->setGraphicsViewMode(true);
-	ui_->imageView_source->setTextLabel(tr("Press \"space\" to start the camera..."));
+	ui_->imageView_source->setTextLabel(tr("Press \"space\" to start the camera or drop an image here..."));
 	ui_->imageView_source->setMirrorView(Settings::getGeneral_mirrorView());
 	connect((QCheckBox*)ui_->toolBox->getParameterWidget(Settings::kGeneral_mirrorView()),
 				SIGNAL(stateChanged(int)),
@@ -200,6 +200,8 @@ MainWindow::MainWindow(FindObject * findObject, Camera * camera, QWidget * paren
 	connect(ui_->actionRemove_all_objects, SIGNAL(triggered()), this, SLOT(removeAllObjects()));
 	connect(ui_->actionSave_settings, SIGNAL(triggered()), this, SLOT(saveSettings()));
 	connect(ui_->actionLoad_settings, SIGNAL(triggered()), this, SLOT(loadSettings()));
+	connect(ui_->actionShow_objects_features, SIGNAL(triggered()), this, SLOT(showObjectsFeatures()));
+	connect(ui_->actionHide_objects_features, SIGNAL(triggered()), this, SLOT(hideObjectsFeatures()));
 
 	connect(ui_->pushButton_play, SIGNAL(clicked()), this, SLOT(startProcessing()));
 	connect(ui_->pushButton_stop, SIGNAL(clicked()), this, SLOT(stopProcessing()));
@@ -528,6 +530,22 @@ void MainWindow::showHideControls()
 	ui_->widget_controls->setVisible(Settings::getGeneral_controlsShown());
 }
 
+void MainWindow::showObjectsFeatures()
+{
+	for(QMap<int, ObjWidget*>::iterator iter=objWidgets_.begin(); iter!=objWidgets_.end(); ++iter)
+	{
+		iter.value()->setFeaturesShown(true);
+	}
+}
+
+void MainWindow::hideObjectsFeatures()
+{
+	for(QMap<int, ObjWidget*>::iterator iter=objWidgets_.begin(); iter!=objWidgets_.end(); ++iter)
+	{
+		iter.value()->setFeaturesShown(false);
+	}
+}
+
 void MainWindow::addObjectFromScene()
 {
 	disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
@@ -553,8 +571,6 @@ void MainWindow::addObjectFromScene()
 		objWidgets_.insert(obj->id(), obj);
 		ui_->actionSave_objects->setEnabled(true);
 		showObject(obj);
-		QLabel * detectorDescriptorType = qFindChild<QLabel*>(this, QString("%1type").arg(obj->id()));
-		detectorDescriptorType->setText(QString("%1/%2").arg(signature->detectorType()).arg(signature->descriptorType()));
 		updateVocabulary();
 		objectsModified_ = true;
 	}
@@ -747,15 +763,12 @@ void MainWindow::showObject(ObjWidget * obj)
 		ui_->toolBox->updateParameter(Settings::kGeneral_nextObjID());
 
 		QLabel * title = new QLabel(QString("%1 (%2)").arg(obj->id()).arg(obj->keypoints().size()), this);
-		QLabel * detectorDescriptorType = new QLabel(QString("%1/%2").arg("detector").arg("descriptor"), this);
 		QLabel * detectedLabel = new QLabel(this);
 		title->setObjectName(QString("%1title").arg(obj->id()));
-		detectorDescriptorType->setObjectName(QString("%1type").arg(obj->id()));
 		detectedLabel->setObjectName(QString("%1detection").arg(obj->id()));
 		QHBoxLayout * hLayout = new QHBoxLayout();
 		hLayout->addWidget(title);
 		hLayout->addStretch(1);
-		hLayout->addWidget(detectorDescriptorType);
 		hLayout->addStretch(1);
 		hLayout->addWidget(detectedLabel);
 		vLayout->addLayout(hLayout);
@@ -764,7 +777,6 @@ void MainWindow::showObject(ObjWidget * obj)
 		connect(obj, SIGNAL(removalTriggered(find_object::ObjWidget*)), this, SLOT(removeObject(find_object::ObjWidget*)));
 		connect(obj, SIGNAL(destroyed(QObject *)), title, SLOT(deleteLater()));
 		connect(obj, SIGNAL(destroyed(QObject *)), detectedLabel, SLOT(deleteLater()));
-		connect(obj, SIGNAL(destroyed(QObject *)), detectorDescriptorType, SLOT(deleteLater()));
 		connect(obj, SIGNAL(destroyed(QObject *)), vLayout, SLOT(deleteLater()));
 		ui_->verticalLayout_objects->insertLayout(ui_->verticalLayout_objects->count()-1, vLayout);
 
@@ -774,7 +786,16 @@ void MainWindow::showObject(ObjWidget * obj)
 		obj->pixmap().scaledToWidth(128).save(&buffer, "JPEG"); // writes image into JPEG format
 		imagesMap_.insert(obj->id(), ba);
 
-		updateObjectSize(obj);
+		// update objects size slider
+		int objectsPanelWidth = ui_->dockWidget_objects->width();
+		if(objectsPanelWidth > 0 && (obj->pixmap().width()*ui_->horizontalSlider_objectsSize->value()) / 100 > objectsPanelWidth)
+		{
+			ui_->horizontalSlider_objectsSize->setValue((objectsPanelWidth * 100) / obj->pixmap().width());
+		}
+		else
+		{
+			updateObjectSize(obj);
+		}
 	}
 }
 
@@ -795,8 +816,6 @@ void MainWindow::updateObjects()
 		//update object labels
 		QLabel * title = qFindChild<QLabel*>(this, QString("%1title").arg(signatures[i]->id()));
 		title->setText(QString("%1 (%2)").arg(signatures[i]->id()).arg(QString::number(signatures[i]->keypoints().size())));
-		QLabel * detectorDescriptorType = qFindChild<QLabel*>(this, QString("%1type").arg(signatures[i]->id()));
-		detectorDescriptorType->setText(QString("%1/%2").arg(signatures[i]->detectorType()).arg(signatures[i]->descriptorType()));
 	}
 
 	if(!camera_->isRunning() && !sceneImage_.empty())
@@ -969,9 +988,12 @@ void MainWindow::update(const cv::Mat & image)
 		iter.value()->resetKptsColor();
 	}
 
+	QTime guiRefreshTime;
+
 	DetectionInfo info;
 	if(findObject_->detect(sceneImage_, info))
 	{
+		guiRefreshTime.start();
 		ui_->label_timeDetection->setNum(info.timeStamps_.value(DetectionInfo::kTimeKeypointDetection, 0));
 		ui_->label_timeSkewAffine->setNum(info.timeStamps_.value(DetectionInfo::kTimeSkewAffine, 0));
 		ui_->label_timeExtraction->setNum(info.timeStamps_.value(DetectionInfo::kTimeDescriptorExtraction, 0));
@@ -1166,6 +1188,8 @@ void MainWindow::update(const cv::Mat & image)
 	}
 	else
 	{
+		guiRefreshTime.start();
+
 		if(findObject_->vocabulary()->size())
 		{
 			this->statusBar()->showMessage(tr("Cannot search, objects must be updated!"));
@@ -1217,6 +1241,8 @@ void MainWindow::update(const cv::Mat & image)
 		lowestRefreshRate_ = 99;
 		refreshStartTime_.start();
 	}
+
+	ui_->label_timeRefreshGUI->setNum(guiRefreshTime.elapsed());
 }
 
 void MainWindow::notifyParametersChanged(const QStringList & paramChanged)
