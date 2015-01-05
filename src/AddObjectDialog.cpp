@@ -58,7 +58,7 @@ AddObjectDialog::AddObjectDialog(Camera * camera, const cv::Mat & image, bool mi
 
 	detector_ = Settings::createKeypointDetector();
 	extractor_ = Settings::createDescriptorExtractor();
-	Q_ASSERT(detector_ != 0 && extractor_ != 0);
+	UASSERT(detector_ != 0 && extractor_ != 0);
 
 	connect(ui_->pushButton_cancel, SIGNAL(clicked()), this, SLOT(cancel()));
 	connect(ui_->pushButton_back, SIGNAL(clicked()), this, SLOT(back()));

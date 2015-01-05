@@ -84,7 +84,7 @@ MainWindow::MainWindow(FindObject * findObject, Camera * camera, QWidget * paren
 	objectsModified_(false),
 	tcpServer_(0)
 {
-	Q_ASSERT(findObject_ != 0);
+	UASSERT(findObject_ != 0);
 
 	ui_ = new Ui_mainWindow();
 	ui_->setupUi(this);
@@ -565,7 +565,7 @@ void MainWindow::addObjectFromScene()
 		ObjWidget * obj = 0;
 		ObjSignature * signature = 0;
 		dialog->retrieveObject(&obj, &signature);
-		Q_ASSERT(obj!=0 && signature!=0);
+		UASSERT(obj!=0 && signature!=0);
 		findObject_->addObject(signature);
 		obj->setId(signature->id());
 		objWidgets_.insert(obj->id(), obj);
@@ -1028,7 +1028,7 @@ void MainWindow::update(const cv::Mat & image)
 				label->setText(QString("%1 matches").arg(jter.value().size()));
 
 				ObjWidget * obj = objWidgets_.value(id);
-				Q_ASSERT(obj != 0);
+				UASSERT(obj != 0);
 
 				for(QMultiMap<int, int>::const_iterator iter = jter.value().constBegin(); iter!= jter.value().constEnd(); ++iter)
 				{
@@ -1084,7 +1084,7 @@ void MainWindow::update(const cv::Mat & image)
 		{
 			int id = iter.key();
 			ObjWidget * obj = objWidgets_.value(id);
-			Q_ASSERT(obj != 0);
+			UASSERT(obj != 0);
 
 			// COLORIZE (should be done in the GUI thread)
 			QTransform hTransform = iter.value();

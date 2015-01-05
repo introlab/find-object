@@ -27,6 +27,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "find_object/Settings.h"
 
+#include "find_object/utilite/ULogger.h"
 #include "Vocabulary.h"
 #include <QtCore/QVector>
 #include <stdio.h>
@@ -67,7 +68,7 @@ QMultiMap<int, int> Vocabulary::addWords(const cv::Mat & descriptors, int object
 		bool globalSearch = false;
 		if(!indexedDescriptors_.empty() && indexedDescriptors_.rows >= (int)k)
 		{
-			Q_ASSERT(indexedDescriptors_.type() == descriptors.type() && indexedDescriptors_.cols == descriptors.cols);
+			UASSERT(indexedDescriptors_.type() == descriptors.type() && indexedDescriptors_.cols == descriptors.cols);
 			this->search(descriptors, results, dists, k);
 
 			if( dists.type() == CV_32S )
@@ -88,7 +89,7 @@ QMultiMap<int, int> Vocabulary::addWords(const cv::Mat & descriptors, int object
 			QMultiMap<float, int> fullResults; // nearest descriptors sorted by distance
 			if(notIndexedDescriptors_.rows)
 			{
-				Q_ASSERT(newWords.type() == descriptors.type() && newWords.cols == descriptors.cols);
+				UASSERT(notIndexedDescriptors_.type() == descriptors.type() && notIndexedDescriptors_.cols == descriptors.cols);
 
 				// Check if this descriptor matches with a word not already added to the vocabulary
 				// Do linear search only
@@ -198,9 +199,12 @@ void Vocabulary::update()
 {
 	if(!notIndexedDescriptors_.empty())
 	{
-		Q_ASSERT(indexedDescriptors_.cols == notIndexedDescriptors_.cols &&
-				 indexedDescriptors_.type() == notIndexedDescriptors_.type() );
-
+		if(!indexedDescriptors_.empty())
+		{
+			UASSERT(indexedDescriptors_.cols == notIndexedDescriptors_.cols &&
+				 	indexedDescriptors_.type() == notIndexedDescriptors_.type() );
+		}
+		
 		//concatenate descriptors
 		indexedDescriptors_.push_back(notIndexedDescriptors_);
 
@@ -218,11 +222,9 @@ void Vocabulary::update()
 
 void Vocabulary::search(const cv::Mat & descriptors, cv::Mat & results, cv::Mat & dists, int k)
 {
-	Q_ASSERT(notIndexedDescriptors_.empty() && notIndexedWordIds_.size() == 0);
-
 	if(!indexedDescriptors_.empty())
 	{
-		Q_ASSERT(descriptors.type() == indexedDescriptors_.type() && descriptors.cols == indexedDescriptors_.cols);
+		UASSERT(descriptors.type() == indexedDescriptors_.type() && descriptors.cols == indexedDescriptors_.cols);
 
 		if(Settings::isBruteForceNearestNeighbor())
 		{

@@ -332,7 +332,7 @@ public:
 			descriptors = cv::Mat();
 		else
 		{
-			Q_ASSERT(descriptorsGPU.type() == CV_32F);
+			UASSERT(descriptorsGPU.type() == CV_32F);
 			descriptors = cv::Mat(descriptorsGPU.size(), CV_32F);
 			descriptorsGPU.download(descriptors);
 		}
@@ -444,7 +444,7 @@ protected:
 			descriptors = cv::Mat();
 		else
 		{
-			Q_ASSERT(descriptorsGPU.type() == CV_8U);
+			UASSERT(descriptorsGPU.type() == CV_8U);
 			descriptors = cv::Mat(descriptorsGPU.size(), CV_8U);
 			descriptorsGPU.download(descriptors);
 		}
@@ -626,7 +626,7 @@ KeypointDetector * Settings::createKeypointDetector()
 		}
 	}
 
-	Q_ASSERT(detectorGPU!=0 || detector!=0);
+	UASSERT(detectorGPU!=0 || detector!=0);
 	if(detectorGPU)
 	{
 		return new KeypointDetector(detectorGPU);
@@ -760,7 +760,7 @@ DescriptorExtractor * Settings::createDescriptorExtractor()
 		}
 	}
 
-	Q_ASSERT(extractorGPU!=0 || extractor!=0);
+	UASSERT(extractorGPU!=0 || extractor!=0);
 	if(extractorGPU)
 	{
 		return new DescriptorExtractor(extractorGPU);
@@ -987,13 +987,13 @@ KeypointDetector::KeypointDetector(cv::FeatureDetector * featureDetector) :
 	featureDetector_(featureDetector),
 	gpuFeature2D_(0)
 {
-	Q_ASSERT(featureDetector_!=0);
+	UASSERT(featureDetector_!=0);
 }
 KeypointDetector::KeypointDetector(GPUFeature2D * gpuFeature2D) :
 	featureDetector_(0),
 	gpuFeature2D_(gpuFeature2D)
 {
-	Q_ASSERT(gpuFeature2D_!=0);
+	UASSERT(gpuFeature2D_!=0);
 }
 void KeypointDetector::detect(const cv::Mat & image,
 		std::vector<cv::KeyPoint> & keypoints,
@@ -1013,13 +1013,13 @@ DescriptorExtractor::DescriptorExtractor(cv::DescriptorExtractor * descriptorExt
 	descriptorExtractor_(descriptorExtractor),
 	gpuFeature2D_(0)
 {
-	Q_ASSERT(descriptorExtractor_!=0);
+	UASSERT(descriptorExtractor_!=0);
 }
 DescriptorExtractor::DescriptorExtractor(GPUFeature2D * gpuFeature2D) :
 	descriptorExtractor_(0),
 	gpuFeature2D_(gpuFeature2D)
 {
-	Q_ASSERT(gpuFeature2D_!=0);
+	UASSERT(gpuFeature2D_!=0);
 }
 void DescriptorExtractor::compute(const cv::Mat & image,
 		std::vector<cv::KeyPoint> & keypoints,

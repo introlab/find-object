@@ -49,7 +49,7 @@ FindObject::FindObject(QObject * parent) :
 	extractor_(Settings::createDescriptorExtractor())
 {
 	qRegisterMetaType<find_object::DetectionInfo>("find_object::DetectionInfo");
-	Q_ASSERT(detector_ != 0 && extractor_ != 0);
+	UASSERT(detector_ != 0 && extractor_ != 0);
 }
 
 FindObject::~FindObject() {
@@ -117,7 +117,7 @@ const ObjSignature * FindObject::addObject(const QString & filePath)
 
 const ObjSignature * FindObject::addObject(const cv::Mat & image, int id, const QString & filename)
 {
-	Q_ASSERT(id >= 0);
+	UASSERT(id >= 0);
 	ObjSignature * s = new ObjSignature(id, image, filename);
 	if(!this->addObject(s))
 	{
@@ -129,7 +129,7 @@ const ObjSignature * FindObject::addObject(const cv::Mat & image, int id, const 
 
 bool FindObject::addObject(ObjSignature * obj)
 {
-	Q_ASSERT(obj != 0 && obj->id() >= 0);
+	UASSERT(obj != 0 && obj->id() >= 0);
 	if(obj->id() && objects_.contains(obj->id()))
 	{
 		UERROR("object with id %d already added!", obj->id());
@@ -171,7 +171,7 @@ void FindObject::updateDetectorExtractor()
 	delete extractor_;
 	detector_ = Settings::createKeypointDetector();
 	extractor_ = Settings::createDescriptorExtractor();
-	Q_ASSERT(detector_ != 0 && extractor_ != 0);
+	UASSERT(detector_ != 0 && extractor_ != 0);
 }
 
 std::vector<cv::KeyPoint> limitKeypoints(const std::vector<cv::KeyPoint> & keypoints, int maxKeypoints)
@@ -664,7 +664,7 @@ public:
 		minMatchedDistance_(-1.0f),
 		maxMatchedDistance_(-1.0f)
 	{
-		Q_ASSERT(index && descriptors);
+		UASSERT(descriptors);
 	}
 	virtual ~SearchThread() {}
 
@@ -760,7 +760,7 @@ public:
 				kptsB_(kptsB),
 				code_(DetectionInfo::kRejectedUndef)
 	{
-		Q_ASSERT(matches && kptsA && kptsB);
+		UASSERT(matches && kptsA && kptsB);
 	}
 	virtual ~HomographyThread() {}
 
