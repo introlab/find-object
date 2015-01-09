@@ -81,6 +81,8 @@ public Q_SLOTS:
 	void update(const cv::Mat & image);
 
 private Q_SLOTS:
+	void loadSession();
+	void saveSession();
 	void loadSettings();
 	void saveSettings();
 	void loadObjects();
@@ -110,7 +112,7 @@ Q_SIGNALS:
 
 private:
 	bool loadSettings(const QString & path);
-	bool saveSettings(const QString & path);
+	bool saveSettings(const QString & path) const;
 	int loadObjects(const QString & dirPath);
 	int saveObjects(const QString & dirPath);
 	void setupTCPServer();

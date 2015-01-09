@@ -51,6 +51,41 @@ void Vocabulary::clear()
 	notIndexedWordIds_.clear();
 }
 
+void Vocabulary::save(QDataStream & streamPtr) const
+{
+	if(!indexedDescriptors_.empty() && !wordToObjects_.empty())
+	{
+		UASSERT(notIndexedDescriptors_.empty() && notIndexedWordIds_.empty());
+
+		// save index
+		streamPtr << wordToObjects_;
+
+		// save words
+		qint64 dataSize = indexedDescriptors_.elemSize()*indexedDescriptors_.cols*indexedDescriptors_.rows;
+		streamPtr << indexedDescriptors_.rows <<
+				indexedDescriptors_.cols <<
+				indexedDescriptors_.type() <<
+				dataSize;
+		streamPtr << QByteArray((char*)indexedDescriptors_.data, dataSize);
+	}
+}
+
+void Vocabulary::load(QDataStream & streamPtr)
+{
+	// load index
+	streamPtr >> wordToObjects_;
+
+	// load words
+	int rows,cols,type;
+	qint64 dataSize;
+	streamPtr >> rows >> cols >> type >> dataSize;
+	QByteArray data;
+	streamPtr >> data;
+	indexedDescriptors_ = cv::Mat(rows, cols, type, data.data()).clone();
+
+	update();
+}
+
 QMultiMap<int, int> Vocabulary::addWords(const cv::Mat & descriptors, int objectId, bool incremental)
 {
 	QMultiMap<int, int> words;

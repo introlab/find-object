@@ -65,6 +65,9 @@ public:
 	FindObject(QObject * parent = 0);
 	virtual ~FindObject();
 
+	bool loadSession(const QString & path);
+	bool saveSession(const QString & path) const;
+
 	int loadObjects(const QString & dirPath); // call updateObjects()
 	const ObjSignature * addObject(const QString & filePath);
 	const ObjSignature * addObject(const cv::Mat & image, int id=0, const QString & filename = QString());

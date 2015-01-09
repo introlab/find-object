@@ -45,6 +45,10 @@ public:
 	void search(const cv::Mat & descriptors, cv::Mat & results, cv::Mat & dists, int k);
 	int size() const {return indexedDescriptors_.rows + notIndexedDescriptors_.rows;}
 	const QMultiMap<int, int> & wordToObjects() const {return wordToObjects_;}
+	const cv::Mat & indexedDescriptors() const {return indexedDescriptors_;}
+
+	void save(QDataStream & streamPtr) const;
+	void load(QDataStream & streamPtr);
 
 private:
 	cv::flann::Index flannIndex_;

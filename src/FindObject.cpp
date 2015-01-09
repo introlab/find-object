@@ -59,6 +59,85 @@ FindObject::~FindObject() {
 	objectsDescriptors_.clear();
 }
 
+bool FindObject::loadSession(const QString & path)
+{
+	if(QFile::exists(path) && !path.isEmpty() && QFileInfo(path).suffix().compare("bin") == 0)
+	{
+		QFile file(path);
+		file.open(QIODevice::ReadOnly);
+		QDataStream in(&file);
+
+		ParametersMap parameters;
+
+		// load parameters
+		in >> parameters;
+		for(QMap<QString, QVariant>::iterator iter=parameters.begin(); iter!=parameters.end(); ++iter)
+		{
+			Settings::setParameter(iter.key(), iter.value());
+		}
+
+		// save vocabulary
+		vocabulary_->load(in);
+
+		// load objects
+		while(!in.atEnd())
+		{
+			ObjSignature * obj = new ObjSignature();
+			obj->load(in);
+			if(obj->id() >= 0)
+			{
+				objects_.insert(obj->id(), obj);
+			}
+			else
+			{
+				UERROR("Failed to load and object!");
+				delete obj;
+			}
+		}
+		file.close();
+
+		if(!Settings::getGeneral_invertedSearch())
+		{
+			// this will fill objectsDescriptors_ matrix
+			updateVocabulary();
+		}
+
+		return true;
+	}
+	else
+	{
+		UERROR("Invalid session file (should be *.bin): \"%s\"", path.toStdString().c_str());
+	}
+	return false;
+}
+
+bool FindObject::saveSession(const QString & path) const
+{
+	if(!path.isEmpty() && QFileInfo(path).suffix().compare("bin") == 0)
+	{
+		QFile file(path);
+		file.open(QIODevice::WriteOnly);
+		QDataStream out(&file);
+
+		// save parameters
+		out << Settings::getParameters();
+
+		// save vocabulary
+		vocabulary_->save(out);
+
+		// save objects
+		for(QMultiMap<int, ObjSignature*>::const_iterator iter=objects_.constBegin(); iter!=objects_.constEnd(); ++iter)
+		{
+			iter.value()->save(out);
+		}
+
+		file.close();
+		return true;
+	}
+	UERROR("Path \"%s\" not valid (should be *.bin)", path.toStdString().c_str());
+	return false;
+}
+
 int FindObject::loadObjects(const QString & dirPath)
 {
 	int loadedObjects = 0;
@@ -143,7 +222,6 @@ bool FindObject::addObject(ObjSignature * obj)
 	Settings::setGeneral_nextObjID(obj->id()+1);
 
 	objects_.insert(obj->id(), obj);
-	clearVocabulary();
 
 	return true;
 }
@@ -512,11 +590,7 @@ void FindObject::updateObjects()
 
 				int id = threads[j]->objectId();
 
-				objects_.value(id)->setData(
-						threads[j]->keypoints(),
-						threads[j]->descriptors(),
-						Settings::currentDetectorType(),
-						Settings::currentDescriptorType());
+				objects_.value(id)->setData(threads[j]->keypoints(), threads[j]->descriptors());
 			}
 		}
 		UINFO("Features extraction from %d objects... done! (%d ms)", objects_.size(), time.elapsed());
@@ -915,13 +989,22 @@ bool FindObject::detect(const cv::Mat & image, find_object::DetectionInfo & info
 		bool consistentNNData = (vocabulary_->size()!=0 && vocabulary_->wordToObjects().begin().value()!=-1 && Settings::getGeneral_invertedSearch()) ||
 								((vocabulary_->size()==0 || vocabulary_->wordToObjects().begin().value()==-1) && !Settings::getGeneral_invertedSearch());
 
+		bool descriptorsValid = !Settings::getGeneral_invertedSearch() &&
+								!objectsDescriptors_.empty() &&
+								objectsDescriptors_.begin().value().cols == info.sceneDescriptors_.cols &&
+								objectsDescriptors_.begin().value().type() == info.sceneDescriptors_.type();
+
+		bool vocabularyValid = Settings::getGeneral_invertedSearch() &&
+								vocabulary_->size() &&
+								!vocabulary_->indexedDescriptors().empty() &&
+								vocabulary_->indexedDescriptors().cols == info.sceneDescriptors_.cols &&
+								vocabulary_->indexedDescriptors().type() == info.sceneDescriptors_.type();
+
 		// COMPARE
 		UDEBUG("COMPARE");
-		if(!objectsDescriptors_.empty() &&
+		if((descriptorsValid || vocabularyValid) &&
 			info.sceneKeypoints_.size() &&
-		   consistentNNData &&
-		   objectsDescriptors_.begin().value().cols == info.sceneDescriptors_.cols &&
-		   objectsDescriptors_.begin().value().type() == info.sceneDescriptors_.type()) // binary descriptor issue, if the dataTree is not yet updated with modified settings
+		    consistentNNData)
 		{
 			success = true;
 			QTime time;
@@ -1243,7 +1326,7 @@ bool FindObject::detect(const cv::Mat & image, find_object::DetectionInfo & info
 				info.timeStamps_.insert(DetectionInfo::kTimeHomography, time.restart());
 			}
 		}
-		else if(!objectsDescriptors_.empty() && info.sceneKeypoints_.size())
+		else if((descriptorsValid || vocabularyValid) && info.sceneKeypoints_.size())
 		{
 			UWARN("Cannot search, objects must be updated");
 		}

@@ -181,6 +181,7 @@ MainWindow::MainWindow(FindObject * findObject, Camera * camera, QWidget * paren
 	ui_->actionStop_camera->setEnabled(false);
 	ui_->actionPause_camera->setEnabled(false);
 	ui_->actionSave_objects->setEnabled(false);
+	ui_->actionSave_session->setEnabled(false);
 
 	// Actions
 	connect(ui_->actionAdd_object_from_scene, SIGNAL(triggered()), this, SLOT(addObjectFromScene()));
@@ -200,6 +201,8 @@ MainWindow::MainWindow(FindObject * findObject, Camera * camera, QWidget * paren
 	connect(ui_->actionRemove_all_objects, SIGNAL(triggered()), this, SLOT(removeAllObjects()));
 	connect(ui_->actionSave_settings, SIGNAL(triggered()), this, SLOT(saveSettings()));
 	connect(ui_->actionLoad_settings, SIGNAL(triggered()), this, SLOT(loadSettings()));
+	connect(ui_->actionSave_session, SIGNAL(triggered()), this, SLOT(saveSession()));
+	connect(ui_->actionLoad_session, SIGNAL(triggered()), this, SLOT(loadSession()));
 	connect(ui_->actionShow_objects_features, SIGNAL(triggered()), this, SLOT(showObjectsFeatures()));
 	connect(ui_->actionHide_objects_features, SIGNAL(triggered()), this, SLOT(hideObjectsFeatures()));
 
@@ -315,6 +318,84 @@ void MainWindow::setSourceImageText(const QString & text)
 	ui_->imageView_source->setTextLabel(text);
 }
 
+void MainWindow::loadSession()
+{
+	if(objWidgets_.size())
+	{
+		QMessageBox::StandardButton b = QMessageBox::question(this, tr("Loading session..."),
+				tr("There are some objects (%1) already loaded, they will be "
+				   "deleted when loading the session. Do you want to continue?").arg(objWidgets_.size()),
+				QMessageBox::Yes | QMessageBox::No, QMessageBox::NoButton);
+		if(b != QMessageBox::Yes)
+		{
+			return;
+		}
+	}
+
+	QString path = QFileDialog::getOpenFileName(this, tr("Load session..."), Settings::workingDirectory(), "*.bin");
+	if(!path.isEmpty())
+	{
+		qDeleteAll(objWidgets_);
+		objWidgets_.clear();
+		ui_->actionSave_objects->setEnabled(false);
+		findObject_->removeAllObjects();
+
+		if(findObject_->loadSession(path))
+		{
+			//update parameters tool box
+			const ParametersMap & parameters = Settings::getParameters();
+			for(ParametersMap::const_iterator iter = parameters.begin(); iter!= parameters.constEnd(); ++iter)
+			{
+				ui_->toolBox->updateParameter(iter.key());
+			}
+
+			//update object widgets
+			for(QMap<int, ObjSignature *>::const_iterator iter=findObject_->objects().constBegin(); iter!=findObject_->objects().constEnd();++iter)
+			{
+				if(iter.value())
+				{
+					ObjWidget * obj = new ObjWidget(iter.key(), iter.value()->keypoints(), cvtCvMat2QImage(iter.value()->image()));
+					objWidgets_.insert(obj->id(), obj);
+					ui_->actionSave_objects->setEnabled(true);
+					ui_->actionSave_session->setEnabled(true);
+					this->showObject(obj);
+
+					//update object labels
+					QLabel * title = qFindChild<QLabel*>(this, QString("%1title").arg(iter.value()->id()));
+					title->setText(QString("%1 (%2)").arg(iter.value()->id()).arg(QString::number(iter.value()->keypoints().size())));
+				}
+
+			}
+
+			QMessageBox::information(this, tr("Session loaded!"), tr("Session \"%1\" successfully loaded (%2 objects)!").arg(path).arg(objWidgets_.size()));
+
+			if(!camera_->isRunning() && !sceneImage_.empty())
+			{
+				this->update(sceneImage_);
+			}
+		}
+	}
+}
+void MainWindow::saveSession()
+{
+	if(objWidgets_.size())
+	{
+		QString path = QFileDialog::getSaveFileName(this, tr("Save session..."), Settings::workingDirectory(), "*.bin");
+		if(!path.isEmpty())
+		{
+			if(QFileInfo(path).suffix().compare("bin") != 0)
+			{
+				path.append(".bin");
+			}
+
+			if(findObject_->saveSession(path))
+			{
+				QMessageBox::information(this, tr("Session saved!"), tr("Session \"%1\" successfully saved (%2 objects)!").arg(path).arg(objWidgets_.size()));
+			}
+		}
+	}
+}
+
 void MainWindow::loadSettings()
 {
 	QString path = QFileDialog::getOpenFileName(this, tr("Load settings..."), Settings::workingDirectory(), "*.ini");
@@ -360,11 +441,11 @@ bool MainWindow::loadSettings(const QString & path)
 
 		return true;
 	}
-	UINFO("Path \"%s\" not valid (should be *.ini)", path.toStdString().c_str());
+	UERROR("Path \"%s\" not valid (should be *.ini)", path.toStdString().c_str());
 	return false;
 }
 
-bool MainWindow::saveSettings(const QString & path)
+bool MainWindow::saveSettings(const QString & path) const
 {
 	if(!path.isEmpty() && QFileInfo(path).suffix().compare("ini") == 0)
 	{
@@ -372,7 +453,7 @@ bool MainWindow::saveSettings(const QString & path)
 		Settings::saveWindowSettings(this->saveGeometry(), this->saveState(), path);
 		return true;
 	}
-	UINFO("Path \"%s\" not valid (should be *.ini)", path.toStdString().c_str());
+	UERROR("Path \"%s\" not valid (should be *.ini)", path.toStdString().c_str());
 	return false;
 }
 
@@ -405,7 +486,7 @@ int MainWindow::saveObjects(const QString & dirPath)
 	QDir dir(dirPath);
 	if(dir.exists())
 	{
-		for(QMap<int, ObjWidget*>::iterator iter=objWidgets_.begin(); iter!=objWidgets_.end(); ++iter)
+		for(QMap<int, ObjWidget*>::const_iterator iter=objWidgets_.constBegin(); iter!=objWidgets_.constEnd(); ++iter)
 		{
 			if(iter.value()->pixmap().save(QString("%1/%2.png").arg(dirPath).arg(iter.key())))
 			{
@@ -464,6 +545,7 @@ void MainWindow::removeObject(find_object::ObjWidget * object)
 		if(objWidgets_.size() == 0)
 		{
 			ui_->actionSave_objects->setEnabled(false);
+			ui_->actionSave_session->setEnabled(false);
 		}
 		findObject_->removeObject(object->id());
 		object->deleteLater();
@@ -570,6 +652,7 @@ void MainWindow::addObjectFromScene()
 		obj->setId(signature->id());
 		objWidgets_.insert(obj->id(), obj);
 		ui_->actionSave_objects->setEnabled(true);
+		ui_->actionSave_session->setEnabled(true);
 		showObject(obj);
 		updateVocabulary();
 		objectsModified_ = true;
@@ -616,6 +699,7 @@ bool MainWindow::addObjectFromFile(const QString & filePath)
 		ObjWidget * obj = new ObjWidget(s->id(), std::vector<cv::KeyPoint>(), cvtCvMat2QImage(s->image()));
 		objWidgets_.insert(obj->id(), obj);
 		ui_->actionSave_objects->setEnabled(true);
+		ui_->actionSave_session->setEnabled(true);
 		this->showObject(obj);
 		return true;
 	}
