@@ -99,6 +99,7 @@ void showUsage()
 			"  --console              Don't use the GUI (by default the camera will be\n"
 			"                           started automatically). Option --objects must also be\n"
 			"                           used with valid objects.\n"
+			"  --session \"path\"       Path to a session to load (*.bin).\n"
 			"  --object \"path\"        Path to an object to detect.\n"
 			"  --objects \"path\"       Directory of the objects to detect (--object is ignored).\n"
 			"  --config \"path\"        Path to configuration file (default: %s).\n"
@@ -129,6 +130,7 @@ int main(int argc, char* argv[])
 	// parse options BEGIN
 	//////////////////////////
 	bool guiMode = true;
+	QString sessionPath = "";
 	QString objectsPath = "";
 	QString objectPath = "";
 	QString scenePath = "";
@@ -161,6 +163,29 @@ int main(int argc, char* argv[])
 				if(!QDir(objectsPath).exists())
 				{
 					UERROR("Objects path not valid : %s", objectsPath.toStdString().c_str());
+					showUsage();
+				}
+			}
+			else
+			{
+				showUsage();
+			}
+			continue;
+		}
+		if(strcmp(argv[i], "-session") == 0 ||
+		   strcmp(argv[i], "--session") == 0)
+		{
+			++i;
+			if(i < argc)
+			{
+				sessionPath = argv[i];
+				if(sessionPath.contains('~'))
+				{
+					sessionPath.replace('~', QDir::homePath());
+				}
+				if(!QFile(sessionPath).exists())
+				{
+					UERROR("Session path not valid : %s", sessionPath.toStdString().c_str());
 					showUsage();
 				}
 			}
@@ -329,7 +354,11 @@ int main(int argc, char* argv[])
 
 	UINFO("Options:");
 	UINFO("   GUI mode = %s", guiMode?"true":"false");
-	if(!objectsPath.isEmpty())
+	if(!sessionPath.isEmpty())
+	{
+		UINFO("   Session path: \"%s\"", sessionPath.toStdString().c_str());
+	}
+	else if(!objectsPath.isEmpty())
 	{
 		UINFO("   Objects path: \"%s\"", objectsPath.toStdString().c_str());
 	}
@@ -367,7 +396,18 @@ int main(int argc, char* argv[])
 
 	// Load objects if path is set
 	int objectsLoaded = 0;
-	if(!objectsPath.isEmpty())
+	if(!sessionPath.isEmpty())
+	{
+		if(!findObject->loadSession(sessionPath))
+		{
+			UERROR("Could not load session \"%s\"", sessionPath.toStdString().c_str());
+		}
+		else
+		{
+			objectsLoaded = findObject->objects().size();
+		}
+	}
+	else if(!objectsPath.isEmpty())
 	{
 		objectsLoaded = findObject->loadObjects(objectsPath);
 		if(!objectsLoaded)
