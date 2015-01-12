@@ -90,12 +90,14 @@ private Q_SLOTS:
 	void addObjectFromScene();
 	void addObjectsFromFiles(const QStringList & fileNames);
 	void addObjectsFromFiles();
+	void addObjectFromTcp(const cv::Mat & image, int id, const QString & filePath);
 	void loadSceneFromFile(const QStringList & fileNames);
 	void loadSceneFromFile();
 	void setupCameraFromVideoFile();
 	void setupCameraFromImagesDirectory();
 	void setupCameraFromTcpIp();
 	void removeObject(find_object::ObjWidget * object);
+	void removeObject(int id);
 	void removeAllObjects();
 	void updateObjectsSize();
 	void updateMirrorView();
@@ -116,10 +118,11 @@ private:
 	int loadObjects(const QString & dirPath);
 	int saveObjects(const QString & dirPath);
 	void setupTCPServer();
-	bool addObjectFromFile(const QString & filePath);
+	int addObjectFromFile(const QString & filePath);
 	void showObject(find_object::ObjWidget * obj);
 	void updateObjectSize(find_object::ObjWidget * obj);
 	void updateVocabulary();
+	void updateObjects(const QList<int> & ids);
 
 private:
 	Ui_mainWindow * ui_;

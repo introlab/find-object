@@ -30,6 +30,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QtNetwork/QNetworkInterface>
 #include <QtNetwork/QTcpSocket>
 #include <QtGui/QTransform>
+#include <opencv2/highgui/highgui.hpp>
 
 namespace find_object {
 
@@ -98,8 +99,101 @@ void TcpServer::publishDetectionInfo(const DetectionInfo & info)
 
 void TcpServer::addClient()
 {
-	QTcpSocket * client = this->nextPendingConnection();
-	connect(client, SIGNAL(disconnected()), client, SLOT(deleteLater()));
+	while(this->hasPendingConnections())
+	{
+		QTcpSocket * client =  this->nextPendingConnection();
+		connect(client, SIGNAL(readyRead()), this, SLOT(readReceivedData()));
+		connect(client, SIGNAL(error(QAbstractSocket::SocketError)), this, SLOT(displayError(QAbstractSocket::SocketError)));
+		connect(client, SIGNAL(disconnected()), this, SLOT(connectionLost()));
+	}
+}
+
+void TcpServer::readReceivedData()
+{
+	QTcpSocket * client = (QTcpSocket*)sender();
+	QDataStream in(client);
+	in.setVersion(QDataStream::Qt_4_0);
+
+	if (blockSizes_.value(client->socketDescriptor(), 0) == 0)
+	{
+		if (client->bytesAvailable() < (int)sizeof(quint64))
+		{
+			return;
+		}
+
+		in >> blockSizes_[client->socketDescriptor()];
+	}
+
+	if (client->bytesAvailable() < (int)blockSizes_[client->socketDescriptor()])
+	{
+		return;
+	}
+
+	quint32 serviceType;
+	in >> serviceType;
+
+	bool ok = true;
+	if(serviceType == kAddObject)
+	{
+		int id;
+		in >> id;
+		QString fileName;
+		in >> fileName;
+		quint64 imageSize;
+		in >> imageSize;
+		std::vector<unsigned char> buf(imageSize);
+		in.readRawData((char*)buf.data(), imageSize);
+		cv::Mat image = cv::imdecode(buf, cv::IMREAD_UNCHANGED);
+
+		UINFO("TCP service: Add %d \"%s\"", id, fileName.toStdString().c_str());
+		Q_EMIT addObject(image, id, fileName);
+	}
+	else if(serviceType == kRemoveObject)
+	{
+		int id;
+		in >> id;
+
+		UINFO("TCP service: Remove %d", id);
+		Q_EMIT removeObject(id);
+	}
+	else
+	{
+		UERROR("Unknown service type called %d", serviceType);
+		ok = false;
+	}
+
+	blockSizes_.remove(client->socketDescriptor());
+	client->write(QByteArray(ok?"1":"0")); // send acknowledge
+}
+
+void TcpServer::displayError(QAbstractSocket::SocketError socketError)
+{
+	switch (socketError)
+	{
+		case QAbstractSocket::RemoteHostClosedError:
+			break;
+		case QAbstractSocket::HostNotFoundError:
+			UWARN("CameraTcp: Tcp error: The host was not found. Please "
+					"check the host name and port settings.\n");
+			break;
+		case QAbstractSocket::ConnectionRefusedError:
+			UWARN("CameraTcp: The connection was refused by the peer. "
+					"Make sure your images server is running, "
+					"and check that the host name and port "
+					"settings are correct.");
+			break;
+		default:
+			//UERROR("The following error occurred: %s.", this->errorString().toStdString().c_str());
+			break;
+	}
+}
+
+void TcpServer::connectionLost()
+{
+	//printf("[WARNING] CameraTcp: Connection lost!\n");
+	blockSizes_.remove(((QTcpSocket*)sender())->socketDescriptor());
+	((QTcpSocket*)sender())->close();
+	sender()->deleteLater();
 }
 
 } // namespace find_object

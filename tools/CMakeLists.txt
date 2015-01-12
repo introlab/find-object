@@ -1,4 +1,5 @@
 ADD_SUBDIRECTORY( tcpClient )
 ADD_SUBDIRECTORY( tcpImagesServer )
 ADD_SUBDIRECTORY( tcpRequest )
+ADD_SUBDIRECTORY( tcpService )
 ADD_SUBDIRECTORY( similarity )

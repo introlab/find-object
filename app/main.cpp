@@ -509,6 +509,10 @@ int main(int argc, char* argv[])
 			QObject::connect(&camera, SIGNAL(imageReceived(const cv::Mat &)), findObject, SLOT(detect(const cv::Mat &)));
 			QObject::connect(&camera, SIGNAL(finished()), &app, SLOT(quit()));
 
+			//connect services
+			QObject::connect(&tcpServer, SIGNAL(addObject(const cv::Mat &, int, const QString &)), findObject, SLOT(addObjectAndUpdate(const cv::Mat &, int, const QString &)));
+			QObject::connect(&tcpServer, SIGNAL(removeObject(int)), findObject, SLOT(removeObjectAndUpdate(int)));
+
 			//use camera in settings
 			setupQuitSignal();
 
@@ -521,6 +525,16 @@ int main(int argc, char* argv[])
 			if(running)
 			{
 				app.exec();
+
+				if(!sessionPath.isEmpty() && findObject->isSessionModified())
+				{
+					UINFO("The session has been modified, updating the session file...");
+					if(findObject->saveSession(sessionPath))
+					{
+						UINFO("Session \"%s\" successfully saved (%d objects)!",
+								sessionPath.toStdString().c_str(), findObject->objects().size());
+					}
+				}
 			}
 
 			// cleanup

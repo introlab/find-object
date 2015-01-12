@@ -46,7 +46,8 @@ FindObject::FindObject(QObject * parent) :
 	QObject(parent),
 	vocabulary_(new Vocabulary()),
 	detector_(Settings::createKeypointDetector()),
-	extractor_(Settings::createDescriptorExtractor())
+	extractor_(Settings::createDescriptorExtractor()),
+	sessionModified_(false)
 {
 	qRegisterMetaType<find_object::DetectionInfo>("find_object::DetectionInfo");
 	UASSERT(detector_ != 0 && extractor_ != 0);
@@ -101,7 +102,7 @@ bool FindObject::loadSession(const QString & path)
 			// this will fill objectsDescriptors_ matrix
 			updateVocabulary();
 		}
-
+		sessionModified_ = false;
 		return true;
 	}
 	else
@@ -111,7 +112,7 @@ bool FindObject::loadSession(const QString & path)
 	return false;
 }
 
-bool FindObject::saveSession(const QString & path) const
+bool FindObject::saveSession(const QString & path)
 {
 	if(!path.isEmpty() && QFileInfo(path).suffix().compare("bin") == 0)
 	{
@@ -132,6 +133,7 @@ bool FindObject::saveSession(const QString & path) const
 		}
 
 		file.close();
+		sessionModified_ = false;
 		return true;
 	}
 	UERROR("Path \"%s\" not valid (should be *.bin)", path.toStdString().c_str());
@@ -241,6 +243,28 @@ void FindObject::removeAllObjects()
 	qDeleteAll(objects_);
 	objects_.clear();
 	clearVocabulary();
+}
+
+void FindObject::addObjectAndUpdate(const cv::Mat & image, int id, const QString & filename)
+{
+	const ObjSignature * s = this->addObject(image, id, filename);
+	if(s)
+	{
+		QList<int> ids;
+		ids.push_back(s->id());
+		updateObjects(ids);
+		updateVocabulary();
+	}
+}
+
+void FindObject::removeObjectAndUpdate(int id)
+{
+	if(objects_.contains(id))
+	{
+		delete objects_.value(id);
+		objects_.remove(id);
+	}
+	updateVocabulary();
 }
 
 void FindObject::updateDetectorExtractor()
@@ -561,39 +585,63 @@ private:
 	int timeExtraction_;
 };
 
-void FindObject::updateObjects()
+void FindObject::updateObjects(const QList<int> & ids)
 {
-	if(objects_.size())
+	QList<ObjSignature*> objectsList;
+	if(ids.size())
 	{
+		for(int i=0; i<ids.size(); ++i)
+		{
+			if(objects_.contains(ids[i]))
+			{
+				objectsList.push_back(objects_[ids[i]]);
+			}
+			else
+			{
+				UERROR("Not found object %d!", ids[i]);
+			}
+		}
+	}
+	else
+	{
+		objectsList = objects_.values();
+	}
+
+	if(objectsList.size())
+	{
+		sessionModified_ = true;
 		int threadCounts = Settings::getGeneral_threads();
 		if(threadCounts == 0)
 		{
-			threadCounts = objects_.size();
+			threadCounts = objectsList.size();
 		}
 
 		QTime time;
 		time.start();
-		UINFO("Features extraction from %d objects...", objects_.size());
-		QList<ObjSignature*> objectsList = objects_.values();
-		for(int i=0; i<objectsList.size(); i+=threadCounts)
+
+		if(objectsList.size())
 		{
-			QVector<ExtractFeaturesThread*> threads;
-			for(int k=i; k<i+threadCounts && k<objectsList.size(); ++k)
+			UINFO("Features extraction from %d objects...", objectsList.size());
+			for(int i=0; i<objectsList.size(); i+=threadCounts)
 			{
-				threads.push_back(new ExtractFeaturesThread(detector_, extractor_, objectsList.at(k)->id(), objectsList.at(k)->image()));
-				threads.back()->start();
+				QVector<ExtractFeaturesThread*> threads;
+				for(int k=i; k<i+threadCounts && k<objectsList.size(); ++k)
+				{
+					threads.push_back(new ExtractFeaturesThread(detector_, extractor_, objectsList.at(k)->id(), objectsList.at(k)->image()));
+					threads.back()->start();
+				}
+
+				for(int j=0; j<threads.size(); ++j)
+				{
+					threads[j]->wait();
+
+					int id = threads[j]->objectId();
+
+					objects_.value(id)->setData(threads[j]->keypoints(), threads[j]->descriptors());
+				}
 			}
-
-			for(int j=0; j<threads.size(); ++j)
-			{
-				threads[j]->wait();
-
-				int id = threads[j]->objectId();
-
-				objects_.value(id)->setData(threads[j]->keypoints(), threads[j]->descriptors());
-			}
+			UINFO("Features extraction from %d objects... done! (%d ms)", objectsList.size(), time.elapsed());
 		}
-		UINFO("Features extraction from %d objects... done! (%d ms)", objects_.size(), time.elapsed());
 	}
 	else
 	{
@@ -667,6 +715,7 @@ void FindObject::updateVocabulary()
 
 			if(Settings::getGeneral_invertedSearch())
 			{
+				sessionModified_ = true;
 				QTime time;
 				time.start();
 				bool incremental = Settings::getGeneral_vocabularyIncremental();

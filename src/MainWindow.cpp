@@ -311,6 +311,10 @@ void MainWindow::setupTCPServer()
 	ui_->label_ipAddress->setText(tcpServer_->getHostAddress().toString());
 	ui_->label_port->setNum(tcpServer_->getPort());
 	UINFO("Detection sent on port: %d (IP=%s)", tcpServer_->getPort(), tcpServer_->getHostAddress().toString().toStdString().c_str());
+
+	//connect services
+	connect(tcpServer_, SIGNAL(addObject(const cv::Mat &, int, const QString &)), this, SLOT(addObjectFromTcp(const cv::Mat &, int, const QString &)));
+	connect(tcpServer_, SIGNAL(removeObject(int)), this, SLOT(removeObject(int)));
 }
 
 void MainWindow::setSourceImageText(const QString & text)
@@ -459,7 +463,7 @@ bool MainWindow::saveSettings(const QString & path) const
 
 int MainWindow::loadObjects(const QString & dirPath)
 {
-	int loadedObjects = 0;
+	QList<int> loadedObjects;
 	QString formats = Settings::getGeneral_imageFormats().remove('*').remove('.');
 	UDirectory dir(dirPath.toStdString(), formats.toStdString());
 	if(dir.isValid())
@@ -467,17 +471,18 @@ int MainWindow::loadObjects(const QString & dirPath)
 		const std::list<std::string> & names = dir.getFileNames(); // sorted in natural order
 		for(std::list<std::string>::const_iterator iter=names.begin(); iter!=names.end(); ++iter)
 		{
-			if(this->addObjectFromFile((dirPath.toStdString()+dir.separator()+*iter).c_str()))
+			int id = this->addObjectFromFile((dirPath.toStdString()+dir.separator()+*iter).c_str());
+			if(id >= 0)
 			{
-				++loadedObjects;
+				loadedObjects.push_back(id);
 			}
 		}
-		if(loadedObjects)
+		if(loadedObjects.size())
 		{
-			this->updateObjects();
+			this->updateObjects(loadedObjects);
 		}
 	}
-	return loadedObjects;
+	return loadedObjects.size();
 }
 
 int MainWindow::saveObjects(const QString & dirPath)
@@ -557,6 +562,18 @@ void MainWindow::removeObject(find_object::ObjWidget * object)
 		{
 			this->update(sceneImage_);
 		}
+	}
+}
+
+void MainWindow::removeObject(int id)
+{
+	if(objWidgets_.contains(id))
+	{
+		removeObject(objWidgets_[id]);
+	}
+	else
+	{
+		UERROR("Remove object: Object %d not found!", id);
 	}
 }
 
@@ -677,12 +694,20 @@ void MainWindow::addObjectsFromFiles(const QStringList & fileNames)
 {
 	if(fileNames.size())
 	{
+		QList<int> ids;
 		for(int i=0; i<fileNames.size(); ++i)
 		{
-			this->addObjectFromFile(fileNames.at(i));
+			int id = this->addObjectFromFile(fileNames.at(i));
+			if(id >= 0)
+			{
+				ids.push_back(id);
+			}
 		}
-		objectsModified_ = true;
-		updateObjects();
+		if(ids.size())
+		{
+			objectsModified_ = true;
+			updateObjects(ids);
+		}
 	}
 }
 
@@ -691,7 +716,7 @@ void MainWindow::addObjectsFromFiles()
 	addObjectsFromFiles(QFileDialog::getOpenFileNames(this, tr("Add objects..."), Settings::workingDirectory(), tr("Image Files (%1)").arg(Settings::getGeneral_imageFormats())));
 }
 
-bool MainWindow::addObjectFromFile(const QString & filePath)
+int MainWindow::addObjectFromFile(const QString & filePath)
 {
 	const ObjSignature * s = findObject_->addObject(filePath);
 	if(s)
@@ -701,12 +726,36 @@ bool MainWindow::addObjectFromFile(const QString & filePath)
 		ui_->actionSave_objects->setEnabled(true);
 		ui_->actionSave_session->setEnabled(true);
 		this->showObject(obj);
-		return true;
+		return s->id();
 	}
 	else
 	{
 		QMessageBox::critical(this, tr("Error adding object"), tr("Failed to add object from \"%1\"").arg(filePath));
-		return false;
+		return -1;
+	}
+}
+
+void MainWindow::addObjectFromTcp(const cv::Mat & image, int id, const QString & filePath)
+{
+	if(objWidgets_.contains(id))
+	{
+		UERROR("Add Object: Object %d is already added.", id);
+	}
+	const ObjSignature * s = findObject_->addObject(image, id, filePath);
+	if(s)
+	{
+		ObjWidget * obj = new ObjWidget(s->id(), std::vector<cv::KeyPoint>(), cvtCvMat2QImage(s->image()));
+		objWidgets_.insert(obj->id(), obj);
+		ui_->actionSave_objects->setEnabled(true);
+		ui_->actionSave_session->setEnabled(true);
+		this->showObject(obj);
+		QList<int> ids;
+		ids.push_back(obj->id());
+		updateObjects(ids);
+	}
+	else
+	{
+		UERROR("Add Object: Error adding object %d.", id);
 	}
 }
 
@@ -883,30 +932,41 @@ void MainWindow::showObject(ObjWidget * obj)
 	}
 }
 
+void MainWindow::updateObjects(const QList<int> & ids)
+{
+	if(ids.size())
+	{
+		this->statusBar()->showMessage(tr("Updating %1 objects...").arg(ids.size()));
+		QApplication::processEvents();
+
+		findObject_->updateObjects(ids);
+
+		updateVocabulary();
+
+		QList<ObjSignature*> signatures = findObject_->objects().values();
+		for(int i=0; i<signatures.size(); ++i)
+		{
+			if(ids.contains(signatures[i]->id()))
+			{
+				objWidgets_.value(signatures[i]->id())->setData(signatures[i]->keypoints(), cvtCvMat2QImage(signatures[i]->image()));
+
+				//update object labels
+				QLabel * title = qFindChild<QLabel*>(this, QString("%1title").arg(signatures[i]->id()));
+				title->setText(QString("%1 (%2)").arg(signatures[i]->id()).arg(QString::number(signatures[i]->keypoints().size())));
+			}
+		}
+
+		if(!camera_->isRunning() && !sceneImage_.empty())
+		{
+			this->update(sceneImage_);
+		}
+		this->statusBar()->clearMessage();
+	}
+}
+
 void MainWindow::updateObjects()
 {
-	this->statusBar()->showMessage(tr("Updating %1 objects...").arg(findObject_->objects().size()));
-	QApplication::processEvents();
-
-	findObject_->updateObjects();
-
-	updateVocabulary();
-
-	QList<ObjSignature*> signatures = findObject_->objects().values();
-	for(int i=0; i<signatures.size(); ++i)
-	{
-		objWidgets_.value(signatures[i]->id())->setData(signatures[i]->keypoints(), cvtCvMat2QImage(signatures[i]->image()));
-
-		//update object labels
-		QLabel * title = qFindChild<QLabel*>(this, QString("%1title").arg(signatures[i]->id()));
-		title->setText(QString("%1 (%2)").arg(signatures[i]->id()).arg(QString::number(signatures[i]->keypoints().size())));
-	}
-
-	if(!camera_->isRunning() && !sceneImage_.empty())
-	{
-		this->update(sceneImage_);
-	}
-	this->statusBar()->clearMessage();
+	updateObjects(objWidgets_.keys());
 }
 
 void MainWindow::updateVocabulary()
@@ -1374,7 +1434,7 @@ void MainWindow::notifyParametersChanged(const QStringList & paramChanged)
 	{
 		if(detectorDescriptorParamsChanged)
 		{
-			this->updateObjects();
+			this->updateObjects(objWidgets_.keys());
 		}
 		else if(nearestNeighborParamsChanged)
 		{

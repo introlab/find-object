@@ -31,6 +31,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "find_object/FindObjectExp.h" // DLL export/import defines
 
 #include "find_object/DetectionInfo.h"
+#include <opencv2/opencv.hpp>
 
 #include <QtNetwork/QTcpServer>
 
@@ -43,6 +44,12 @@ class FINDOBJECT_EXP TcpServer : public QTcpServer
 	Q_OBJECT
 
 public:
+	enum Service {
+		kAddObject,   // id fileName imageSize image
+		kRemoveObject // id
+	};
+
+public:
 	TcpServer(quint16 port = 0, QObject * parent = 0);
 
 	QHostAddress getHostAddress() const;
@@ -53,6 +60,16 @@ public Q_SLOTS:
 
 private Q_SLOTS:
 	void addClient();
+	void readReceivedData();
+	void displayError(QAbstractSocket::SocketError socketError);
+	void connectionLost();
+
+Q_SIGNALS:
+	void addObject(const cv::Mat &, int, const QString &);
+	void removeObject(int);
+
+private:
+	QMap<int, quint64> blockSizes_;
 };
 
 } // namespace find_object

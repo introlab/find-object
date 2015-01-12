@@ -66,7 +66,8 @@ public:
 	virtual ~FindObject();
 
 	bool loadSession(const QString & path);
-	bool saveSession(const QString & path) const;
+	bool saveSession(const QString & path);
+	bool isSessionModified() const {return sessionModified_;}
 
 	int loadObjects(const QString & dirPath); // call updateObjects()
 	const ObjSignature * addObject(const QString & filePath);
@@ -78,13 +79,15 @@ public:
 	bool detect(const cv::Mat & image, find_object::DetectionInfo & info);
 
 	void updateDetectorExtractor();
-	void updateObjects();
+	void updateObjects(const QList<int> & ids = QList<int>());
 	void updateVocabulary();
 
 	const QMap<int, ObjSignature*> & objects() const {return objects_;}
 	const Vocabulary * vocabulary() const {return vocabulary_;}
 
 public Q_SLOTS:
+	void addObjectAndUpdate(const cv::Mat & image, int id=0, const QString & filename = QString());
+	void removeObjectAndUpdate(int id);
 	void detect(const cv::Mat & image); // emit objectsFound()
 
 Q_SIGNALS:
@@ -100,6 +103,7 @@ private:
 	QMap<int, int> dataRange_; // <last id of object's descriptor, id>
 	KeypointDetector * detector_;
 	DescriptorExtractor * extractor_;
+	bool sessionModified_;
 };
 
 } // namespace find_object
