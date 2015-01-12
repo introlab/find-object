@@ -38,7 +38,7 @@ void showUsage()
 {
 	printf("\ntcpService [options] port\n"
 			"  Options:\n"
-			"    --add \"image.png\" #  Add object (file name + id). Set id=0 "
+			"    --add \"image.png\" #    Add object (file name + id). Set id=0\n"
 			"                           will make the server generating an id.\n"
 			"    --remove #             Remove object by ID.\n"
 			"    --host #.#.#.#         Set host address.\n"
