@@ -99,59 +99,62 @@ void Settings::loadSettings(const QString & fileName)
 			if(value.isValid())
 			{
 				QString str = value.toString();
-				if(str.contains(";") && str.size() != getParameter(key).toString().size())
+				if(str.contains(";"))
 				{
-					// If a string list is modified, update the value
-					// (assuming that index < 10... one character for index)
+					if(str.size() != getParameter(key).toString().size())
+					{
+						// If a string list is modified, update the value
+						// (assuming that index < 10... one character for index)
+						QChar index = str.at(0);
+						str = getParameter(key).toString();
+						str[0] = index.toAscii();
+						value = QVariant(str);
+						UINFO("Updated list of parameter \"%s\"", key.toStdString().c_str());
+					}
+#if FINDOBJECT_NONFREE == 0
 					QChar index = str.at(0);
+					if(key.compare(Settings::kFeature2D_1Detector()) == 0)
+					{
+						if(index == '5' || index == '7')
+						{
+							index = Settings::defaultFeature2D_1Detector().at(0);
+							int indexInt = Settings::defaultFeature2D_1Detector().split(':').first().toInt();
+							UWARN("Trying to set \"%s\" to SIFT/SURF but Find-Object isn't built "
+								  "with the nonfree module from OpenCV. Keeping default combo value: %s.",
+								  Settings::kFeature2D_1Detector().toStdString().c_str(),
+								  Settings::defaultFeature2D_1Detector().split(':').last().split(";").at(indexInt).toStdString().c_str());
+						}
+					}
+					else if(key.compare(Settings::kFeature2D_2Descriptor()) == 0)
+					{
+						if(index == '2' || index == '3')
+						{
+							index = Settings::defaultFeature2D_2Descriptor().at(0);
+							int indexInt = Settings::defaultFeature2D_2Descriptor().split(':').first().toInt();
+							UWARN("Trying to set \"%s\" to SIFT/SURF but Find-Object isn't built "
+								  "with the nonfree module from OpenCV. Keeping default combo value: %s.",
+								  Settings::kFeature2D_2Descriptor().toStdString().c_str(),
+								  Settings::defaultFeature2D_2Descriptor().split(':').last().split(";").at(indexInt).toStdString().c_str());
+						}
+					}
+					else if(key.compare(Settings::kNearestNeighbor_1Strategy()) == 0)
+					{
+						if(index <= '4')
+						{
+							index = Settings::defaultNearestNeighbor_1Strategy().at(0);
+							int indexInt = Settings::defaultNearestNeighbor_1Strategy().split(':').first().toInt();
+							UWARN("Trying to set \"%s\" to one FLANN approach but Find-Object isn't built "
+									  "with the nonfree module from OpenCV and FLANN cannot be used "
+									  "with binary descriptors. Keeping default combo value: %s.",
+									  Settings::kNearestNeighbor_1Strategy().toStdString().c_str(),
+									  Settings::defaultNearestNeighbor_1Strategy().split(':').last().split(";").at(indexInt).toStdString().c_str());
+						}
+					}
 					str = getParameter(key).toString();
 					str[0] = index.toAscii();
 					value = QVariant(str);
-					UINFO("Updated list of parameter \"%s\"", key.toStdString().c_str());
-				}
-#if FINDOBJECT_NONFREE == 0
-				QChar index = str.at(0);
-				if(key.compare(Settings::kFeature2D_1Detector()) == 0)
-				{
-					if(index == '5' || index == '7')
-					{
-						index = Settings::defaultFeature2D_1Detector().at(0);
-						int indexInt = Settings::defaultFeature2D_1Detector().split(':').first().toInt();
-						UWARN("Trying to set \"%s\" to SIFT/SURF but Find-Object isn't built "
-							  "with the nonfree module from OpenCV. Keeping default combo value: %s.",
-							  Settings::kFeature2D_1Detector().toStdString().c_str(),
-							  Settings::defaultFeature2D_1Detector().split(':').last().split(";").at(indexInt).toStdString().c_str());
-					}
-				}
-				if(key.compare(Settings::kFeature2D_2Descriptor()) == 0)
-				{
-					if(index == '2' || index == '3')
-					{
-						index = Settings::defaultFeature2D_2Descriptor().at(0);
-						int indexInt = Settings::defaultFeature2D_2Descriptor().split(':').first().toInt();
-						UWARN("Trying to set \"%s\" to SIFT/SURF but Find-Object isn't built "
-							  "with the nonfree module from OpenCV. Keeping default combo value: %s.",
-							  Settings::kFeature2D_2Descriptor().toStdString().c_str(),
-							  Settings::defaultFeature2D_2Descriptor().split(':').last().split(";").at(indexInt).toStdString().c_str());
-					}
-				}
-				if(key.compare(Settings::kNearestNeighbor_1Strategy()) == 0)
-				{
-					if(index <= '4')
-					{
-						index = Settings::defaultNearestNeighbor_1Strategy().at(0);
-						int indexInt = Settings::defaultNearestNeighbor_1Strategy().split(':').first().toInt();
-						UWARN("Trying to set \"%s\" to one FLANN approach but Find-Object isn't built "
-								  "with the nonfree module from OpenCV and FLANN cannot be used "
-								  "with binary descriptors. Keeping default combo value: %s.",
-								  Settings::kNearestNeighbor_1Strategy().toStdString().c_str(),
-								  Settings::defaultNearestNeighbor_1Strategy().split(':').last().split(";").at(indexInt).toStdString().c_str());
-					}
-				}
-				str = getParameter(key).toString();
-				str[0] = index.toAscii();
-				value = QVariant(str);
 #endif
+				}
 				setParameter(key, value);
 			}
 		}
