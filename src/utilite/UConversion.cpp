@@ -155,7 +155,7 @@ std::string uBytes2Hex(const char * bytes, unsigned int bytesLen)
 
 std::vector<char> uHex2Bytes(const std::string & hex)
 {
-	return uHex2Bytes(&hex[0], hex.length());
+	return uHex2Bytes(&hex[0], (int)hex.length());
 }
 
 std::vector<char> uHex2Bytes(const char * hex, int hexLen)
@@ -270,7 +270,12 @@ std::string uFormatv (const char *fmt, va_list args)
 #endif
 
         // Try to vsnprintf into our buffer.
-    	int needed = vsnprintf (buf, size, fmt, argsTmp);
+#ifdef _MSC_VER
+		int needed = (int)vsnprintf_s(buf, size, _TRUNCATE, fmt, argsTmp);
+#else
+		int needed = (int)vsnprintf(buf, size, fmt, argsTmp);
+#endif
+
     	va_end(argsTmp);
         // NB. C99 (which modern Linux and OS X follow) says vsnprintf
         // failure returns the length it would have needed.  But older

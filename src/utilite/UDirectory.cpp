@@ -262,7 +262,7 @@ bool UDirectory::exists(const std::string & dirPath)
 std::string UDirectory::getDir(const std::string & filePath)
 {
 	std::string dir = filePath;
-	int i=dir.size()-1;
+	int i=(int)dir.size()-1;
 	for(; i>=0; --i)
 	{
 		if(dir[i] == '/' || dir[i] == '\\')

@@ -286,8 +286,8 @@ void Vocabulary::search(const cv::Mat & descriptors, cv::Mat & results, cv::Mat 
 			}
 
 			//convert back to matrix style
-			results = cv::Mat(matches.size(), k, CV_32SC1);
-			dists = cv::Mat(matches.size(), k, CV_32FC1);
+			results = cv::Mat((int)matches.size(), k, CV_32SC1);
+			dists = cv::Mat((int)matches.size(), k, CV_32FC1);
 			for(unsigned int i=0; i<matches.size(); ++i)
 			{
 				for(int j=0; j<k; ++j)

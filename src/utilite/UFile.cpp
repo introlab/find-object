@@ -65,14 +65,14 @@ int UFile::erase(const std::string &filePath)
 int UFile::rename(const std::string &oldFilePath,
                      const std::string &newFilePath)
 {
-    return rename(oldFilePath.c_str(), newFilePath.c_str());
+    return ::rename(oldFilePath.c_str(), newFilePath.c_str());
 }
 
 std::string UFile::getName(const std::string & filePath)
 {
 	std::string fullPath = filePath;
 	std::string name;
-	for(int i=fullPath.size()-1; i>=0; --i)
+	for(int i=(int)fullPath.size()-1; i>=0; --i)
 	{
 		if(fullPath[i] == '/' || fullPath[i] == '\\')
 		{

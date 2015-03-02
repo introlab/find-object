@@ -93,7 +93,7 @@ public:
 
 		std::vector<unsigned char> bytes;
 		cv::imencode(".png", image_, bytes);
-		streamPtr << QByteArray((char*)bytes.data(), bytes.size());
+		streamPtr << QByteArray((char*)bytes.data(), (int)bytes.size());
 	}
 
 	void load(QDataStream & streamPtr)
