@@ -1,0 +1,8 @@
+# Ignore everything in this directory
+*
+# Except this file
+!.gitignore
+!box_in_scene.png
+!box.png
+!multi-objs
+!multi-scene.jpg

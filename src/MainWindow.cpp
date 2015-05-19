@@ -937,7 +937,6 @@ void MainWindow::updateObjects(const QList<int> & ids)
 	if(ids.size())
 	{
 		this->statusBar()->showMessage(tr("Updating %1 objects...").arg(ids.size()));
-		QApplication::processEvents();
 
 		findObject_->updateObjects(ids);
 
@@ -972,7 +971,6 @@ void MainWindow::updateObjects()
 void MainWindow::updateVocabulary()
 {
 	this->statusBar()->showMessage(tr("Updating vocabulary..."));
-	QApplication::processEvents();
 
 	QTime time;
 	time.start();
@@ -1445,12 +1443,12 @@ void MainWindow::notifyParametersChanged(const QStringList & paramChanged)
 	{
 		this->statusBar()->showMessage(tr("A parameter has changed... \"Update objects\" may be required."));
 	}
+
 	if(parameterChanged && !camera_->isRunning() && !sceneImage_.empty())
 	{
 		this->update(sceneImage_);
 		ui_->label_timeRefreshRate->setVisible(false);
 	}
-
 	ui_->actionCamera_from_video_file->setChecked(!Settings::getCamera_5mediaPath().isEmpty() && !UDirectory::exists(Settings::getCamera_5mediaPath().toStdString()) && !Settings::getCamera_6useTcpCamera());
 	ui_->actionCamera_from_directory_of_images->setChecked(!Settings::getCamera_5mediaPath().isEmpty() && UDirectory::exists(Settings::getCamera_5mediaPath().toStdString()) && !Settings::getCamera_6useTcpCamera());
 	ui_->actionCamera_from_TCP_IP->setChecked(Settings::getCamera_6useTcpCamera());
