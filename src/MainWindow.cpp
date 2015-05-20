@@ -159,7 +159,6 @@ MainWindow::MainWindow(FindObject * findObject, Camera * camera, QWidget * paren
 	ui_->menuView->addAction(ui_->dockWidget_plot->toggleViewAction());
 	connect(ui_->toolBox, SIGNAL(parametersChanged(const QStringList &)), this, SLOT(notifyParametersChanged(const QStringList &)));
 
-	ui_->imageView_source->setGraphicsViewMode(true);
 	ui_->imageView_source->setTextLabel(tr("Press \"space\" to start the camera or drop an image here..."));
 	ui_->imageView_source->setMirrorView(Settings::getGeneral_mirrorView());
 	connect((QCheckBox*)ui_->toolBox->getParameterWidget(Settings::kGeneral_mirrorView()),
@@ -1139,6 +1138,7 @@ void MainWindow::update(const cv::Mat & image)
 		ui_->label_timeDetection->setNum(info.timeStamps_.value(DetectionInfo::kTimeKeypointDetection, 0));
 		ui_->label_timeSkewAffine->setNum(info.timeStamps_.value(DetectionInfo::kTimeSkewAffine, 0));
 		ui_->label_timeExtraction->setNum(info.timeStamps_.value(DetectionInfo::kTimeDescriptorExtraction, 0));
+		ui_->label_timeSubPix->setNum(info.timeStamps_.value(DetectionInfo::kTimeSubPixelRefining, 0));
 		ui_->imageView_source->setData(info.sceneKeypoints_, cvtCvMat2QImage(sceneImage_));
 		if(!findObject_->vocabulary()->size())
 		{
@@ -1339,6 +1339,7 @@ void MainWindow::update(const cv::Mat & image)
 		ui_->label_timeDetection->setNum(info.timeStamps_.value(DetectionInfo::kTimeKeypointDetection, 0));
 		ui_->label_timeSkewAffine->setNum(info.timeStamps_.value(DetectionInfo::kTimeSkewAffine, 0));
 		ui_->label_timeExtraction->setNum(info.timeStamps_.value(DetectionInfo::kTimeDescriptorExtraction, 0));
+		ui_->label_timeSubPix->setNum(info.timeStamps_.value(DetectionInfo::kTimeSubPixelRefining, 0));
 		ui_->imageView_source->setData(info.sceneKeypoints_, cvtCvMat2QImage(sceneImage_));
 	}
 

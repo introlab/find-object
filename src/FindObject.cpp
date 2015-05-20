@@ -377,7 +377,8 @@ public:
 		phi_(phi),
 		timeSkewAffine_(0),
 		timeDetection_(0),
-		timeExtraction_(0)
+		timeExtraction_(0),
+		timeSubPix_(0)
 	{
 		UASSERT(detector && extractor);
 	}
@@ -388,6 +389,7 @@ public:
 	int timeSkewAffine() const {return timeSkewAffine_;}
 	int timeDetection() const {return timeDetection_;}
 	int timeExtraction() const {return timeExtraction_;}
+	int timeSubPix() const {return timeSubPix_;}
 
 protected:
 	virtual void run()
@@ -422,6 +424,24 @@ protected:
 				keypoints_[i].pt.x = pa.at<float>(0,0);
 				keypoints_[i].pt.y = pa.at<float>(1,0);
 			}
+
+			if(keypoints_.size() && Settings::getFeature2D_6SubPix())
+			{
+				// Sub pixel should be done after descriptors extraction
+				std::vector<cv::Point2f> corners;
+				cv::KeyPoint::convert(keypoints_, corners);
+				cv::cornerSubPix(image_,
+						corners,
+						cv::Size(Settings::getFeature2D_7SubPixWinSize(), Settings::getFeature2D_7SubPixWinSize()),
+						cv::Size(-1,-1),
+						cv::TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, Settings::getFeature2D_8SubPixIterations(), Settings::getFeature2D_9SubPixEps() ));
+				UASSERT(corners.size() == keypoints_.size());
+				for(unsigned int i=0; i<corners.size(); ++i)
+				{
+					keypoints_[i].pt = corners[i];
+				}
+				timeSubPix_ +=timeStep.restart();
+			}
 		}
 		else
 		{
@@ -440,6 +460,7 @@ private:
 	int timeSkewAffine_;
 	int timeDetection_;
 	int timeExtraction_;
+	int timeSubPix_;
 };
 
 class ExtractFeaturesThread : public QThread
@@ -456,7 +477,8 @@ public:
 		image_(image),
 		timeSkewAffine_(0),
 		timeDetection_(0),
-		timeExtraction_(0)
+		timeExtraction_(0),
+		timeSubPix_(0)
 	{
 		UASSERT(detector && extractor);
 	}
@@ -468,6 +490,7 @@ public:
 	int timeSkewAffine() const {return timeSkewAffine_;}
 	int timeDetection() const {return timeDetection_;}
 	int timeExtraction() const {return timeExtraction_;}
+	int timeSubPix() const {return timeSubPix_;}
 
 protected:
 	virtual void run()
@@ -512,6 +535,23 @@ protected:
 				if((int)keypoints_.size() != descriptors_.rows)
 				{
 					UERROR("obj=%d kpt=%d != descriptors=%d", objectId_, (int)keypoints_.size(), descriptors_.rows);
+				}
+				else if(Settings::getFeature2D_6SubPix())
+				{
+					// Sub pixel should be done after descriptors extraction
+					std::vector<cv::Point2f> corners;
+					cv::KeyPoint::convert(keypoints_, corners);
+					cv::cornerSubPix(image_,
+							corners,
+							cv::Size(Settings::getFeature2D_7SubPixWinSize(), Settings::getFeature2D_7SubPixWinSize()),
+							cv::Size(-1,-1),
+							cv::TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, Settings::getFeature2D_8SubPixIterations(), Settings::getFeature2D_9SubPixEps() ));
+					UASSERT(corners.size() == keypoints_.size());
+					for(unsigned int i=0; i<corners.size(); ++i)
+					{
+						keypoints_[i].pt = corners[i];
+					}
+					timeSubPix_ +=timeStep.restart();
 				}
 			}
 			else
@@ -566,6 +606,7 @@ protected:
 					timeSkewAffine_ += threads[k]->timeSkewAffine();
 					timeDetection_ += threads[k]->timeDetection();
 					timeExtraction_ += threads[k]->timeExtraction();
+					timeSubPix_ += threads[k]->timeSubPix();
 				}
 			}
 		}
@@ -583,6 +624,7 @@ private:
 	int timeSkewAffine_;
 	int timeDetection_;
 	int timeExtraction_;
+	int timeSubPix_;
 };
 
 void FindObject::updateObjects(const QList<int> & ids)
@@ -876,11 +918,15 @@ public:
 			const QMultiMap<int, int> * matches, // <object, scene>
 			int objectId,
 			const std::vector<cv::KeyPoint> * kptsA,
-			const std::vector<cv::KeyPoint> * kptsB) :
+			const std::vector<cv::KeyPoint> * kptsB,
+			const cv::Mat & imageA,   // image only required if opticalFlow is on
+			const cv::Mat & imageB) : // image only required if opticalFlow is on
 				matches_(matches),
 				objectId_(objectId),
 				kptsA_(kptsA),
 				kptsB_(kptsB),
+				imageA_(imageA),
+				imageB_(imageB),
 				code_(DetectionInfo::kRejectedUndef)
 	{
 		UASSERT(matches && kptsA && kptsB);
@@ -919,6 +965,41 @@ protected:
 
 		if((int)mpts_1.size() >= Settings::getHomography_minimumInliers())
 		{
+			if(Settings::getHomography_opticalFlow())
+			{
+				UASSERT(!imageA_.empty() && !imageB_.empty());
+
+				cv::Mat imageA = imageA_;
+				cv::Mat imageB = imageB_;
+				if(imageA_.cols < imageB_.cols && imageA_.rows < imageB_.rows)
+				{
+					// padding, optical flow wants images of the same size
+					imageA = cv::Mat::zeros(imageB_.size(), imageA_.type());
+					imageA_.copyTo(imageA(cv::Rect(0,0,imageA_.cols, imageA_.rows)));
+				}
+				if(imageA.size() == imageB.size())
+				{
+					//refine matches
+					std::vector<unsigned char> status;
+					std::vector<float> err;
+					cv::calcOpticalFlowPyrLK(
+							imageA,
+							imageB_,
+							mpts_1,
+							mpts_2,
+							status,
+							err,
+							cv::Size(Settings::getHomography_opticalFlowWinSize(), Settings::getHomography_opticalFlowWinSize()),
+							Settings::getHomography_opticalFlowMaxLevel(),
+							cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS, Settings::getHomography_opticalFlowIterations(), Settings::getHomography_opticalFlowEps()),
+							cv::OPTFLOW_LK_GET_MIN_EIGENVALS | cv::OPTFLOW_USE_INITIAL_FLOW, 1e-4);
+				}
+				else
+				{
+					UERROR("Object's image should be less/equal size of the scene image to use Optical Flow.");
+				}
+			}
+
 			h_ = findHomography(mpts_1,
 					mpts_2,
 					Settings::getHomographyMethod(),
@@ -959,6 +1040,8 @@ private:
 	int objectId_;
 	const std::vector<cv::KeyPoint> * kptsA_;
 	const std::vector<cv::KeyPoint> * kptsB_;
+	cv::Mat imageA_;
+	cv::Mat imageB_;
 	DetectionInfo::RejectedCode code_;
 
 	std::vector<int> indexesA_;
@@ -1033,6 +1116,7 @@ bool FindObject::detect(const cv::Mat & image, find_object::DetectionInfo & info
 		info.sceneDescriptors_ = extractThread.descriptors();
 		info.timeStamps_.insert(DetectionInfo::kTimeKeypointDetection, extractThread.timeDetection());
 		info.timeStamps_.insert(DetectionInfo::kTimeDescriptorExtraction, extractThread.timeExtraction());
+		info.timeStamps_.insert(DetectionInfo::kTimeSubPixelRefining, extractThread.timeSubPix());
 		info.timeStamps_.insert(DetectionInfo::kTimeSkewAffine, extractThread.timeSkewAffine());
 
 		bool consistentNNData = (vocabulary_->size()!=0 && vocabulary_->wordToObjects().begin().value()!=-1 && Settings::getGeneral_invertedSearch()) ||
@@ -1063,9 +1147,9 @@ bool FindObject::detect(const cv::Mat & image, find_object::DetectionInfo & info
 
 			if(!Settings::getGeneral_invertedSearch())
 			{
+				vocabulary_->clear();
 				// CREATE INDEX for the scene
 				UDEBUG("CREATE INDEX FOR THE SCENE");
-				vocabulary_->clear();
 				words = vocabulary_->addWords(info.sceneDescriptors_, -1, Settings::getGeneral_vocabularyIncremental());
 				if(!Settings::getGeneral_vocabularyIncremental())
 				{
@@ -1235,7 +1319,13 @@ bool FindObject::detect(const cv::Mat & image, find_object::DetectionInfo & info
 					for(int k=i; k<i+threadCounts && k<matchesList.size(); ++k)
 					{
 						int objectId = matchesId[k];
-						threads.push_back(new HomographyThread(&matchesList[k], objectId, &objects_.value(objectId)->keypoints(), &info.sceneKeypoints_));
+						threads.push_back(new HomographyThread(
+								&matchesList[k],
+								objectId,
+								&objects_.value(objectId)->keypoints(),
+								&info.sceneKeypoints_,
+								objects_.value(objectId)->image(),
+								grayscaleImg));
 						threads.back()->start();
 					}
 
@@ -1353,8 +1443,6 @@ bool FindObject::detect(const cv::Mat & image, find_object::DetectionInfo & info
 						if(code == DetectionInfo::kRejectedUndef)
 						{
 							// Accepted!
-							//std::cout << "H= " << threads[j]->getHomography() << std::endl;
-
 							info.objDetected_.insert(id, hTransform);
 							info.objDetectedSizes_.insert(id, objects_.value(id)->rect().size());
 							info.objDetectedInliers_.insert(id, threads[j]->getInliers());
