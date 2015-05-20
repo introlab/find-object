@@ -7,7 +7,7 @@ Find-Object project, visit the [home page](http://introlab.github.io/find-object
 ```bash
 # Install ROS Groovy/Hydro/Indigo/Jade (catkin build):
  $ cd ~/catkin_ws
- $ git clone -b find_object_2d https://github.com/introlab/find-object.git src/find_object_2d
+ $ git clone https://github.com/introlab/find-object.git src/find_object_2d
  $ catkin_make
 
 # Install ROS Fuerte (in a directory of your "ROS_PACKAGE_PATH"):
