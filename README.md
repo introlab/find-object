@@ -4,6 +4,18 @@ Find-Object project, visit the [home page](http://introlab.github.io/find-object
 ## find_object_2d (ROS package)
 
 ### Install
+
+Binaries:
+```bash
+# ROS Jade:
+ $ sudo apt-get install ros-jade-find-object-2d
+# ROS Indigo:
+ $ sudo apt-get install ros-indigo-find-object-2d
+# ROS Hydro:
+ $ sudo apt-get install ros-hydro-find-object-2d
+```
+
+Source:
 ```bash
 # Install ROS Groovy/Hydro/Indigo/Jade (catkin build):
  $ cd ~/catkin_ws
