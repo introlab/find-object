@@ -115,12 +115,12 @@ class FINDOBJECT_EXP Settings
 
 	//List format : [Index:item0;item1;item3;...]
 
-	PARAMETER_COND(Feature2D, 1Detector, QString, FINDOBJECT_NONFREE, "7:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK" , "1:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK", "Keypoint detector.");
-	PARAMETER_COND(Feature2D, 2Descriptor, QString, FINDOBJECT_NONFREE, "3:Brief;ORB;SIFT;SURF;BRISK;FREAK", "0:Brief;ORB;SIFT;SURF;BRISK;FREAK", "Keypoint descriptor.");
+	PARAMETER_COND(Feature2D, 1Detector, QString, FINDOBJECT_NONFREE, "7:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK" , "2:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK", "Keypoint detector.");
+	PARAMETER_COND(Feature2D, 2Descriptor, QString, FINDOBJECT_NONFREE, "3:Brief;ORB;SIFT;SURF;BRISK;FREAK", "5:Brief;ORB;SIFT;SURF;BRISK;FREAK", "Keypoint descriptor.");
 	PARAMETER(Feature2D, 3MaxFeatures, int, 0, "Maximum features per image. If the number of features extracted is over this threshold, only X features with the highest response are kept. 0 means all features are kept.");
 	PARAMETER(Feature2D, 4Affine, bool, false, "(ASIFT) Extract features on multiple affine transformations of the image.");
 	PARAMETER(Feature2D, 5AffineCount, int, 6, "(ASIFT) Higher the value, more affine transformations will be done.");
-	PARAMETER(Feature2D, 6SubPix, bool, FINDOBJECT_NONFREE != 1, "Refines the corner locations. With SIFT/SURF, features are already subpixel, so no need to activate this.");
+	PARAMETER(Feature2D, 6SubPix, bool, false, "Refines the corner locations. With SIFT/SURF, features are already subpixel, so no need to activate this.");
 	PARAMETER(Feature2D, 7SubPixWinSize, int, 3, "Half of the side length of the search window. For example, if winSize=Size(5,5) , then a 5*2+1 x 5*2+1 = 11 x 11 search window is used.");
 	PARAMETER(Feature2D, 8SubPixIterations, int, 30, "The process of corner position refinement stops after X iterations.");
 	PARAMETER(Feature2D, 9SubPixEps, float, 0.02, "The process of corner position refinement stops when the corner position moves by less than epsilon on some iteration.");
