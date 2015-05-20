@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <meta name="description" content="Find-Object : Simple Qt interface to try OpenCV implementations of SIFT, SURF, FAST, BRIEF and other feature detectors and descriptors.">
+
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+    <title>Find-Object</title>
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/introlab/find-object">View on GitHub</a>
+
+          <h1 id="project_title">Find-Object</h1>
+          <h2 id="project_tagline">Simple Qt interface to try OpenCV implementations of SIFT, SURF, FAST, BRIEF and other feature detectors and descriptors.</h2>
+
+            <section id="downloads">
+              <a class="zip_download_link" href="https://github.com/introlab/find-object/zipball/master">Download this project as a .zip file</a>
+              <a class="tar_download_link" href="https://github.com/introlab/find-object/tarball/master">Download this project as a tar.gz file</a>
+            </section>
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <h1>
+<a id="overview" class="anchor" href="#overview" aria-hidden="true"><span class="octicon octicon-link"></span></a>Overview</h1>
+
+<p><img src="https://raw.githubusercontent.com/introlab/find-object/master/src/resources/Find-Object.png" alt="Find-Object logo" title="Find-Object" width="120"></p>
+
+<p>Using a webcam:</p>
+
+<ol>
+<li>Go "Edit" -&gt; "Add object...",</li>
+<li>Present an object, </li>
+<li>Select the features extracted from the object, return to main screen,</li>
+<li>Play ("Edit" -&gt; "Start") and </li>
+<li>See highlighted features corresponding to the object.</li>
+</ol>
+
+<p>Features:</p>
+
+<ul>
+<li>You can change any parameters at runtime, make it easier to test feature detectors and descriptors without always recompiling.</li>
+<li>Detectors/descriptors supported (from OpenCV): BRIEF, Dense, FAST, GoodFeaturesToTrack, MSER, ORB, SIFT, STAR, SURF, FREAK and BRISK.</li>
+<li>Sample code with the OpenCV C++ interface <a href="http://introlab.github.io/find-object/#Code_example">below</a>...</li>
+<li>For an example of an application using SURF descriptors: see my project <a href="http://introlab.github.io/rtabmap">RTAB-Map</a> (an appearance-based loop closure detector for SLAM).</li>
+</ul>
+
+<h1>
+<a id="screenshots" class="anchor" href="#screenshots" aria-hidden="true"><span class="octicon octicon-link"></span></a>Screenshots</h1>
+
+<ul>
+<li><p>Add object:
+<img src="https://raw.githubusercontent.com/wiki/introlab/find-object/doc/Add_object.png"></p></li>
+<li><p>Enjoy detections:
+<img src="https://raw.githubusercontent.com/wiki/introlab/find-object/doc/Find_object.png"></p></li>
+<li><p>Change algorithms' parameters (mapping OpenCV names), here using STAR detector and BRIEF descriptors:
+<img src="https://raw.githubusercontent.com/wiki/introlab/find-object/doc/Parameters.png"></p></li>
+</ul>
+
+<h1>
+<a id="license" class="anchor" href="#license" aria-hidden="true"><span class="octicon octicon-link"></span></a>License</h1>
+
+<ul>
+<li>If OpenCV is built <strong>without the nonfree</strong> module, Find-Object can be used under the permissive BSD License.</li>
+<li>If OpenCV is built <strong>with the nonfree</strong> module, Find-Object is free for research only because it depends on SURF and SIFT features. SIFT and SURF are not free for commercial use.
+
+<ul>
+<li>SURF noncommercial notice: <a href="http://www.vision.ee.ethz.ch/%7Esurf/download.html">http://www.vision.ee.ethz.ch/~surf/download.html</a>
+</li>
+<li>SIFT patent: <a href="http://www.cs.ubc.ca/%7Elowe/keypoints/">http://www.cs.ubc.ca/~lowe/keypoints/</a>
+</li>
+</ul>
+</li>
+</ul>
+
+<h1>
+<a id="author" class="anchor" href="#author" aria-hidden="true"><span class="octicon octicon-link"></span></a>Author</h1>
+
+<ul>
+<li>
+<a href="https://introlab.3it.usherbrooke.ca/mediawiki-introlab/index.php?title=Mathieu_Labb%C3%A9&amp;setlang=en">Mathieu Labbé</a>
+
+<ul>
+<li>Similar project: <a href="http://introlab.github.io/rtabmap">RTAB-Map</a> (6-DOF RGB-D SLAM/scanning with a Kinect)</li>
+</ul>
+</li>
+</ul>
+
+<h1>
+<a id="news" class="anchor" href="#news" aria-hidden="true"><span class="octicon octicon-link"></span></a>News</h1>
+
+<p>June 2015</p>
+
+<ul>
+<li>Moving from <a href="find-object.googlecode.com">GoogleCode</a> to GitHub!</li>
+</ul>
+
+<p>February 2015</p>
+
+<ul>
+<li>New Version 0.5.1
+
+<ul>
+<li>Added Drag&amp;Drop feature to drop image files into objects and scene panels.</li>
+<li>Added Save/Load session in File menu. Everything (objects, features extracted, vocabulary and settings) of the current session is saved into a single file, and can be restored very fast.</li>
+<li>Objects can be added/removed through TCP.</li>
+<li>ROS: added <code>session_path</code> parameter to load a session on start.</li>
+<li>Downloads:</li>
+<li>
+<a href="http://bit.ly/FindObject051zip">Find-Object-0.5.1-Source.zip</a> (Source)</li>
+<li>
+<a href="http://bit.ly/FindObject051win64exe">Find-Object-0.5.1-win64.exe</a> (Windows binaries, installer)</li>
+<li>
+<a href="http://bit.ly/FindObject051dmg">Find-Object-0.5.1-Darwin.dmg</a> (Mac OS X binaries)
+August 2014</li>
+</ul>
+</li>
+<li>New Version 0.5.0
+
+<ul>
+<li>Improved stability.</li>
+<li>Console mode: see <code>$ find_object --help</code> on terminal.</li>
+<li>Added <strong>ASIFT</strong>: check <code>Feature2D/Affine</code> parameter to activate. If you have many CPUs, you may want to increase <em>General/Threads</em> to 4.</li>
+<li>Added library interface.</li>
+<li>Added <strong>JSON</strong> output and <a href="https://github.com/introlab/find-object/wiki/TcpRequest">TCP request example</a>.</li>
+<li>Downloads:</li>
+<li>
+<a href="http://bit.ly/1pOaPmR">Find-Object-0.5.0-Source.zip</a> (Source)</li>
+<li>
+<a href="http://bit.ly/1wKTzUp">Find-Object-0.5.0-Win64.exe</a> (Windows binaries, installer)</li>
+<li>
+<a href="http://bit.ly/VRrzgY">Find-Object-0.5.0-Win64-cuda.exe</a> (Windows binaries, installer, CUDA 6 required)</li>
+<li>
+<a href="http://bit.ly/1tQlsFU">Find-Object-0.5.0-Darwin.dmg</a> (Mac OS X binaries)</li>
+</ul>
+</li>
+<li>I did a fork of the source code for GitHub and I will keep it synchronized with the svn here. It will be easier for you to customize the code with a fork on GitHub.
+
+<ul>
+<li><a href="https://github.com/introlab/find-object">GitHub for Find-Object</a></li>
+</ul>
+</li>
+<li>
+<p>I posted a video on my another project <a href="http://introlab.github.io/rtabmap">RTAB-Map</a> where Find-Object runs in parallel during the mapping (you can <a href="http://wiki.ros.org/rtabmap_ros#Robot_mapping_with_Find-Object">try the demo here</a>). There are five books which can be detected, take a look:</p>
+
+<p><a href="http://www.youtube.com/watch?v=o1GSQanY-Do" target="_blank"><img src="https://raw.githubusercontent.com/wiki/introlab/rtabmap/doc/video_screenshots/findobject.jpeg" alt="video" title="video"></a></p>
+</li>
+</ul>
+
+<p><a href="http://introlab.github.io/find-object/#Older_news">Older news</a></p>
+
+<h1>
+<a id="tutorials" class="anchor" href="#tutorials" aria-hidden="true"><span class="octicon octicon-link"></span></a>Tutorials</h1>
+
+<h3>
+<a id="find-objects-with-a-webcam" class="anchor" href="#find-objects-with-a-webcam" aria-hidden="true"><span class="octicon octicon-link"></span></a>Find objects with a webcam</h3>
+
+<p><a href="https://github.com/introlab/find-object/wiki/FindObjectsWithWebcam"><img src="https://raw.githubusercontent.com/wiki/introlab/find-object/doc/tutorial1/13.png" alt="Find objects with a webcam"></a></p>
+
+<h3>
+<a id="about-changing-parameters" class="anchor" href="#about-changing-parameters" aria-hidden="true"><span class="octicon octicon-link"></span></a>About changing parameters</h3>
+
+<p><a href="https://github.com/introlab/find-object/wiki/ChangeParameters"><img src="https://raw.githubusercontent.com/wiki/introlab/find-object/doc/tutorial2/4.png" alt="About changing parameters"></a></p>
+
+<h3>
+<a id="place-recognition-likelihood-computation" class="anchor" href="#place-recognition-likelihood-computation" aria-hidden="true"><span class="octicon octicon-link"></span></a>Place recognition (likelihood computation)</h3>
+
+<p><a href="https://github.com/introlab/find-object/wiki/InvertedSearch"><img src="https://raw.githubusercontent.com/wiki/introlab/find-object/doc/tutorial3/12.png" alt="Place recognition (likelihood computation)"></a></p>
+
+<h3>
+<a id="detection-of-multiple-occurrences-of-the-same-object" class="anchor" href="#detection-of-multiple-occurrences-of-the-same-object" aria-hidden="true"><span class="octicon octicon-link"></span></a>Detection of multiple occurrences of the same object</h3>
+
+<p><a href="https://github.com/introlab/find-object/wiki/MultiDetection"><img src="https://raw.githubusercontent.com/wiki/introlab/find-object/doc/tutorial4/1.png" alt="Detection of multiple occurrences of the same object"></a></p>
+
+<h3>
+<a id="beers-wall-many-objects-detection" class="anchor" href="#beers-wall-many-objects-detection" aria-hidden="true"><span class="octicon octicon-link"></span></a>Beers wall (many objects detection)</h3>
+
+<p><a href="https://github.com/introlab/find-object/wiki/BeersWall"><img src="https://raw.githubusercontent.com/wiki/introlab/find-object/doc/tutorial5/results1000.jpg" alt="Detection of multiple occurrences of the same object"></a></p>
+
+<h3>
+<a id="tcp-request" class="anchor" href="#tcp-request" aria-hidden="true"><span class="octicon octicon-link"></span></a>TCP request</h3>
+
+<p><a href="https://github.com/introlab/find-object/wiki/TcpRequest"><img src="https://raw.githubusercontent.com/wiki/introlab/find-object/doc/tcp_request.png" alt="TCP request example"></a></p>
+
+<h1>
+<a id="install" class="anchor" href="#install" aria-hidden="true"><span class="octicon octicon-link"></span></a>Install</h1>
+
+<h2>
+<a id="binaries-recommended" class="anchor" href="#binaries-recommended" aria-hidden="true"><span class="octicon octicon-link"></span></a>Binaries (recommended)</h2>
+
+<ul>
+<li>Windows : Download the <code>Find-Object-#.#.#-Win32.exe</code> or <code>Find-Object-#.#.#-Win32.zip</code> in the <a href="http://introlab.github.io/find-object/#News">News</a> section above.</li>
+<li>Mac OS X : Download the <code>Find-Object-#.#.#-Darwin.dmg</code> file in the <a href="http://introlab.github.io/find-object/#News">News</a> section above.</li>
+<li>Linux : See <a href="http://introlab.github.io/find-object/#From_source_(Ubuntu,_Mac_OS_X,_Windows)">From source</a> below.</li>
+</ul>
+
+<h2>
+<a id="ros" class="anchor" href="#ros" aria-hidden="true"><span class="octicon octicon-link"></span></a>ROS</h2>
+
+<p>See <a href="https://github.com/introlab/find-object/tree/find_object_2d#find_object_2d-ros-package">find_object_2d</a> branch on GitHub.</p>
+
+<h2>
+<a id="from-source-ubuntu-mac-os-x-windows" class="anchor" href="#from-source-ubuntu-mac-os-x-windows" aria-hidden="true"><span class="octicon octicon-link"></span></a>From source (Ubuntu, Mac OS X, Windows)</h2>
+
+<h3>
+<a id="requirements" class="anchor" href="#requirements" aria-hidden="true"><span class="octicon octicon-link"></span></a>Requirements</h3>
+
+<ul>
+<li>CMake (tested on 2.8.7)</li>
+<li>Qt4 (tested on 4.8.1)</li>
+<li>OpenCV (tested on 2.4.0 / trunk now on 2.4.3rc)</li>
+<li>Visual Studio or MinGW (only for Windows)</li>
+</ul>
+
+<div class="highlight highlight-bash"><pre>Ubuntu <span class="pl-c1">:</span>
+ $ sudo apt-get install cmake libqt4-dev libopencv2.4-dev</pre></div>
+
+<h3>
+<a id="download" class="anchor" href="#download" aria-hidden="true"><span class="octicon octicon-link"></span></a>Download</h3>
+
+<ul>
+<li>Download ZIP file on top of this page or clone the latest version from GIT:</li>
+</ul>
+
+<div class="highlight highlight-bash"><pre> $ git clone https://github.com/introlab/find-object.git</pre></div>
+
+<h3>
+<a id="build" class="anchor" href="#build" aria-hidden="true"><span class="octicon octicon-link"></span></a>Build</h3>
+
+<ul>
+<li>Unix (Ubuntu, Mac OS X):</li>
+</ul>
+
+<div class="highlight highlight-bash"><pre> $ <span class="pl-c1">cd</span> find_object/build
+ $ cmake -DCMAKE_BUILD_TYPE=Release ..
+ $ make
+ $ <span class="pl-c1">cd</span> ../bin
+ $ ./find_object</pre></div>
+
+<ul>
+<li>Windows (Visual Studio):</li>
+</ul>
+
+<div class="highlight highlight-bash"><pre> $ <span class="pl-c1">cd</span> find_object/build
+ $ cmake -G<span class="pl-s"><span class="pl-pds">"</span>NMake Makefiles<span class="pl-pds">"</span></span> -DCMAKE_BUILD_TYPE=Release ..
+ $ nmake
+ $ <span class="pl-c1">cd</span> ../bin
+ $ Find-Object.exe</pre></div>
+
+<ul>
+<li>Windows (MinGW):</li>
+</ul>
+
+<div class="highlight highlight-bash"><pre> $ <span class="pl-c1">cd</span> find_object/build
+ $ cmake -G<span class="pl-s"><span class="pl-pds">"</span>MinGW Makefiles<span class="pl-pds">"</span></span> -DCMAKE_BUILD_TYPE=Release ..
+ $ make
+ $ <span class="pl-c1">cd</span> ../bin
+ $ Find-Object.exe</pre></div>
+
+<h1>
+<a id="uninstall" class="anchor" href="#uninstall" aria-hidden="true"><span class="octicon octicon-link"></span></a>Uninstall</h1>
+
+<ul>
+<li>Windows:
+
+<ul>
+<li>Use the uninstaller.</li>
+<li>For a full cleanup, you can remove the config file in <code>$USER_DIRECTORY$/Documents/FindObject</code>.</li>
+</ul>
+</li>
+<li>Mac OS X:
+
+<ul>
+<li>Drag and drop the application in the trash.</li>
+<li>For a full cleanup, you can remove the config file in <code>~/.find_object</code>.</li>
+</ul>
+</li>
+<li>Ubuntu or Mac OS X "Unix" installation style:
+
+<ul>
+<li>Remove <code>$YOUR_INSTALL_PATH$/bin/find_object</code> (default path is <code>/usr/local/bin/find_object</code>).</li>
+<li>For a full cleanup, you can remove the config file in <code>~/.find_object</code>.</li>
+</ul>
+</li>
+</ul>
+
+<div class="highlight highlight-bash"><pre> $ sudo rm /usr/local/bin/find_object
+ $ rm -rf <span class="pl-k">~</span>/.find_object</pre></div>
+
+<h1>
+<a id="code-example" class="anchor" href="#code-example" aria-hidden="true"><span class="octicon octicon-link"></span></a>Code example</h1>
+
+<ul>
+<li>Here an example of features extraction (with OpenCV C++ interface) and nearest neighbor search with Flann library. This code can be found in this sample application <a href="https://github.com/introlab/find-object/blob/master/example/main.cpp">main.cpp</a>. Sample images from OpenCV : <a href="https://raw.githubusercontent.com/wiki/introlab/find-object/find_object/bin/box.png">box.png</a> and <a href="https://raw.githubusercontent.com/wiki/introlab/find-object/find_object/bin/box_in_scene.png">box_in_scene.png</a>. Example results:</li>
+</ul>
+
+<div class="highlight highlight-bash"><pre>./find_object-example box.png box_in_scene.png
+Loading images: 5 ms
+Object: 198 keypoints detected <span class="pl-k">in</span> 12 ms
+Scene: 355 keypoints detected <span class="pl-k">in</span> 27 ms
+Object: 198 descriptors extracted <span class="pl-k">in</span> 20 ms
+Scene: 355 descriptors extracted <span class="pl-k">in</span> 42 ms
+Time creating FLANN index = 3 ms
+Time nearest neighbor search = 3 ms
+Time finding homography = 2 ms
+Inliers=34 Outliers=12</pre></div>
+
+<p><img src="https://raw.githubusercontent.com/wiki/introlab/find-object/doc/Box_example.png"></p>
+
+<div class="highlight highlight-cpp"><pre><span class="pl-c">// OpenCV stuff</span>
+#<span class="pl-k">include</span> <span class="pl-s"><span class="pl-pds">&lt;</span>opencv2/core/core.hpp<span class="pl-pds">&gt;</span></span>
+#<span class="pl-k">include</span> <span class="pl-s"><span class="pl-pds">&lt;</span>opencv2/highgui/highgui.hpp<span class="pl-pds">&gt;</span></span>
+#<span class="pl-k">include</span> <span class="pl-s"><span class="pl-pds">&lt;</span>opencv2/features2d/features2d.hpp<span class="pl-pds">&gt;</span></span>
+#<span class="pl-k">include</span> <span class="pl-s"><span class="pl-pds">&lt;</span>opencv2/nonfree/features2d.hpp<span class="pl-pds">&gt;</span></span>
+#<span class="pl-k">include</span> <span class="pl-s"><span class="pl-pds">&lt;</span>opencv2/calib3d/calib3d.hpp<span class="pl-pds">&gt;</span></span> <span class="pl-c">// for homography</span>
+
+<span class="pl-c">//...</span>
+
+<span class="pl-c">// LOAD IMAGES (as grayscale)</span>
+cv::Mat objectImg = cv::imread(argv[<span class="pl-c1">1</span>], cv::IMREAD_GRAYSCALE);
+﻿cv::Mat sceneImg = cv::imread(argv[<span class="pl-c1">2</span>], cv::IMREAD_GRAYSCALE);
+
+std::vector&lt;cv::KeyPoint&gt; objectKeypoints;
+﻿std::vector&lt;cv::KeyPoint&gt; sceneKeypoints;
+﻿cv::Mat objectDescriptors;
+﻿cv::Mat sceneDescriptors;
+
+<span class="pl-c">////////////////////////////</span>
+﻿<span class="pl-c">// EXTRACT KEYPOINTS</span>
+﻿<span class="pl-c">////////////////////////////</span>
+﻿<span class="pl-c">// The detector can be any of (see OpenCV features2d.hpp):</span>
+﻿<span class="pl-c">// cv::FeatureDetector * detector = new cv::DenseFeatureDetector();</span>
+﻿<span class="pl-c">// cv::FeatureDetector * detector = new cv::FastFeatureDetector();</span>
+﻿<span class="pl-c">// cv::FeatureDetector * detector = new cv::GFTTDetector();</span>
+<span class="pl-c">// cv::FeatureDetector * detector = new cv::MSER();</span>
+﻿<span class="pl-c">// cv::FeatureDetector * detector = new cv::ORB();</span>
+﻿cv::FeatureDetector * detector = <span class="pl-k">new</span> cv::SIFT();
+﻿<span class="pl-c">// cv::FeatureDetector * detector = new cv::StarFeatureDetector();</span>
+﻿<span class="pl-c">// cv::FeatureDetector * detector = new cv::SURF(600.0);</span>
+<span class="pl-c">// cv::FeatureDetector * detector = new cv::BRISK();</span>
+﻿detector-&gt;<span class="pl-en">detect</span>(objectImg, objectKeypoints);
+﻿detector-&gt;<span class="pl-en">detect</span>(sceneImg, sceneKeypoints);
+<span class="pl-k">delete</span> detector;
+
+<span class="pl-c">////////////////////////////</span>
+<span class="pl-c">// EXTRACT DESCRIPTORS</span>
+<span class="pl-c">////////////////////////////</span>
+<span class="pl-c">// The extractor can be any of (see OpenCV features2d.hpp):</span>
+﻿<span class="pl-c">// cv::DescriptorExtractor * extractor = new cv::BriefDescriptorExtractor();</span>
+<span class="pl-c">// cv::DescriptorExtractor * extractor = new cv::ORB();</span>
+cv::DescriptorExtractor * extractor = <span class="pl-k">new</span> cv::SIFT();
+﻿<span class="pl-c">// cv::DescriptorExtractor * extractor = new cv::SURF(600.0);</span>
+<span class="pl-c">// cv::DescriptorExtractor * extractor = new cv::BRISK();</span>
+<span class="pl-c">// cv::DescriptorExtractor * extractor = new cv::FREAK();</span>
+﻿extractor-&gt;<span class="pl-en">compute</span>(objectImg, objectKeypoints, objectDescriptors);
+﻿extractor-&gt;<span class="pl-en">compute</span>(sceneImg, sceneKeypoints, sceneDescriptors);
+<span class="pl-k">delete</span> extractor;
+
+<span class="pl-c">////////////////////////////</span>
+﻿<span class="pl-c">// NEAREST NEIGHBOR MATCHING USING FLANN LIBRARY (included in OpenCV)</span>
+﻿<span class="pl-c">////////////////////////////</span>
+cv::Mat results;
+cv::Mat dists;
+<span class="pl-k">int</span> k=<span class="pl-c1">2</span>; <span class="pl-c">// find the 2 nearest neighbors</span>
+<span class="pl-k">if</span>(objectDescriptors.type()==CV_8U)
+{
+    <span class="pl-c">// Binary descriptors detected (from ORB or Brief)</span>
+
+    <span class="pl-c">// Create Flann LSH index</span>
+    cv::flann::Index <span class="pl-smi">flannIndex</span>(sceneDescriptors, <span class="pl-c1">cv::flann::LshIndexParams</span>(<span class="pl-c1">12</span>, <span class="pl-c1">20</span>, <span class="pl-c1">2</span>), cvflann::FLANN_DIST_HAMMING);
+
+    <span class="pl-c">// search (nearest neighbor)</span>
+    flannIndex.<span class="pl-c1">knnSearch</span>(objectDescriptors, results, dists, k, <span class="pl-c1">cv::flann::SearchParams</span>() );
+}
+<span class="pl-k">else</span>
+{
+    <span class="pl-c">// assume it is CV_32F</span>
+    <span class="pl-c">// Create Flann KDTree index</span>
+    cv::flann::Index <span class="pl-smi">flannIndex</span>(sceneDescriptors, <span class="pl-c1">cv::flann::KDTreeIndexParams</span>(), cvflann::FLANN_DIST_EUCLIDEAN);
+
+    <span class="pl-c">// search (nearest neighbor)</span>
+    flannIndex.<span class="pl-c1">knnSearch</span>(objectDescriptors, results, dists, k, <span class="pl-c1">cv::flann::SearchParams</span>() );
+}
+
+<span class="pl-c">// Conversion to CV_32F if needed</span>
+<span class="pl-k">if</span>(dists.type() == CV_32S)
+{
+    cv::Mat temp;
+    dists.<span class="pl-c1">convertTo</span>(temp, CV_32F);
+    dists = temp;
+}
+﻿
+
+<span class="pl-c">////////////////////////////</span>
+<span class="pl-c">// PROCESS NEAREST NEIGHBOR RESULTS</span>
+<span class="pl-c">////////////////////////////</span>
+<span class="pl-c">// Find correspondences by NNDR (Nearest Neighbor Distance Ratio)</span>
+<span class="pl-k">float</span> nndrRatio = <span class="pl-c1">0.8</span>;
+std::vector&lt;cv::Point2f&gt; mpts_1, mpts_2; <span class="pl-c">// Used for homography</span>
+std::vector&lt;<span class="pl-k">int</span>&gt; indexes_1, indexes_2; <span class="pl-c">// Used for homography</span>
+std::vector&lt;uchar&gt; outlier_mask;  <span class="pl-c">// Used for homography</span>
+<span class="pl-k">for</span>(<span class="pl-k">unsigned</span> <span class="pl-k">int</span> i=<span class="pl-c1">0</span>; i&lt;objectData.rows; ++i)
+{
+    <span class="pl-c">// Check if this descriptor matches with those of the objects</span>
+    <span class="pl-c">// Apply NNDR</span>
+    <span class="pl-k">if</span>(results.<span class="pl-smi">at</span>&lt;<span class="pl-k">int</span>&gt;(i,<span class="pl-c1">0</span>) &gt;= <span class="pl-c1">0</span> &amp;&amp; results.<span class="pl-smi">at</span>&lt;<span class="pl-k">int</span>&gt;(i,<span class="pl-c1">1</span>) &gt;= <span class="pl-c1">0</span> &amp;&amp; dists.<span class="pl-smi">at</span>&lt;<span class="pl-k">float</span>&gt;(i,<span class="pl-c1">0</span>) &lt;= nndrRatio * dists.<span class="pl-smi">at</span>&lt;<span class="pl-k">float</span>&gt;(i,<span class="pl-c1">1</span>))
+    {
+        mpts_1.<span class="pl-c1">push_back</span>(objectKeypoints.<span class="pl-c1">at</span>(i).<span class="pl-smi">pt</span>);
+        indexes_1.<span class="pl-c1">push_back</span>(i);
+
+        mpts_2.<span class="pl-c1">push_back</span>(sceneKeypoints.<span class="pl-c1">at</span>(results.<span class="pl-smi">at</span>&lt;<span class="pl-k">int</span>&gt;(i,<span class="pl-c1">0</span>)).<span class="pl-smi">pt</span>);
+        indexes_2.<span class="pl-c1">push_back</span>(results.<span class="pl-smi">at</span>&lt;<span class="pl-k">int</span>&gt;(i,<span class="pl-c1">0</span>));
+    }
+}
+
+<span class="pl-c">// FIND HOMOGRAPHY</span>
+<span class="pl-k">int</span> nbMatches = <span class="pl-c1">8</span>;
+<span class="pl-k">if</span>(mpts_1.size() &gt;= nbMatches)
+{
+    cv::Mat H = <span class="pl-c1">findHomography</span>(mpts_1,
+            mpts_2,
+            cv::RANSAC,
+            <span class="pl-c1">1.0</span>,
+            outlier_mask);
+    <span class="pl-c">// Do what you want with the homography (like showing a rectangle)</span>
+    <span class="pl-c">// The "outlier_mask" contains a mask representing the inliers and outliers.</span>
+    <span class="pl-c">// ...</span>
+}
+</pre></div>
+
+<h1>
+<a id="older-news" class="anchor" href="#older-news" aria-hidden="true"><span class="octicon octicon-link"></span></a>Older news</h1>
+
+<p>July 2014</p>
+
+<ul>
+<li>
+<strong>ROS</strong> new feature 
+
+<ul>
+<li>When using Kinect-like sensors, you can set <strong>find_object_2d</strong> node in a mode that  publishes 3D positions of the objects over TF. See 3D position of objects on ROS <a href="http://wiki.ros.org/find_object_2d">find_object_2d</a> page.
+<img src="https://raw.githubusercontent.com/wiki/introlab/find-object/doc/ros_find_object_3d.png" width="600">
+</li>
+</ul>
+</li>
+</ul>
+
+<p>June 2014</p>
+
+<ul>
+<li>New Version 0.4.6
+
+<ul>
+<li>Fixed a bug when changing from float descriptors to binary descriptors (issue 22).</li>
+<li>Fixed slow BRISK issue... now running under 10 ms (issue 21).</li>
+<li>Fixed missing libOpenNI.dylib on Mac (issue 25).</li>
+<li>Downloads:</li>
+<li>
+<a href="http://bit.ly/1pnrmPW">Find-Object-0.4.6-Source.zip</a> (Source)</li>
+<li>
+<a href="http://bit.ly/VrDu5B">Find-Object-0.4.6-Win64.exe</a> (Windows binaries, installer)</li>
+<li>
+<a href="http://bit.ly/VrCZsc">Find-Object-0.4.6-Win64-cuda6.exe</a> (Windows binaries, installer, CUDA 6 required)</li>
+<li>
+<a href="http://bit.ly/1wCc0Hi">Find-Object-0.4.6-Darwin.dmg</a> (Mac OS X binaries)</li>
+</ul>
+</li>
+<li>New Version 0.4.5
+
+<ul>
+<li>Added GPU-SURF support when OpenCV is built with CUDA. See parameter "Feature2D -&gt; SURF -&gt; SURF_gpu".</li>
+<li>Downloads:</li>
+<li>
+<a href="http://bit.ly/1qpURA3">Find-Object-0.4.5-Source.zip</a> (Source)</li>
+<li>
+<a href="http://bit.ly/1oCcBbL">Find-Object-0.4.5-win64-cuda6.exe</a> (Windows 64 bits binaries, installer, <a href="https://developer.nvidia.com/cuda-downloads">CUDA 6</a> driver required)</li>
+</ul>
+</li>
+<li>New Version 0.4.4
+
+<ul>
+<li>Added bag-of-words (BOW) matching using an <strong>incremental vocabulary</strong>.</li>
+<li>New tutorial <a href="https://github.com/introlab/find-object/wiki/BeersWall">Beers wall</a> for detection of many objects.</li>
+<li>Updated tutorial <a href="https://github.com/introlab/find-object/wiki/InvertedSearch">Place recognition</a>.</li>
+<li>Downloads:</li>
+<li>
+<a href="http://bit.ly/1n4p9mU">Find-Object-0.4.4-Darwin.dmg</a> (Mac OS X binaries)</li>
+<li>
+<a href="http://bit.ly/1xFFOV3">Find-Object-0.4.4-Source.zip</a> (Source)</li>
+<li>
+<a href="http://bit.ly/1nwa6E5">Find-Object-0.4.4-Win32.exe</a> (Windows binaries, installer)</li>
+<li>
+<a href="http://bit.ly/1oS4a87">Find-Object-0.4.4-Win32.zip</a> (Windows binaries)
+May 2014</li>
+</ul>
+</li>
+<li>New Version 0.4.3
+
+<ul>
+<li>Added <strong>TCP/IP interface</strong> to publish information about detected objects on a port.</li>
+<li>Updated tutorial <a href="https://github.com/introlab/find-object/wiki/FindObjectsWithWebcam#TCP_information">FindObjectsWithWebcam</a> with TCP connection example.</li>
+<li>Downloads:</li>
+<li>
+<a href="http://bit.ly/1fN33Xe">Find-Object-0.4.3-Darwin.dmg</a> (Mac OS X binaries)</li>
+<li>
+<a href="http://bit.ly/RkSGyY">Find-Object-0.4.3-Source.zip</a> (Source)</li>
+<li>
+<a href="http://bit.ly/1kJ7ikd">Find-Object-0.4.3-Win32.exe</a> (Windows binaries, installer)</li>
+<li>
+<a href="http://bit.ly/1lVAiIj">Find-Object-0.4.3-Win32.zip</a> (Windows binaries)
+April 2014</li>
+</ul>
+</li>
+<li>New Version 0.4.2
+
+<ul>
+<li>Updated ros-pkg for ROS Hydro (Catkin build).</li>
+<li>Mouse over parameters' label to show a description.</li>
+<li>
+<strong>Multi-threading</strong> : See <code>General/threads</code> parameter. </li>
+<li>Detection of <strong>multiple occurrences of the same object</strong> : See <code>General/multiDetection</code> parameter and tutorial <a href="https://github.com/introlab/find-object/wiki/MultiDetection">MultiDetection</a>.</li>
+<li>Added save/load settings in File menu.</li>
+<li>Downloads:</li>
+<li>
+<a href="http://bit.ly/1etchYj">Find-Object-0.4.2-Darwin.dmg</a> (Mac OS X binaries)</li>
+<li>
+<a href="http://bit.ly/1etcxXl">Find-Object-0.4.2-Source.zip</a> (Source)</li>
+<li>
+<a href="http://bit.ly/1ne1qkL">Find-Object-0.4.2-Win32.exe</a> (Windows binaries, installer)</li>
+<li>
+<a href="http://bit.ly/1n1CPlP">Find-Object-0.4.2-Win32.zip</a> (Windows binaries)
+February 2013</li>
+</ul>
+</li>
+<li>New version 0.4.1
+
+<ul>
+<li>Updated binary/source releases with OpenCV 2.4.3. <strong>FREAK</strong> and <strong>BRISK</strong> descriptors are now available.
+August 2012</li>
+</ul>
+</li>
+<li>New version 0.4.0
+
+<ul>
+<li>Added camera controls to browse frames of a video file or a directory of images.</li>
+<li>New <strong>inverted search mode</strong> for likelihood computation (see this <a href="https://github.com/introlab/find-object/wiki/InvertedSearch">InvertedSearch tutorial</a>).</li>
+<li>Added in the "Parameters" panel a new group for the choice of the FLANN nearest neighbor strategy (KD-Tree, K-Means, Linear, composite, auto-tuned). All FLANN parameters can be modified.</li>
+<li>Added 3 tutorials <a href="http://introlab.github.io/find-object/#Tutorials">below</a>.
+May 2012</li>
+</ul>
+</li>
+<li>New version 0.3.0.
+
+<ul>
+<li>Updated to use OpenCV 2.4 and ROS Fuerte. Some feature detectors/descriptors were updated with new/removed/modified parameters from OpenCV 2.4. </li>
+<li>Updated example <a href="http://introlab.github.io/find-object/#Code_example">below</a> accordingly to changes from OpenCV 2.4.</li>
+<li>If you upgrade from a previous version, it is recommended to execute "Edit-&gt;Restore all default settings" to clean the parameters.
+February 2012</li>
+</ul>
+</li>
+<li>New version 0.2.2
+
+<ul>
+<li>Support still images processing (png, jpg, bmp, tiff). Objects can be added from image files (Edit-&gt;Add objects from files...) and a scene can be loaded from an image file (Edit-&gt;Load scene from file...).</li>
+<li>Objects can be updated more easily when parameters are changed (button "Update objects"). You can also set "true" parameter General/autoUpdateObjects to update objects for each change "on the fly".</li>
+<li>Modified how objects are saved/loaded, now to/from a directory of images.</li>
+<li>Camera can be also set to use a video file (avi), see "Edit-&gt;Camera from video file...".</li>
+<li>ROS package's name is changed to find_object_2d, to differ from existing find_object package on the ROS's <a href="http://www.ros.org/wiki/find_object">wiki</a>.
+January 2012</li>
+</ul>
+</li>
+<li>New version 0.2.1
+
+<ul>
+<li>Fixed a crash on Windows when adding an object (r67).</li>
+<li>New parameter <code>Homography/homographyComputed</code> to detect outliers using RANSAC (default true). It is the same behavior as before, but it can be now easily deactivated to show all matched features. With the ROS package, this parameter must be on to publish objects detected.</li>
+<li>New parameters <code>NN/minDistanceUsed</code> and <code>NN/minDistance</code> can be used instead of/or with the NNDR criterion for nearest neighbor matching. To accept a match, the distance with the nearest neighbor must be &lt; minDistance. New statistics are added in Statistics panel to show the min and max matched distances, to better set this parameter across the different descriptors. For info when using NNDR, a match is accepted if the distance with the nearest neighbor is &lt; nndrRatio X distance with the second nearest neighbor (see <a href="http://www.google.com/url?sa=t&amp;rct=j&amp;q=distinctive%20image%20features%20from%20scale-invariant%20keypoints&amp;source=web&amp;cd=1&amp;ved=0CCEQFjAA&amp;url=http%3A%2F%2Fwww.cs.ubc.ca%2F%7Elowe%2Fpapers%2Fijcv04.pdf&amp;ei=bvoET9jNLcne0QH336mHAg&amp;usg=AFQjCNExaFk5YsadEaL01y1K6FRDDh5u3g">Lowe</a> (figure 11) to know how to adjust this parameter). </li>
+<li>ROS package: the full homography is sent with objects detected (a more general way than only sending the center position of the objects). See <a href="http://www.ros.org/wiki/find_object_2d">find_object_2d</a> for more details.</li>
+</ul>
+</li>
+</ul>
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p class="copyright">Find-Object maintained by <a href="https://github.com/introlab">introlab</a></p>
+        <p>Published with <a href="https://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+
+              <script type="text/javascript">
+            var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+            document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+          </script>
+          <script type="text/javascript">
+            try {
+              var pageTracker = _gat._getTracker("UA-56986679-2");
+            pageTracker._trackPageview();
+            } catch(err) {}
+          </script>
+
+
+  </body>
+</html>
