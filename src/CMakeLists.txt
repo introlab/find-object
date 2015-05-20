@@ -138,4 +138,15 @@ ELSE()
    add_executable(tf_example ros/tf_example_node.cpp)
    target_link_libraries(tf_example ${LIBRARIES})
    add_dependencies(tf_example find_object_2d_generate_messages_cpp)
+
+   ## Mark executables and/or libraries for installation
+   install(TARGETS 
+      find_object
+      find_object_2d 
+      print_objects_detected 
+      tf_example 
+      ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+      LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+      RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+    )
 ENDIF()

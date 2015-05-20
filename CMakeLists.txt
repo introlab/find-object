@@ -285,17 +285,6 @@ ELSE()
    #############
    ## Install ##
    #############
-   ## Mark executables and/or libraries for installation
-   install(TARGETS 
-      find_object
-      find_object_2d 
-      print_objects_detected 
-      tf_example 
-      ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-      LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-      RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-    )
-
    ## Mark other files for installation (e.g. launch and bag files, etc.)
    install(FILES
       launch/find_object_2d_gui.launch
