@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 
+OPTION(CATKIN_BUILD "Set to ON to build in a Catkin workspace (ROS)" OFF)
+
 IF(NOT CATKIN_BUILD)
    #Standalone build
    PROJECT( Find-Object )
@@ -7,8 +9,6 @@ ELSE()
    #Standalone build
    PROJECT( find_object_2d )
 ENDIF()
-
-OPTION(CATKIN_BUILD "Set to ON to build in a Catkin workspace (ROS)" OFF)
 
 #######################
 # VERSION
