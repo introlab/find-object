@@ -535,7 +535,7 @@ void MainWindow::loadObjects()
 	{
 		QDir d(dirPath);
 		bool recursive = false;
-		if(d.entryList(QDir::AllDirs).size())
+		if(d.entryList(QDir::AllDirs | QDir::NoDotAndDotDot).size())
 		{
 			QMessageBox::StandardButton b = QMessageBox::question(
 					this,
