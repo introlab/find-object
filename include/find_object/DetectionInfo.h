@@ -70,7 +70,7 @@ public:
 	// Those maps have the same size
 	QMultiMap<int, QTransform> objDetected_;
 	QMultiMap<int, QSize> objDetectedSizes_; // Object ID <width, height> match the number of detected objects
-	QMultiMap<int, QString > objDetectedFilenames_; // Object ID <filename> match the number of detected objects
+	QMultiMap<int, QString > objDetectedFilePaths_; // Object ID <filename> match the number of detected objects
 	QMultiMap<int, int> objDetectedInliersCount_; // ObjectID <count> match the number of detected objects
 	QMultiMap<int, int> objDetectedOutliersCount_; // ObjectID <count> match the number of detected objects
 	QMultiMap<int, QMultiMap<int, int> > objDetectedInliers_; // ObjectID Map< ObjectDescriptorIndex, SceneDescriptorIndex >, match the number of detected objects
@@ -98,7 +98,7 @@ inline QDataStream & operator<<(QDataStream &out, const DetectionInfo & info)
 	QMultiMap<int, int>::const_iterator iterInliers = info.objDetectedInliersCount_.constBegin();
 	QMultiMap<int, int>::const_iterator iterOutliers = info.objDetectedOutliersCount_.constBegin();
 	QMultiMap<int, QSize>::const_iterator iterSizes = info.objDetectedSizes_.constBegin();
-	QMultiMap<int, QString>::const_iterator iterFilenames = info.objDetectedFilenames_.constBegin();
+	QMultiMap<int, QString>::const_iterator iterFilenames = info.objDetectedFilePaths_.constBegin();
 	for(QMultiMap<int, QTransform>::const_iterator iter=info.objDetected_.constBegin();
 		iter!=info.objDetected_.constEnd();
 		++iter)
@@ -148,7 +148,7 @@ inline QDataStream & operator>>(QDataStream &in, DetectionInfo & info)
 		in >> id >> size >> homography >> filename >> inliers >> outliers;
 		info.objDetected_.insert(id, homography);
 		info.objDetectedSizes_.insert(id, size);
-		info.objDetectedFilenames_.insert(id, filename);
+		info.objDetectedFilePaths_.insert(id, filename);
 		info.objDetectedInliersCount_.insert(id, inliers);
 		info.objDetectedOutliersCount_.insert(id, outliers);
 	}

@@ -30,6 +30,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <QtCore/QFile>
 #include <QtCore/QTextStream>
+#include <QtCore/QFileInfo>
 
 #include "json/json.h"
 
@@ -48,7 +49,7 @@ void JsonWriter::write(const DetectionInfo & info, const QString & path)
 			QMultiMap<int, int>::const_iterator iterInliers = info.objDetectedInliersCount_.constBegin();
 			QMultiMap<int, int>::const_iterator iterOutliers = info.objDetectedOutliersCount_.constBegin();
 			QMultiMap<int, QSize>::const_iterator iterSizes = info.objDetectedSizes_.constBegin();
-			QMultiMap<int, QString>::const_iterator iterFilenames = info.objDetectedFilenames_.constBegin();
+			QMultiMap<int, QString>::const_iterator iterFilePaths = info.objDetectedFilePaths_.constBegin();
 			for(QMultiMap<int, QTransform>::const_iterator iter = info.objDetected_.constBegin(); iter!= info.objDetected_.end();)
 			{
 				char index = 'a';
@@ -73,13 +74,20 @@ void JsonWriter::write(const DetectionInfo & info, const QString & path)
 					root[name.toStdString()]["homography"] = homography;
 					root[name.toStdString()]["inliers"] = iterInliers.value();
 					root[name.toStdString()]["outliers"] = iterOutliers.value();
-					root[name.toStdString()]["filename"] = iterFilenames.value().toStdString();
+					root[name.toStdString()]["filepath"] = iterFilePaths.value().toStdString();
+					QString filename;
+					if(!iterFilePaths.value().isEmpty())
+					{
+						QFileInfo file(iterFilePaths.value());
+						filename=file.fileName();
+					}
+					root[name.toStdString()]["filename"] = filename.toStdString();
 
 					++iter;
 					++iterInliers;
 					++iterOutliers;
 					++iterSizes;
-					++iterFilenames;
+					++iterFilePaths;
 				}
 			}
 			root["objects"] = detections;

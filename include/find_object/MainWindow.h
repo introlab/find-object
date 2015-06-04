@@ -115,7 +115,7 @@ Q_SIGNALS:
 private:
 	bool loadSettings(const QString & path);
 	bool saveSettings(const QString & path) const;
-	int loadObjects(const QString & dirPath);
+	int loadObjects(const QString & dirPath, bool recursive = false);
 	int saveObjects(const QString & dirPath);
 	void setupTCPServer();
 	int addObjectFromFile(const QString & filePath);

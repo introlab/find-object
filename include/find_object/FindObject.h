@@ -69,9 +69,9 @@ public:
 	bool saveSession(const QString & path);
 	bool isSessionModified() const {return sessionModified_;}
 
-	int loadObjects(const QString & dirPath); // call updateObjects()
+	int loadObjects(const QString & dirPath, bool recursive = false); // call updateObjects()
 	const ObjSignature * addObject(const QString & filePath);
-	const ObjSignature * addObject(const cv::Mat & image, int id=0, const QString & filename = QString());
+	const ObjSignature * addObject(const cv::Mat & image, int id=0, const QString & filePath = QString());
 	bool addObject(ObjSignature * obj); // take ownership when true is returned
 	void removeObject(int id);
 	void removeAllObjects();
@@ -86,7 +86,7 @@ public:
 	const Vocabulary * vocabulary() const {return vocabulary_;}
 
 public Q_SLOTS:
-	void addObjectAndUpdate(const cv::Mat & image, int id=0, const QString & filename = QString());
+	void addObjectAndUpdate(const cv::Mat & image, int id=0, const QString & filePath = QString());
 	void removeObjectAndUpdate(int id);
 	void detect(const cv::Mat & image); // emit objectsFound()
 

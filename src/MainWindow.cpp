@@ -460,27 +460,49 @@ bool MainWindow::saveSettings(const QString & path) const
 	return false;
 }
 
-int MainWindow::loadObjects(const QString & dirPath)
+int MainWindow::loadObjects(const QString & dirPath, bool recursive)
 {
 	QList<int> loadedObjects;
 	QString formats = Settings::getGeneral_imageFormats().remove('*').remove('.');
-	UDirectory dir(dirPath.toStdString(), formats.toStdString());
-	if(dir.isValid())
+
+	QStringList paths;
+	paths.append(dirPath);
+
+	while(paths.size())
 	{
-		const std::list<std::string> & names = dir.getFileNames(); // sorted in natural order
-		for(std::list<std::string>::const_iterator iter=names.begin(); iter!=names.end(); ++iter)
+		QString currentDir = paths.front();
+		UDirectory dir(currentDir.toStdString(), formats.toStdString());
+		if(dir.isValid())
 		{
-			int id = this->addObjectFromFile((dirPath.toStdString()+dir.separator()+*iter).c_str());
-			if(id >= 0)
+			const std::list<std::string> & names = dir.getFileNames(); // sorted in natural order
+			for(std::list<std::string>::const_iterator iter=names.begin(); iter!=names.end(); ++iter)
 			{
-				loadedObjects.push_back(id);
+				int id = this->addObjectFromFile((currentDir.toStdString()+dir.separator()+*iter).c_str());
+				if(id >= 0)
+				{
+					loadedObjects.push_back(id);
+				}
 			}
 		}
-		if(loadedObjects.size())
+
+		paths.pop_front();
+
+		if(recursive)
 		{
-			this->updateObjects(loadedObjects);
+			QDir d(currentDir);
+			QStringList subDirs = d.entryList(QDir::AllDirs|QDir::NoDotAndDotDot, QDir::Name);
+			for(int i=subDirs.size()-1; i>=0; --i)
+			{
+				paths.prepend(currentDir + QDir::separator() + subDirs[i]);
+			}
 		}
 	}
+
+	if(loadedObjects.size())
+	{
+		this->updateObjects(loadedObjects);
+	}
+
 	return loadedObjects.size();
 }
 
@@ -511,7 +533,20 @@ void MainWindow::loadObjects()
 	QString dirPath = QFileDialog::getExistingDirectory(this, tr("Loading objects... Select a directory."), Settings::workingDirectory());
 	if(!dirPath.isEmpty())
 	{
-		int count = loadObjects(dirPath);
+		QDir d(dirPath);
+		bool recursive = false;
+		if(d.entryList(QDir::AllDirs).size())
+		{
+			QMessageBox::StandardButton b = QMessageBox::question(
+					this,
+					tr("Loading objects..."),
+					tr("The current directory contains subdirectories. Load objects recursively?"),
+					QMessageBox::Yes|QMessageBox::No,
+					QMessageBox::No);
+			recursive = b == QMessageBox::Yes;
+		}
+
+		int count = loadObjects(dirPath, recursive);
 		if(count)
 		{
 			QMessageBox::information(this, tr("Loading..."), tr("%1 objects loaded from \"%2\".").arg(count).arg(dirPath));

@@ -42,10 +42,10 @@ public:
 	ObjSignature() :
 		id_(-1)
 	{}
-	ObjSignature(int id, const cv::Mat & image, const QString & filename) :
+	ObjSignature(int id, const cv::Mat & image, const QString & filePath) :
 		id_(id),
 		image_(image),
-		filename_(filename)
+		filePath_(filePath)
 	{}
 	virtual ~ObjSignature() {}
 
@@ -60,7 +60,7 @@ public:
 	QRect rect() const {return QRect(0,0,image_.cols, image_.rows);}
 
 	int id() const {return id_;}
-	const QString & filename() const {return filename_;}
+	const QString & filePath() const {return filePath_;}
 	const cv::Mat & image() const {return image_;}
 	const std::vector<cv::KeyPoint> & keypoints() const {return keypoints_;}
 	const cv::Mat & descriptors() const {return descriptors_;}
@@ -69,7 +69,7 @@ public:
 	void save(QDataStream & streamPtr) const
 	{
 		streamPtr << id_;
-		streamPtr << filename_;
+		streamPtr << filePath_;
 		streamPtr << (int)keypoints_.size();
 		for(unsigned int j=0; j<keypoints_.size(); ++j)
 		{
@@ -99,7 +99,7 @@ public:
 	void load(QDataStream & streamPtr)
 	{
 		int nKpts;
-		streamPtr >> id_ >> filename_ >> nKpts;
+		streamPtr >> id_ >> filePath_ >> nKpts;
 		keypoints_.resize(nKpts);
 		for(int i=0;i<nKpts;++i)
 		{
@@ -132,7 +132,7 @@ public:
 private:
 	int id_;
 	cv::Mat image_;
-	QString filename_;
+	QString filePath_;
 	std::vector<cv::KeyPoint> keypoints_;
 	cv::Mat descriptors_;
 	QMultiMap<int, int> words_; // <word id, keypoint indexes>

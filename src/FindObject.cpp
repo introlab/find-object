@@ -37,6 +37,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QtCore/QFileInfo>
 #include <QtCore/QStringList>
 #include <QtCore/QTime>
+#include <QtCore/QDir>
 #include <QtGui/QGraphicsRectItem>
 #include <stdio.h>
 
@@ -140,25 +141,49 @@ bool FindObject::saveSession(const QString & path)
 	return false;
 }
 
-int FindObject::loadObjects(const QString & dirPath)
+int FindObject::loadObjects(const QString & dirPath, bool recursive)
 {
 	int loadedObjects = 0;
 	QString formats = Settings::getGeneral_imageFormats().remove('*').remove('.');
-	UDirectory dir(dirPath.toStdString(), formats.toStdString());
-	if(dir.isValid())
+
+	QStringList paths;
+	paths.append(dirPath);
+
+	while(paths.size())
 	{
-		const std::list<std::string> & names = dir.getFileNames(); // sorted in natural order
-		for(std::list<std::string>::const_iterator iter=names.begin(); iter!=names.end(); ++iter)
+		QString currentDir = paths.front();
+		UDirectory dir(currentDir.toStdString(), formats.toStdString());
+		if(dir.isValid())
 		{
-			this->addObject((dirPath.toStdString()+dir.separator()+*iter).c_str());
+			const std::list<std::string> & names = dir.getFileNames(); // sorted in natural order
+			for(std::list<std::string>::const_iterator iter=names.begin(); iter!=names.end(); ++iter)
+			{
+				if(this->addObject((currentDir.toStdString()+dir.separator()+*iter).c_str()))
+				{
+					++loadedObjects;
+				}
+			}
 		}
-		if(names.size())
+
+		paths.pop_front();
+
+		if(recursive)
 		{
-			this->updateObjects();
-			this->updateVocabulary();
+			QDir d(currentDir);
+			QStringList subDirs = d.entryList(QDir::AllDirs|QDir::NoDotAndDotDot, QDir::Name);
+			for(int i=subDirs.size()-1; i>=0; --i)
+			{
+				paths.prepend(currentDir+QDir::separator()+subDirs[i]);
+			}
 		}
-		loadedObjects = (int)names.size();
 	}
+
+	if(loadedObjects)
+	{
+		this->updateObjects();
+		this->updateVocabulary();
+	}
+
 	return loadedObjects;
 }
 
@@ -190,16 +215,16 @@ const ObjSignature * FindObject::addObject(const QString & filePath)
 					id = 0;
 				}
 			}
-			return this->addObject(img, id, file.fileName());
+			return this->addObject(img, id, filePath);
 		}
 	}
 	return 0;
 }
 
-const ObjSignature * FindObject::addObject(const cv::Mat & image, int id, const QString & filename)
+const ObjSignature * FindObject::addObject(const cv::Mat & image, int id, const QString & filePath)
 {
 	UASSERT(id >= 0);
-	ObjSignature * s = new ObjSignature(id, image, filename);
+	ObjSignature * s = new ObjSignature(id, image, filePath);
 	if(!this->addObject(s))
 	{
 		delete s;
@@ -245,9 +270,9 @@ void FindObject::removeAllObjects()
 	clearVocabulary();
 }
 
-void FindObject::addObjectAndUpdate(const cv::Mat & image, int id, const QString & filename)
+void FindObject::addObjectAndUpdate(const cv::Mat & image, int id, const QString & filePath)
 {
-	const ObjSignature * s = this->addObject(image, id, filename);
+	const ObjSignature * s = this->addObject(image, id, filePath);
 	if(s)
 	{
 		QList<int> ids;
@@ -1449,7 +1474,7 @@ bool FindObject::detect(const cv::Mat & image, find_object::DetectionInfo & info
 							info.objDetectedOutliers_.insert(id, threads[j]->getOutliers());
 							info.objDetectedInliersCount_.insert(id, threads[j]->getInliers().size());
 							info.objDetectedOutliersCount_.insert(id, threads[j]->getOutliers().size());
-							info.objDetectedFilenames_.insert(id, objects_.value(id)->filename());
+							info.objDetectedFilePaths_.insert(id, objects_.value(id)->filePath());
 						}
 						else
 						{
