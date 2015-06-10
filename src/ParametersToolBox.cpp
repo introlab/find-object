@@ -377,11 +377,11 @@ void ParametersToolBox::addParameter(QVBoxLayout * layout,
 {
 	QDoubleSpinBox * widget = new QDoubleSpinBox(this);
 	double def = Settings::getDefaultParameters().value(key).toDouble();
-	if(def<0.001)
+	if(def<0.01)
 	{
 		widget->setDecimals(4);
 	}
-	else if(def<0.01)
+	else if(def<0.1)
 	{
 		widget->setDecimals(3);
 	}
