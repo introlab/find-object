@@ -62,7 +62,7 @@ public:
 				cv::Mat & Ai);
 
 public:
-	FindObject(QObject * parent = 0);
+	FindObject(bool keepImagesInRAM_ = true, QObject * parent = 0);
 	virtual ~FindObject();
 
 	bool loadSession(const QString & path);
@@ -104,6 +104,7 @@ private:
 	KeypointDetector * detector_;
 	DescriptorExtractor * extractor_;
 	bool sessionModified_;
+	bool keepImagesInRAM_;
 };
 
 } // namespace find_object

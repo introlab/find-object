@@ -74,7 +74,7 @@ ObjWidget::ObjWidget(int id, const std::vector<cv::KeyPoint> & keypoints, const 
 	color_(QColor((Qt::GlobalColor)((id % 11 + 7)==Qt::yellow?Qt::gray:(id % 11 + 7))))
 {
 	setupUi();
-	this->setData(keypoints, image);
+	this->setData(keypoints, image, image.rect());
 }
 ObjWidget::~ObjWidget()
 {
@@ -264,7 +264,7 @@ void ObjWidget::setTextLabel(const QString & text)
 	label_->setText(text);
 }
 
-void ObjWidget::setData(const std::vector<cv::KeyPoint> & keypoints, const QImage & image)
+void ObjWidget::setData(const std::vector<cv::KeyPoint> & keypoints, const QImage & image, const QRect & rect)
 {
 	keypoints_ = keypoints;
 	kptColors_ = QVector<QColor>((int)keypoints.size(), defaultColor());
@@ -275,6 +275,11 @@ void ObjWidget::setData(const std::vector<cv::KeyPoint> & keypoints, const QImag
 	mouseCurrentPos_ = mousePressedPos_; // this will reset roi selection
 
 	pixmap_ = QPixmap::fromImage(image);
+	rect_ = rect;
+	if(rect_.isNull())
+	{
+		rect_ = pixmap_.rect();
+	}
 	//this->setMinimumSize(image_.size());
 
 	if(graphicsViewMode_->isChecked())
@@ -397,10 +402,10 @@ void ObjWidget::computeScaleOffsets(float & scale, float & offsetX, float & offs
 	offsetX = 0.0f;
 	offsetY = 0.0f;
 
-	if(!pixmap_.isNull())
+	if(!rect_.isNull())
 	{
-		float w = pixmap_.width();
-		float h = pixmap_.height();
+		float w = rect_.width();
+		float h = rect_.height();
 		float widthRatio = float(this->rect().width()) / w;
 		float heightRatio = float(this->rect().height()) / h;
 
@@ -439,7 +444,7 @@ void ObjWidget::paintEvent(QPaintEvent *event)
 	}
 	else
 	{
-		if(!pixmap_.isNull())
+		if(!rect_.isNull())
 		{
 			//Scale
 			float ratio, offsetX, offsetY;
@@ -448,7 +453,7 @@ void ObjWidget::paintEvent(QPaintEvent *event)
 
 			if(mirrorView_->isChecked())
 			{
-				painter.translate(offsetX+pixmap_.width()*ratio, offsetY);
+				painter.translate(offsetX+rect_.width()*ratio, offsetY);
 				painter.scale(-ratio, ratio);
 			}
 			else
@@ -457,7 +462,7 @@ void ObjWidget::paintEvent(QPaintEvent *event)
 				painter.scale(ratio, ratio);
 			}
 
-			if(showImage_->isChecked())
+			if(!pixmap_.isNull() && showImage_->isChecked())
 			{
 				painter.drawPixmap(QPoint(0,0), pixmap_);
 			}
@@ -487,15 +492,15 @@ void ObjWidget::paintEvent(QPaintEvent *event)
 				if(mirrorView_->isChecked())
 				{
 					int l = left;
-					left = qAbs(right - pixmap_.width());
-					right = qAbs(l - pixmap_.width());
+					left = qAbs(right - rect_.width());
+					right = qAbs(l - rect_.width());
 				}
 				painter.setPen(Qt::NoPen);
 				painter.setBrush(QBrush(QColor(0,0,0,100)));
-				painter.drawRect(0, 0, pixmap_.width(), top);
+				painter.drawRect(0, 0, rect_.width(), top);
 				painter.drawRect(0, top, left, bottom-top);
-				painter.drawRect(right, top, pixmap_.width()-right, bottom-top);
-				painter.drawRect(0, bottom, pixmap_.width(), pixmap_.height()-bottom);
+				painter.drawRect(right, top, rect_.width()-right, bottom-top);
+				painter.drawRect(0, bottom, rect_.width(), rect_.height()-bottom);
 				painter.restore();
 			}
 		}
@@ -534,7 +539,7 @@ void ObjWidget::mouseMoveEvent(QMouseEvent * event)
 
 void ObjWidget::mouseReleaseEvent(QMouseEvent * event)
 {
-	if(!pixmap_.isNull())
+	if(!rect_.isNull())
 	{
 		int left,top,bottom,right;
 
@@ -546,8 +551,8 @@ void ObjWidget::mouseReleaseEvent(QMouseEvent * event)
 		if(mirrorView_->isChecked())
 		{
 			int l = left;
-			left = qAbs(right - pixmap_.width());
-			right = qAbs(l - pixmap_.width());
+			left = qAbs(right - rect_.width());
+			right = qAbs(l - rect_.width());
 		}
 
 		Q_EMIT roiChanged(cv::Rect(left, top, right-left, bottom-top));
@@ -747,10 +752,10 @@ std::vector<cv::KeyPoint> ObjWidget::selectedKeypoints() const
 
 void ObjWidget::setupGraphicsView()
 {
-	if(!pixmap_.isNull())
+	if(!rect_.isNull())
 	{
 		graphicsView_->setVisible(true);
-		graphicsView_->scene()->setSceneRect(pixmap_.rect());
+		graphicsView_->scene()->setSceneRect(rect_);
 		QList<KeypointItem*> items;
 
 		QRectF sceneRect = graphicsView_->sceneRect();

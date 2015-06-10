@@ -981,7 +981,8 @@ void MainWindow::updateObjects(const QList<int> & ids)
 		{
 			if(ids.contains(signatures[i]->id()))
 			{
-				objWidgets_.value(signatures[i]->id())->setData(signatures[i]->keypoints(), cvtCvMat2QImage(signatures[i]->image()));
+				QImage qtImage = cvtCvMat2QImage(signatures[i]->image());
+				objWidgets_.value(signatures[i]->id())->setData(signatures[i]->keypoints(), qtImage, signatures[i]->rect());
 
 				//update object labels
 				QLabel * title = qFindChild<QLabel*>(this, QString("%1title").arg(signatures[i]->id()));

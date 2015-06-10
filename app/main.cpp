@@ -106,6 +106,8 @@ void showUsage()
 			"                           If set to \"\", default parameters are used "
 			"                           without saving modified parameters on closing.\n"
 			"  --scene \"path\"         Path to a scene image file.\n"
+			"  --images_not_saved     Don't keep images in RAM after the features are extracted (only\n"
+			"                         in console mode). Images won't be saved if an output session is set.\n"
 			"  --debug                Show debug log.\n"
 			"  --debug-time           Show debug log with time.\n"
 			"  --params               Show all parameters.\n"
@@ -137,6 +139,7 @@ int main(int argc, char* argv[])
 	QString configPath = find_object::Settings::iniDefaultPath();
 	QString jsonPath;
 	find_object::ParametersMap customParameters;
+	bool imagesSaved = true;
 
 	for(int i=1; i<argc; ++i)
 	{
@@ -269,6 +272,12 @@ int main(int argc, char* argv[])
 			guiMode = false;
 			continue;
 		}
+		if(strcmp(argv[i], "-images_not_saved") == 0 ||
+		   strcmp(argv[i], "--images_not_saved") == 0)
+		{
+			imagesSaved = false;
+			continue;
+		}
 		if(strcmp(argv[i], "-debug") == 0 ||
 		   strcmp(argv[i], "--debug") == 0)
 		{
@@ -392,7 +401,7 @@ int main(int argc, char* argv[])
 	}
 
 	// Create FindObject
-	find_object::FindObject * findObject = new find_object::FindObject();
+	find_object::FindObject * findObject = new find_object::FindObject(guiMode || imagesSaved);
 
 	// Load objects if path is set
 	int objectsLoaded = 0;

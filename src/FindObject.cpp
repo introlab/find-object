@@ -43,12 +43,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace find_object {
 
-FindObject::FindObject(QObject * parent) :
+FindObject::FindObject(bool keepImagesInRAM, QObject * parent) :
 	QObject(parent),
 	vocabulary_(new Vocabulary()),
 	detector_(Settings::createKeypointDetector()),
 	extractor_(Settings::createDescriptorExtractor()),
-	sessionModified_(false)
+	sessionModified_(false),
+	keepImagesInRAM_(keepImagesInRAM)
 {
 	qRegisterMetaType<find_object::DetectionInfo>("find_object::DetectionInfo");
 	UASSERT(detector_ != 0 && extractor_ != 0);
@@ -85,7 +86,7 @@ bool FindObject::loadSession(const QString & path)
 		while(!in.atEnd())
 		{
 			ObjSignature * obj = new ObjSignature();
-			obj->load(in);
+			obj->load(in, !keepImagesInRAM_);
 			if(obj->id() >= 0)
 			{
 				objects_.insert(obj->id(), obj);
@@ -705,6 +706,11 @@ void FindObject::updateObjects(const QList<int> & ids)
 					int id = threads[j]->objectId();
 
 					objects_.value(id)->setData(threads[j]->keypoints(), threads[j]->descriptors());
+
+					if(!keepImagesInRAM_)
+					{
+						objects_.value(id)->removeImage();
+					}
 				}
 			}
 			UINFO("Features extraction from %d objects... done! (%d ms)", objectsList.size(), time.elapsed());

@@ -57,7 +57,7 @@ public:
 	virtual ~ObjWidget();
 
 	void setId(int id);
-	void setData(const std::vector<cv::KeyPoint> & keypoints, const QImage & image);
+	void setData(const std::vector<cv::KeyPoint> & keypoints, const QImage & image, const QRect & rect = QRect());
 	void setTextLabel(const QString & text);
 	void resetKptsColor();
 	void setKptColor(int index, const QColor & color);
@@ -111,6 +111,7 @@ private:
 	int id_;
 	std::vector<cv::KeyPoint> keypoints_;
 	QPixmap pixmap_;
+	QRect rect_;
 	QList<KeypointItem*> keypointItems_;
 	QGraphicsView * graphicsView_;
 	QVector<QColor> kptColors_;

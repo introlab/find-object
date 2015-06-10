@@ -45,6 +45,7 @@ public:
 	ObjSignature(int id, const cv::Mat & image, const QString & filePath) :
 		id_(id),
 		image_(image),
+		rect_(0,0,image.cols, image.rows),
 		filePath_(filePath)
 	{}
 	virtual ~ObjSignature() {}
@@ -56,8 +57,9 @@ public:
 	}
 	void setWords(const QMultiMap<int, int> & words) {words_ = words;}
 	void setId(int id) {id_ = id;}
+	void removeImage() {image_ = cv::Mat();}
 
-	QRect rect() const {return QRect(0,0,image_.cols, image_.rows);}
+	const QRect & rect() const {return rect_;}
 
 	int id() const {return id_;}
 	const QString & filePath() const {return filePath_;}
@@ -94,9 +96,11 @@ public:
 		std::vector<unsigned char> bytes;
 		cv::imencode(".png", image_, bytes);
 		streamPtr << QByteArray((char*)bytes.data(), (int)bytes.size());
+
+		streamPtr << rect_;
 	}
 
-	void load(QDataStream & streamPtr)
+	void load(QDataStream & streamPtr, bool ignoreImage)
 	{
 		int nKpts;
 		streamPtr >> id_ >> filePath_ >> nKpts;
@@ -124,14 +128,20 @@ public:
 
 		QByteArray image;
 		streamPtr >> image;
-		std::vector<unsigned char> bytes(image.size());
-		memcpy(bytes.data(), image.data(), image.size());
-		image_ = cv::imdecode(bytes, cv::IMREAD_UNCHANGED);
+		if(!ignoreImage)
+		{
+			std::vector<unsigned char> bytes(image.size());
+			memcpy(bytes.data(), image.data(), image.size());
+			image_ = cv::imdecode(bytes, cv::IMREAD_UNCHANGED);
+		}
+
+		streamPtr >> rect_;
 	}
 
 private:
 	int id_;
 	cv::Mat image_;
+	QRect rect_;
 	QString filePath_;
 	std::vector<cv::KeyPoint> keypoints_;
 	cv::Mat descriptors_;
