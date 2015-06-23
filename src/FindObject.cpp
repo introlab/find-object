@@ -801,10 +801,14 @@ void FindObject::updateVocabulary()
 				sessionModified_ = true;
 				QTime time;
 				time.start();
-				bool incremental = Settings::getGeneral_vocabularyIncremental();
+				bool incremental = Settings::getGeneral_vocabularyIncremental() && !Settings::getGeneral_vocabularyFixed();
 				if(incremental)
 				{
 					UINFO("Creating incremental vocabulary...");
+				}
+				else if(Settings::getGeneral_vocabularyFixed())
+				{
+					UINFO("Updating vocabulary correspondences only (vocabulary is fixed)...");
 				}
 				else
 				{
@@ -816,7 +820,7 @@ void FindObject::updateVocabulary()
 				int addedWords = 0;
 				for(int i=0; i<objectsList.size(); ++i)
 				{
-					QMultiMap<int, int> words = vocabulary_->addWords(objectsList[i]->descriptors(), objectsList.at(i)->id(), incremental);
+					QMultiMap<int, int> words = vocabulary_->addWords(objectsList[i]->descriptors(), objectsList.at(i)->id());
 					objectsList[i]->setWords(words);
 					addedWords += words.uniqueKeys().size();
 					bool updated = false;
@@ -834,7 +838,7 @@ void FindObject::updateVocabulary()
 							localTime.restart(),
 							updated?"updated":"");
 				}
-				if(addedWords)
+				if(addedWords && !Settings::getGeneral_vocabularyFixed())
 				{
 					vocabulary_->update();
 				}
@@ -842,6 +846,10 @@ void FindObject::updateVocabulary()
 				if(incremental)
 				{
 					UINFO("Creating incremental vocabulary... done! size=%d (%d ms)", vocabulary_->size(), time.elapsed());
+				}
+				else if(Settings::getGeneral_vocabularyFixed())
+				{
+					UINFO("Updating vocabulary correspondences only (vocabulary is fixed)... done! size=%d (%d ms)", time.elapsed());
 				}
 				else
 				{
@@ -1191,11 +1199,8 @@ bool FindObject::detect(const cv::Mat & image, find_object::DetectionInfo & info
 				vocabulary_->clear();
 				// CREATE INDEX for the scene
 				UDEBUG("CREATE INDEX FOR THE SCENE");
-				words = vocabulary_->addWords(info.sceneDescriptors_, -1, Settings::getGeneral_vocabularyIncremental());
-				if(!Settings::getGeneral_vocabularyIncremental())
-				{
-					vocabulary_->update();
-				}
+				words = vocabulary_->addWords(info.sceneDescriptors_, -1);
+				vocabulary_->update();
 				info.timeStamps_.insert(DetectionInfo::kTimeIndexing, time.restart());
 			}
 

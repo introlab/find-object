@@ -40,7 +40,7 @@ public:
 	virtual ~Vocabulary();
 
 	void clear();
-	QMultiMap<int, int> addWords(const cv::Mat & descriptors, int objectId, bool incremental);
+	QMultiMap<int, int> addWords(const cv::Mat & descriptors, int objectId);
 	void update();
 	void search(const cv::Mat & descriptors, cv::Mat & results, cv::Mat & dists, int k);
 	int size() const {return indexedDescriptors_.rows + notIndexedDescriptors_.rows;}

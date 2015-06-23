@@ -54,10 +54,17 @@ Vocabulary::~Vocabulary()
 
 void Vocabulary::clear()
 {
-	indexedDescriptors_ = cv::Mat();
-	notIndexedDescriptors_ = cv::Mat();
 	wordToObjects_.clear();
+	notIndexedDescriptors_ = cv::Mat();
 	notIndexedWordIds_.clear();
+
+	if(Settings::getGeneral_vocabularyFixed() && Settings::getGeneral_invertedSearch())
+	{
+		// If the dictionary is fixed, don't clear indexed descriptors
+		return;
+	}
+
+	indexedDescriptors_ = cv::Mat();
 }
 
 void Vocabulary::save(QDataStream & streamPtr) const
@@ -95,7 +102,7 @@ void Vocabulary::load(QDataStream & streamPtr)
 	update();
 }
 
-QMultiMap<int, int> Vocabulary::addWords(const cv::Mat & descriptors, int objectId, bool incremental)
+QMultiMap<int, int> Vocabulary::addWords(const cv::Mat & descriptors, int objectId)
 {
 	QMultiMap<int, int> words;
 	if (descriptors.empty())
@@ -103,7 +110,7 @@ QMultiMap<int, int> Vocabulary::addWords(const cv::Mat & descriptors, int object
 		return words;
 	}
 
-	if(incremental)
+	if(Settings::getGeneral_vocabularyIncremental() || Settings::getGeneral_vocabularyFixed())
 	{
 		int k = 2;
 		cv::Mat results;
@@ -125,8 +132,11 @@ QMultiMap<int, int> Vocabulary::addWords(const cv::Mat & descriptors, int object
 			globalSearch = true;
 		}
 
-		notIndexedWordIds_.reserve(notIndexedWordIds_.size() + descriptors.rows);
-		notIndexedDescriptors_.reserve(notIndexedDescriptors_.rows + descriptors.rows);
+		if(!Settings::getGeneral_vocabularyFixed())
+		{
+			notIndexedWordIds_.reserve(notIndexedWordIds_.size() + descriptors.rows);
+			notIndexedDescriptors_.reserve(notIndexedDescriptors_.rows + descriptors.rows);
+		}
 		int matches = 0;
 		for(int i = 0; i < descriptors.rows; ++i)
 		{
@@ -199,27 +209,47 @@ QMultiMap<int, int> Vocabulary::addWords(const cv::Mat & descriptors, int object
 				}
 			}
 
-			bool match = false;
-			// Apply NNDR
-			if(fullResults.size() >= 2 &&
+			bool matched = false;
+			if(Settings::getNearestNeighbor_3nndrRatioUsed() &&
+			   fullResults.size() >= 2 &&
 			   fullResults.begin().key() <= Settings::getNearestNeighbor_4nndrRatio() * (++fullResults.begin()).key())
 			{
-				match = true;
+				matched = true;
+			}
+			if((matched || !Settings::getNearestNeighbor_3nndrRatioUsed()) &&
+			   Settings::getNearestNeighbor_5minDistanceUsed())
+			{
+				if(fullResults.begin().key() <= Settings::getNearestNeighbor_6minDistance())
+				{
+					matched = true;
+				}
+				else
+				{
+					matched = false;
+				}
+			}
+			if(!matched && !Settings::getNearestNeighbor_3nndrRatioUsed() && !Settings::getNearestNeighbor_5minDistanceUsed())
+			{
+				matched = true; // no criterion, match to the nearest descriptor
 			}
 
-			if(match)
+			if(matched)
 			{
 				words.insert(fullResults.begin().value(), i);
 				wordToObjects_.insert(fullResults.begin().value(), objectId);
 				++matches;
 			}
-			else
+			else if(!Settings::getGeneral_invertedSearch() || !Settings::getGeneral_vocabularyFixed())
 			{
 				//concatenate new words
 				notIndexedWordIds_.push_back(indexedDescriptors_.rows + notIndexedDescriptors_.rows);
 				notIndexedDescriptors_.push_back(descriptors.row(i));
 				words.insert(notIndexedWordIds_.back(), i);
 				wordToObjects_.insert(notIndexedWordIds_.back(), objectId);
+			}
+			else
+			{
+				words.insert(-1, i); // invalid word
 			}
 		}
 	}
