@@ -533,6 +533,7 @@ protected:
 			keypoints_.clear();
 			descriptors_ = cv::Mat();
 			detector_->detect(image_, keypoints_);
+			UDEBUG("Detected %d keypoints from object %d...", (int)keypoints_.size(), objectId_);
 
 			if(keypoints_.size())
 			{
@@ -548,9 +549,18 @@ protected:
 				try
 				{
 					extractor_->compute(image_, keypoints_, descriptors_);
+					UDEBUG("Extracted %d descriptors from object %d...", descriptors_.rows, objectId_);
 				}
 				catch(cv::Exception & e)
 				{
+					UERROR("Descriptor exception: %s. Maybe some keypoints are invalid "
+							"for the selected descriptor extractor.", e.what());
+					descriptors_ = cv::Mat();
+					keypoints_.clear();
+				}
+				catch ( const std::exception& e )
+				{
+				    // standard exceptions
 					UERROR("Descriptor exception: %s. Maybe some keypoints are invalid "
 							"for the selected descriptor extractor.", e.what());
 					descriptors_ = cv::Mat();

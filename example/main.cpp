@@ -39,8 +39,21 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/features2d/features2d.hpp>
-#include <opencv2/nonfree/features2d.hpp>
 #include <opencv2/calib3d/calib3d.hpp> // for homography
+
+#include <opencv2/opencv_modules.hpp>
+
+#ifdef HAVE_OPENCV_NONFREE
+  #if CV_MAJOR_VERSION == 2 && CV_MINOR_VERSION >=4
+  #include <opencv2/nonfree/gpu.hpp>
+  #include <opencv2/nonfree/features2d.hpp>
+  #endif
+#endif
+#ifdef HAVE_OPENCV_XFEATURES2D
+  #include <opencv2/xfeatures2d.hpp>
+  #include <opencv2/xfeatures2d/cuda.hpp>
+#endif
+
 
 // From this project
 #include "find_object/ObjWidget.h"
@@ -85,16 +98,21 @@ int main(int argc, char * argv[])
 		////////////////////////////
 		// EXTRACT KEYPOINTS
 		////////////////////////////
+		cv::Ptr<cv::FeatureDetector> detector;
 		// The detector can be any of (see OpenCV features2d.hpp):
-		// cv::FeatureDetector * detector = new cv::DenseFeatureDetector();
-		// cv::FeatureDetector * detector = new cv::FastFeatureDetector();
-		// cv::FeatureDetector * detector = new cv::GFTTDetector();
-		// cv::FeatureDetector * detector = new cv::MSER();
-		// cv::FeatureDetector * detector = new cv::ORB();
-		cv::FeatureDetector * detector = new cv::SIFT();
-		// cv::FeatureDetector * detector = new cv::StarFeatureDetector();
-		// cv::FeatureDetector * detector = new cv::SURF(600.0);
-		// cv::FeatureDetector * detector = new cv::BRISK();
+#if CV_MAJOR_VERSION == 2
+		// detector = cv::Ptr(new cv::DenseFeatureDetector());
+		// detector = cv::Ptr(new cv::FastFeatureDetector());
+		// detector = cv::Ptr(new cv::GFTTDetector());
+		// detector = cv::Ptr(new cv::MSER());
+		// detector = cv::Ptr(new cv::ORB());
+		detector = cv::Ptr<cv::FeatureDetector>(new cv::SIFT());
+		// detector = cv::Ptr(new cv::StarFeatureDetector());
+		// detector = cv::Ptr(new cv::SURF(600.0));
+		// detector = cv::Ptr(new cv::BRISK());
+#else
+		detector = cv::xfeatures2d::SIFT::create();
+#endif
 		detector->detect(objectImg, objectKeypoints);
 		printf("Object: %d keypoints detected in %d ms\n", (int)objectKeypoints.size(), time.restart());
 		detector->detect(sceneImg, sceneKeypoints);
@@ -103,13 +121,18 @@ int main(int argc, char * argv[])
 		////////////////////////////
 		// EXTRACT DESCRIPTORS
 		////////////////////////////
+		cv::Ptr<cv::DescriptorExtractor> extractor;
+#if CV_MAJOR_VERSION == 2
 		// The extractor can be any of (see OpenCV features2d.hpp):
-		// cv::DescriptorExtractor * extractor = new cv::BriefDescriptorExtractor();
-		// cv::DescriptorExtractor * extractor = new cv::ORB();
-		cv::DescriptorExtractor * extractor = new cv::SIFT();
-		// cv::DescriptorExtractor * extractor = new cv::SURF(600.0);
-		// cv::DescriptorExtractor * extractor = new cv::BRISK();
-		// cv::DescriptorExtractor * extractor = new cv::FREAK();
+		// extractor = cv::Ptr(new cv::BriefDescriptorExtractor());
+		// extractor = cv::Ptr(new cv::ORB());
+		extractor = cv::Ptr<cv::DescriptorExtractor>(new cv::SIFT());
+		// extractor = cv::Ptr(new cv::SURF(600.0));
+		// extractor = cv::Ptr(new cv::BRISK());
+		// extractor = cv::Ptr(new cv::FREAK());
+#else
+		extractor = cv::xfeatures2d::SIFT::create();
+#endif
 		extractor->compute(objectImg, objectKeypoints, objectDescriptors);
 		printf("Object: %d descriptors extracted in %d ms\n", objectDescriptors.rows, time.restart());
 		extractor->compute(sceneImg, sceneKeypoints, sceneDescriptors);
@@ -308,12 +331,6 @@ int main(int argc, char * argv[])
 
 		int r = app.exec();
 		printf("Closing...\n");
-
-		////////////////////////////
-		//Cleanup
-		////////////////////////////
-		delete detector;
-		delete extractor;
 
 		return r;
 	}

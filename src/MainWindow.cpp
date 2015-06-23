@@ -49,7 +49,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "opencv2/calib3d/calib3d.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/gpu/gpu.hpp"
+#include <opencv2/opencv_modules.hpp>
+#if CV_MAJOR_VERSION < 3
+#include <opencv2/gpu/gpu.hpp>
+#else
+#include <opencv2/core/cuda.hpp>
+#endif
 
 #include <QtCore/QTextStream>
 #include <QtCore/QFile>
@@ -133,7 +138,11 @@ MainWindow::MainWindow(FindObject * findObject, Camera * camera, QWidget * paren
 		ui_->actionLoad_scene_from_file->setVisible(false);
 	}
 
+#if CV_MAJOR_VERSION < 3
 	if(cv::gpu::getCudaEnabledDeviceCount() == 0)
+#else
+	if(cv::cuda::getCudaEnabledDeviceCount() == 0)
+#endif
 	{
 #if FINDOBJECT_NONFREE == 1
 		ui_->toolBox->updateParameter(Settings::kFeature2D_SURF_gpu());

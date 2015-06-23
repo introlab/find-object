@@ -32,8 +32,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/features2d/features2d.hpp>
-#include <opencv2/nonfree/features2d.hpp>
 #include <opencv2/calib3d/calib3d.hpp> // for homography
+#include <opencv2/opencv_modules.hpp>
+
+#ifdef HAVE_OPENCV_NONFREE
+  #if CV_MAJOR_VERSION == 2 && CV_MINOR_VERSION >=4
+  #include <opencv2/nonfree/gpu.hpp>
+  #include <opencv2/nonfree/features2d.hpp>
+  #endif
+#endif
+#ifdef HAVE_OPENCV_XFEATURES2D
+  #include <opencv2/xfeatures2d.hpp>
+  #include <opencv2/xfeatures2d/cuda.hpp>
+#endif
 
 void showUsage()
 {
@@ -93,6 +104,7 @@ int main(int argc, char * argv[])
 		cv::Mat objectDescriptors;
 		cv::Mat sceneDescriptors;
 
+#if CV_MAJOR_VERSION < 3
 		////////////////////////////
 		// EXTRACT KEYPOINTS
 		////////////////////////////
@@ -105,7 +117,20 @@ int main(int argc, char * argv[])
 		////////////////////////////
 		sift.compute(objectImg, objectKeypoints, objectDescriptors);
 		sift.compute(sceneImg, sceneKeypoints, sceneDescriptors);
+#else
+		////////////////////////////
+		// EXTRACT KEYPOINTS
+		////////////////////////////
+		cv::Ptr<cv::xfeatures2d::SIFT> sift = cv::xfeatures2d::SIFT::create();
+		sift->detect(objectImg, objectKeypoints);
+		sift->detect(sceneImg, sceneKeypoints);
 
+		////////////////////////////
+		// EXTRACT DESCRIPTORS
+		////////////////////////////
+		sift->compute(objectImg, objectKeypoints, objectDescriptors);
+		sift->compute(sceneImg, sceneKeypoints, sceneDescriptors);
+#endif
 		////////////////////////////
 		// NEAREST NEIGHBOR MATCHING USING FLANN LIBRARY (included in OpenCV)
 		////////////////////////////

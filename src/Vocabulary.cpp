@@ -31,7 +31,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Vocabulary.h"
 #include <QtCore/QVector>
 #include <stdio.h>
+#if CV_MAJOR_VERSION < 3
 #include <opencv2/gpu/gpu.hpp>
+#define CVCUDA cv::gpu
+#else
+#include <opencv2/core/cuda.hpp>
+#define CVCUDA cv::cuda
+#ifdef HAVE_OPENCV_CUDAFEATURES2D
+#include <opencv2/cudafeatures2d.hpp>
+#endif
+#endif
 
 namespace find_object {
 
@@ -264,20 +273,36 @@ void Vocabulary::search(const cv::Mat & descriptors, cv::Mat & results, cv::Mat 
 		if(Settings::isBruteForceNearestNeighbor())
 		{
 			std::vector<std::vector<cv::DMatch> > matches;
-			if(Settings::getNearestNeighbor_BruteForce_gpu() && cv::gpu::getCudaEnabledDeviceCount())
+			if(Settings::getNearestNeighbor_BruteForce_gpu() && CVCUDA::getCudaEnabledDeviceCount())
 			{
-				cv::gpu::GpuMat newDescriptorsGpu(descriptors);
-				cv::gpu::GpuMat lastDescriptorsGpu(indexedDescriptors_);
+				CVCUDA::GpuMat newDescriptorsGpu(descriptors);
+				CVCUDA::GpuMat lastDescriptorsGpu(indexedDescriptors_);
+#if CV_MAJOR_VERSION < 3
 				if(indexedDescriptors_.type()==CV_8U)
 				{
-					cv::gpu::BruteForceMatcher_GPU<cv::Hamming> gpuMatcher;
+					CVCUDA::BruteForceMatcher_GPU<cv::Hamming> gpuMatcher;
 					gpuMatcher.knnMatch(newDescriptorsGpu, lastDescriptorsGpu, matches, k);
 				}
 				else
 				{
-					cv::gpu::BruteForceMatcher_GPU<cv::L2<float> > gpuMatcher;
+					CVCUDA::BruteForceMatcher_GPU<cv::L2<float> > gpuMatcher;
 					gpuMatcher.knnMatch(newDescriptorsGpu, lastDescriptorsGpu, matches, k);
 				}
+#else
+#ifdef HAVE_OPENCV_CUDAFEATURES2D
+				cv::Ptr<cv::cuda::DescriptorMatcher> gpuMatcher;
+				if(indexedDescriptors_.type()==CV_8U)
+				{
+					gpuMatcher = cv::cuda::DescriptorMatcher::createBFMatcher(cv::NORM_HAMMING);
+					gpuMatcher->knnMatch(newDescriptorsGpu, lastDescriptorsGpu, matches, k);
+				}
+				else
+				{
+					gpuMatcher = cv::cuda::DescriptorMatcher::createBFMatcher(cv::NORM_L2);
+					gpuMatcher.knnMatch(newDescriptorsGpu, lastDescriptorsGpu, matches, k);
+				}
+#endif
+#endif
 			}
 			else
 			{

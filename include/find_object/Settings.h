@@ -115,8 +115,8 @@ class FINDOBJECT_EXP Settings
 
 	//List format : [Index:item0;item1;item3;...]
 
-	PARAMETER_COND(Feature2D, 1Detector, QString, FINDOBJECT_NONFREE, "7:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK" , "2:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK", "Keypoint detector.");
-	PARAMETER_COND(Feature2D, 2Descriptor, QString, FINDOBJECT_NONFREE, "3:Brief;ORB;SIFT;SURF;BRISK;FREAK", "5:Brief;ORB;SIFT;SURF;BRISK;FREAK", "Keypoint descriptor.");
+	PARAMETER_COND(Feature2D, 1Detector, QString, FINDOBJECT_NONFREE, "7:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK;AGAST;KAZE;AKAZE" , "4:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK;AGAST;KAZE;AKAZE", "Keypoint detector.");
+	PARAMETER_COND(Feature2D, 2Descriptor, QString, FINDOBJECT_NONFREE, "3:Brief;ORB;SIFT;SURF;BRISK;FREAK;KAZE;AKAZE;LUCID;LATCH;DAISY", "1:Brief;ORB;SIFT;SURF;BRISK;FREAK;KAZE;AKAZE;LUCID;LATCH;DAISY", "Keypoint descriptor.");
 	PARAMETER(Feature2D, 3MaxFeatures, int, 0, "Maximum features per image. If the number of features extracted is over this threshold, only X features with the highest response are kept. 0 means all features are kept.");
 	PARAMETER(Feature2D, 4Affine, bool, false, "(ASIFT) Extract features on multiple affine transformations of the image.");
 	PARAMETER(Feature2D, 5AffineCount, int, 6, "(ASIFT) Higher the value, more affine transformations will be done.");
@@ -127,6 +127,7 @@ class FINDOBJECT_EXP Settings
 
 	PARAMETER(Feature2D, Brief_bytes, int, 32, "Bytes is a length of descriptor in bytes. It can be equal 16, 32 or 64 bytes.");
 
+#if CV_MAJOR_VERSION < 3
 	PARAMETER(Feature2D, Dense_initFeatureScale, float, 1.f, "");
 	PARAMETER(Feature2D, Dense_featureScaleLevels, int, 1, "");
 	PARAMETER(Feature2D, Dense_featureScaleMul, float, 0.1f, "");
@@ -134,18 +135,34 @@ class FINDOBJECT_EXP Settings
 	PARAMETER(Feature2D, Dense_initImgBound, int, 0, "");
 	PARAMETER(Feature2D, Dense_varyXyStepWithScale, bool, true, "");
 	PARAMETER(Feature2D, Dense_varyImgBoundWithScale, bool, false, "");
+#endif
 
 	PARAMETER(Feature2D, Fast_threshold, int, 10, "Threshold on difference between intensity of the central pixel and pixels of a circle around this pixel.");
 	PARAMETER(Feature2D, Fast_nonmaxSuppression, bool, true, "If true, non-maximum suppression is applied to detected corners (keypoints).");
 	PARAMETER(Feature2D, Fast_gpu, bool, false, "GPU-FAST: Use GPU version of FAST. This option is enabled only if OpenCV is built with CUDA and GPUs are detected.");
 	PARAMETER(Feature2D, Fast_keypointsRatio, double, 0.05, "Used with FAST GPU.");
 
-	PARAMETER(Feature2D, GFTT_maxCorners, int, 1000, "");
-	PARAMETER(Feature2D, GFTT_qualityLevel, double, 0.01, "");
-	PARAMETER(Feature2D, GFTT_minDistance, double, 1, "");
-	PARAMETER(Feature2D, GFTT_blockSize, int, 3, "");
-	PARAMETER(Feature2D, GFTT_useHarrisDetector, bool, false, "");
-	PARAMETER(Feature2D, GFTT_k, double, 0.04, "");
+	PARAMETER(Feature2D, AGAST_threshold, int, 10, "Threshold on difference between intensity of the central pixel and pixels of a circle around this pixel.");
+	PARAMETER(Feature2D, AGAST_nonmaxSuppression, bool, true, "If true, non-maximum suppression is applied to detected corners (keypoints).");
+
+	PARAMETER(Feature2D, KAZE_extended, bool, false, "Set to enable extraction of extended (128-byte) descriptor.");
+	PARAMETER(Feature2D, KAZE_upright, bool, false, "Set to enable use of upright descriptors (non rotation-invariant).");
+	PARAMETER(Feature2D, KAZE_threshold, float, 0.001f, "Detector response threshold to accept point");
+	PARAMETER(Feature2D, KAZE_nOctaves, int, 4, "Maximum octave evolution of the image.");
+	PARAMETER(Feature2D, KAZE_nOctaveLayers, int, 4, "Default number of sublevels per scale level.");
+
+	PARAMETER(Feature2D, AKAZE_descriptorSize, int, 0, "Size of the descriptor in bits. 0 -> Full size.");
+	PARAMETER(Feature2D, AKAZE_descriptorChannels, int, 3, "Number of channels in the descriptor (1, 2, 3).");
+	PARAMETER(Feature2D, AKAZE_threshold, float, 0.001f, "Detector response threshold to accept point.");
+	PARAMETER(Feature2D, AKAZE_nOctaves, int, 4, "Maximum octave evolution of the image.");
+	PARAMETER(Feature2D, AKAZE_nOctaveLayers, int, 4, "Default number of sublevels per scale level.");
+
+	PARAMETER(Feature2D, GFTT_maxCorners, int, 1000, "Maximum number of corners to return. If there are more corners than are found, the strongest of them is returned.");
+	PARAMETER(Feature2D, GFTT_qualityLevel, double, 0.01, "Parameter characterizing the minimal accepted quality of image corners. The parameter value is multiplied by the best corner quality measure, which is the minimal eigenvalue (see cornerMinEigenVal ) or the Harris function response (see cornerHarris ). The corners with the quality measure less than the product are rejected. For example, if the best corner has the quality measure = 1500, and the qualityLevel=0.01 , then all the corners with the quality measure less than 15 are rejected.");
+	PARAMETER(Feature2D, GFTT_minDistance, double, 1, "Minimum possible Euclidean distance between the returned corners.");
+	PARAMETER(Feature2D, GFTT_blockSize, int, 3, "Size of an average block for computing a derivative covariation matrix over each pixel neighborhood. See cornerEigenValsAndVecs.");
+	PARAMETER(Feature2D, GFTT_useHarrisDetector, bool, false, "Parameter indicating whether to use a Harris detector (see cornerHarris) or cornerMinEigenVal.");
+	PARAMETER(Feature2D, GFTT_k, double, 0.04, "Free parameter of the Harris detector.");
 
 	PARAMETER(Feature2D, ORB_nFeatures, int, 500, "The maximum number of features to retain.");
 	PARAMETER(Feature2D, ORB_scaleFactor, float,  1.2f, "Pyramid decimation ratio, greater than 1. scaleFactor==2 means the classical pyramid, where each next level has 4x less pixels than the previous, but such a big scale factor will degrade feature matching scores dramatically. On the other hand, too close to 1 scale factor will mean that to cover certain scale range you will need more pyramid levels and so the speed will suffer.");
@@ -167,7 +184,6 @@ class FINDOBJECT_EXP Settings
 	PARAMETER(Feature2D, MSER_minMargin, double, 0.003, "");
 	PARAMETER(Feature2D, MSER_edgeBlurSize, int, 5, "");
 
-#if FINDOBJECT_NONFREE == 1
 	PARAMETER(Feature2D, SIFT_nfeatures, int, 0, "The number of best features to retain. The features are ranked by their scores (measured in SIFT algorithm as the local contrast).");
 	PARAMETER(Feature2D, SIFT_nOctaveLayers, int, 3, "The number of layers in each octave. 3 is the value used in D. Lowe paper. The number of octaves is computed automatically from the image resolution.");
 	PARAMETER(Feature2D, SIFT_contrastThreshold, double, 0.04, "The contrast threshold used to filter out weak features in semi-uniform (low-contrast) regions. The larger the threshold, the less features are produced by the detector.");
@@ -181,7 +197,6 @@ class FINDOBJECT_EXP Settings
 	PARAMETER(Feature2D, SURF_upright, bool, false, "Up-right or rotated features flag (true - do not compute orientation of features; false - compute orientation).");
 	PARAMETER(Feature2D, SURF_gpu, bool, false, "GPU-SURF: Use GPU version of SURF. This option is enabled only if OpenCV is built with CUDA and GPUs are detected.");
 	PARAMETER(Feature2D, SURF_keypointsRatio, float, 0.01f, "Used with SURF GPU.");
-#endif
 
 	PARAMETER(Feature2D, Star_maxSize, int, 45, "");
 	PARAMETER(Feature2D, Star_responseThreshold, int, 30, "");
@@ -197,6 +212,20 @@ class FINDOBJECT_EXP Settings
 	PARAMETER(Feature2D, FREAK_scaleNormalized, bool, true, "Enable scale normalization.");
 	PARAMETER(Feature2D, FREAK_patternScale, float, 22.0f, "Scaling of the description pattern.");
 	PARAMETER(Feature2D, FREAK_nOctaves, int, 4, "Number of octaves covered by the detected keypoints.");
+
+	PARAMETER(Feature2D, LUCID_kernel, int, 1, "Kernel for descriptor construction, where 1=3x3, 2=5x5, 3=7x7 and so forth.");
+	PARAMETER(Feature2D, LUCID_blur_kernel, int, 2, "Kernel for blurring image prior to descriptor construction, where 1=3x3, 2=5x5, 3=7x7 and so forth.");
+
+	PARAMETER(Feature2D, LATCH_bytes, int, 32, "Size of the descriptor - can be 64, 32, 16, 8, 4, 2 or 1.");
+	PARAMETER(Feature2D, LATCH_rotationInvariance, bool, true, "Whether or not the descriptor should compansate for orientation changes.");
+	PARAMETER(Feature2D, LATCH_half_ssd_size, int, 3, "The size of half of the mini-patches size. For example, if we would like to compare triplets of patches of size 7x7x then the half_ssd_size should be (7-1)/2 = 3.");
+
+	PARAMETER(Feature2D, DAISY_radius, float, 15, "Radius of the descriptor at the initial scale.");
+	PARAMETER(Feature2D, DAISY_q_radius, int, 3, "Amount of radial range division quantity.");
+	PARAMETER(Feature2D, DAISY_q_theta, int, 8, "Amount of angular range division quantity.");
+	PARAMETER(Feature2D, DAISY_q_hist, int, 8, "Amount of gradient orientations range division quantity.");
+	PARAMETER(Feature2D, DAISY_interpolation, bool, true, "Switch to disable interpolation for speed improvement at minor quality loss.");
+	PARAMETER(Feature2D, DAISY_use_orientation, bool, false, "Sample patterns using keypoints orientation, disabled by default.");
 
 	PARAMETER_COND(NearestNeighbor, 1Strategy, QString, FINDOBJECT_NONFREE, "1:Linear;KDTree;KMeans;Composite;Autotuned;Lsh;BruteForce", "6:Linear;KDTree;KMeans;Composite;Autotuned;Lsh;BruteForce", "Nearest neighbor strategy.");
 	PARAMETER_COND(NearestNeighbor, 2Distance_type, QString, FINDOBJECT_NONFREE, "0:EUCLIDEAN_L2;MANHATTAN_L1;MINKOWSKI;MAX;HIST_INTERSECT;HELLINGER;CHI_SQUARE_CS;KULLBACK_LEIBLER_KL;HAMMING", "1:EUCLIDEAN_L2;MANHATTAN_L1;MINKOWSKI;MAX;HIST_INTERSECT;HELLINGER;CHI_SQUARE_CS;KULLBACK_LEIBLER_KL;HAMMING", "Distance type.");
@@ -317,30 +346,32 @@ private:
 class KeypointDetector
 {
 public:
-	KeypointDetector(cv::FeatureDetector * featureDetector);
+	KeypointDetector(cv::Ptr<cv::FeatureDetector> & featureDetector);
 	KeypointDetector(GPUFeature2D * gpuFeature2D);
+	virtual ~KeypointDetector();
 
 	void detect(const cv::Mat & image,
 			std::vector<cv::KeyPoint> & keypoints,
 			const cv::Mat & mask = cv::Mat());
 
 private:
-	cv::FeatureDetector * featureDetector_;
+	cv::Ptr<cv::FeatureDetector> featureDetector_;
 	GPUFeature2D * gpuFeature2D_;
 };
 
 class DescriptorExtractor
 {
 public:
-	DescriptorExtractor(cv::DescriptorExtractor * descriptorExtractor);
+	DescriptorExtractor(cv::Ptr<cv::DescriptorExtractor> & descriptorExtractor);
 	DescriptorExtractor(GPUFeature2D * gpuFeature2D);
+	virtual ~DescriptorExtractor();
 
 	void compute(const cv::Mat & image,
 			std::vector<cv::KeyPoint> & keypoints,
 			cv::Mat & descriptors);
 
 private:
-	cv::DescriptorExtractor * descriptorExtractor_;
+	cv::Ptr<cv::DescriptorExtractor> descriptorExtractor_;
 	GPUFeature2D * gpuFeature2D_;
 };
 

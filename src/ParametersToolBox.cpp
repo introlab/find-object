@@ -38,6 +38,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QtGui/QMessageBox>
 #include <stdio.h>
 #include "find_object/utilite/ULogger.h"
+#include <opencv2/opencv_modules.hpp>
 
 namespace find_object {
 
@@ -337,27 +338,59 @@ void ParametersToolBox::addParameter(QVBoxLayout * layout,
 		widget->setObjectName(key);
 		QStringList splitted = value.split(':');
 		widget->addItems(splitted.last().split(';'));
-#if FINDOBJECT_NONFREE == 0
+
 		if(key.compare(Settings::kFeature2D_1Detector()) == 0)
 		{
+#if FINDOBJECT_NONFREE == 0
 			widget->setItemData(5, 0, Qt::UserRole - 1); // disable SIFT
 			widget->setItemData(7, 0, Qt::UserRole - 1); // disable SURF
+#endif
+#if CV_MAJOR_VERSION < 3
+			widget->setItemData(9, 0, Qt::UserRole - 1); // disable AGAST
+			widget->setItemData(10, 0, Qt::UserRole - 1); // disable KAZE
+			widget->setItemData(11, 0, Qt::UserRole - 1); // disable AKAZE
+#else
+			widget->setItemData(0, 0, Qt::UserRole - 1); // disable Dense
+#ifndef HAVE_OPENCV_XFEATURES2D
+			widget->setItemData(6, 0, Qt::UserRole - 1); // disable Star
+#endif
+#endif
 		}
 		if(key.compare(Settings::kFeature2D_2Descriptor()) == 0)
 		{
+#if FINDOBJECT_NONFREE == 0
 			widget->setItemData(2, 0, Qt::UserRole - 1); // disable SIFT
 			widget->setItemData(3, 0, Qt::UserRole - 1); // disable SURF
+#endif
+#if CV_MAJOR_VERSION < 3
+			widget->setItemData(6, 0, Qt::UserRole - 1); // disable KAZE
+			widget->setItemData(7, 0, Qt::UserRole - 1); // disable AKAZE
+			widget->setItemData(8, 0, Qt::UserRole - 1); // disable LUCID
+			widget->setItemData(9, 0, Qt::UserRole - 1); // disable LATCH
+			widget->setItemData(10, 0, Qt::UserRole - 1); // disable DAISY
+#else
+
+#ifndef HAVE_OPENCV_XFEATURES2D
+			widget->setItemData(0, 0, Qt::UserRole - 1); // disable Brief
+			widget->setItemData(5, 0, Qt::UserRole - 1); // disable Freak
+			widget->setItemData(8, 0, Qt::UserRole - 1); // disable LUCID
+			widget->setItemData(9, 0, Qt::UserRole - 1); // disable LATCH
+			widget->setItemData(10, 0, Qt::UserRole - 1); // disable DAISY
+#endif
+#endif
 		}
 		if(key.compare(Settings::kNearestNeighbor_1Strategy()) == 0)
 		{
+#if FINDOBJECT_NONFREE == 0 && CV_MAJOR_VERSION < 3
 			// disable FLANN approaches (cannot be used with binary descriptors)
 			widget->setItemData(0, 0, Qt::UserRole - 1);
 			widget->setItemData(1, 0, Qt::UserRole - 1);
 			widget->setItemData(2, 0, Qt::UserRole - 1);
 			widget->setItemData(3, 0, Qt::UserRole - 1);
 			widget->setItemData(4, 0, Qt::UserRole - 1);
-		}
 #endif
+		}
+
 		widget->setCurrentIndex(splitted.first().toInt());
 		connect(widget, SIGNAL(currentIndexChanged(int)), this, SLOT(changeParameter(int)));
 		addParameter(layout, key, widget);
@@ -525,7 +558,10 @@ void ParametersToolBox::changeParameter(const int & value)
 				bool isBinaryDescriptor = descriptorBox->currentText().compare("ORB") == 0 ||
 										  descriptorBox->currentText().compare("Brief") == 0 ||
 										  descriptorBox->currentText().compare("BRISK") == 0 ||
-										  descriptorBox->currentText().compare("FREAK") == 0;
+										  descriptorBox->currentText().compare("FREAK") == 0 ||
+										  descriptorBox->currentText().compare("AKAZE") == 0 ||
+										  descriptorBox->currentText().compare("LATCH") == 0 ||
+										  descriptorBox->currentText().compare("LUCID") == 0;
 				if(isBinaryDescriptor && nnBox->currentText().compare("Lsh") != 0 && nnBox->currentText().compare("BruteForce") != 0)
 				{
 					QMessageBox::warning(this,
