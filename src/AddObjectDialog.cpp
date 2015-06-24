@@ -316,7 +316,8 @@ void AddObjectDialog::setState(int state)
 				selectedKeypoints.clear();
 				detector_->detect(imgRoi, selectedKeypoints);
 			}
-			ui_->objectView->setData(selectedKeypoints, cvtCvMat2QImage(imgRoi.clone()));
+			ui_->objectView->updateImage(cvtCvMat2QImage(imgRoi.clone()));
+			ui_->objectView->updateData(selectedKeypoints, QMultiMap<int,int>());
 			ui_->objectView->setMinimumSize(roi_.width, roi_.height);
 			ui_->objectView->update();
 			ui_->pushButton_next->setEnabled(true);
@@ -359,7 +360,7 @@ void AddObjectDialog::setState(int state)
 			}
 			objSignature_ = new ObjSignature(0, imgRoi.clone(), "");
 			objSignature_->setData(keypoints, descriptors);
-			objWidget_ = new ObjWidget(0, keypoints, cvtCvMat2QImage(imgRoi.clone()));
+			objWidget_ = new ObjWidget(0, keypoints, QMultiMap<int,int>(), cvtCvMat2QImage(imgRoi.clone()));
 
 			this->accept();
 		}
@@ -385,7 +386,8 @@ void AddObjectDialog::update(const cv::Mat & image)
 		std::vector<cv::KeyPoint> keypoints;
 		detector_->detect(cameraImage_, keypoints);
 
-		ui_->cameraView->setData(keypoints, cvtCvMat2QImage(cameraImage_));
+		ui_->cameraView->updateImage(cvtCvMat2QImage(cameraImage_));
+		ui_->cameraView->updateData(keypoints, QMultiMap<int,int>());
 		ui_->cameraView->update();
 	}
 	else

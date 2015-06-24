@@ -65,7 +65,7 @@ ObjWidget::ObjWidget(QWidget * parent) :
 {
 	setupUi();
 }
-ObjWidget::ObjWidget(int id, const std::vector<cv::KeyPoint> & keypoints, const QImage & image, QWidget * parent) :
+ObjWidget::ObjWidget(int id, const std::vector<cv::KeyPoint> & keypoints, const QMultiMap<int,int> & words, const QImage & image, QWidget * parent) :
 	QWidget(parent),
 	id_(id),
 	graphicsView_(0),
@@ -74,7 +74,8 @@ ObjWidget::ObjWidget(int id, const std::vector<cv::KeyPoint> & keypoints, const 
 	color_(QColor((Qt::GlobalColor)((id % 11 + 7)==Qt::yellow?Qt::gray:(id % 11 + 7))))
 {
 	setupUi();
-	this->setData(keypoints, image, image.rect());
+	this->updateImage(image);
+	this->updateData(keypoints, words);
 }
 ObjWidget::~ObjWidget()
 {
@@ -264,29 +265,42 @@ void ObjWidget::setTextLabel(const QString & text)
 	label_->setText(text);
 }
 
-void ObjWidget::setData(const std::vector<cv::KeyPoint> & keypoints, const QImage & image, const QRect & rect)
+void ObjWidget::updateImage(const QImage & image)
+{
+	pixmap_ = QPixmap::fromImage(image);
+	rect_ = pixmap_.rect();
+	label_->setVisible(image.isNull());
+}
+void ObjWidget::updateData(const std::vector<cv::KeyPoint> & keypoints, const QMultiMap<int, int> & words)
 {
 	keypoints_ = keypoints;
 	kptColors_ = QVector<QColor>((int)keypoints.size(), defaultColor());
 	keypointItems_.clear();
 	rectItems_.clear();
+	this->updateWords(words);
 	graphicsView_->scene()->clear();
 	graphicsViewInitialized_ = false;
 	mouseCurrentPos_ = mousePressedPos_; // this will reset roi selection
 
-	pixmap_ = QPixmap::fromImage(image);
-	rect_ = rect;
-	if(rect_.isNull())
-	{
-		rect_ = pixmap_.rect();
-	}
 	//this->setMinimumSize(image_.size());
 
 	if(graphicsViewMode_->isChecked())
 	{
 		this->setupGraphicsView();
 	}
-	label_->setVisible(image.isNull());
+}
+
+void ObjWidget::updateWords(const QMultiMap<int,int> & words)
+{
+	words_.clear();
+	for(QMultiMap<int,int>::const_iterator iter=words.begin(); iter!=words.end(); ++iter)
+	{
+		words_.insert(iter.value(), iter.key());
+	}
+	for(int i=0; i<keypointItems_.size(); ++i)
+	{
+		keypointItems_[i]->setWordID(words_.value(i,-1));
+	}
 }
 
 void ObjWidget::resetKptsColor()
@@ -301,6 +315,15 @@ void ObjWidget::resetKptsColor()
 	}
 	qDeleteAll(rectItems_.begin(), rectItems_.end());
 	rectItems_.clear();
+}
+
+void ObjWidget::resetKptsWordID()
+{
+	words_.clear();
+	for(int i=0; i<keypointItems_.size(); ++i)
+	{
+		keypointItems_[i]->setWordID(-1);
+	}
 }
 
 void ObjWidget::setKptColor(int index, const QColor & color)
@@ -322,6 +345,15 @@ void ObjWidget::setKptColor(int index, const QColor & color)
 			c.setAlpha(alpha_);
 			keypointItems_.at(index)->setColor(c);
 		}
+	}
+}
+
+void ObjWidget::setKptWordID(int index, int wordID)
+{
+	words_.insert(index, wordID);
+	if(index < keypointItems_.size())
+	{
+		keypointItems_.at(index)->setWordID(wordID);
 	}
 }
 
@@ -701,14 +733,8 @@ void ObjWidget::drawKeypoints(QPainter * painter)
 		QColor color(kptColors_.at(i).red(), kptColors_.at(i).green(), kptColors_.at(i).blue(), alpha_);
 		if(graphicsViewMode_->isChecked())
 		{
-			QString info = QString( "ID = %1\n"
-									"Response = %2\n"
-									"Angle = %3\n"
-									"X = %4\n"
-									"Y = %5\n"
-									"Size = %6").arg(i+1).arg(r.response).arg(r.angle).arg(r.pt.x).arg(r.pt.y).arg(r.size);
 			// YELLOW = NEW and multiple times
-			item = new KeypointItem(i+1, r.pt.x-radius, r.pt.y-radius, radius*2, info, color);
+			item = new KeypointItem(i, r.pt.x-radius, r.pt.y-radius, radius*2, r, words_.value(i, -1), color);
 			item->setVisible(this->isFeaturesShown());
 			item->setZValue(2);
 			graphicsView_->scene()->addItem(item);
@@ -743,7 +769,7 @@ std::vector<cv::KeyPoint> ObjWidget::selectedKeypoints() const
 		{
 			if(qgraphicsitem_cast<KeypointItem*>(items.at(i)))
 			{
-				selected.push_back(keypoints_.at(((KeypointItem*)items.at(i))->id()-1)); // ids start at 1
+				selected.push_back(keypoints_.at(((KeypointItem*)items.at(i))->id()));
 			}
 		}
 	}

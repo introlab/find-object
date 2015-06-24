@@ -32,16 +32,18 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QtGui/QGraphicsTextItem>
 #include <QtGui/QPen>
 #include <QtGui/QBrush>
+#include <opencv2/features2d/features2d.hpp>
 
 namespace find_object {
 
 class KeypointItem : public QGraphicsEllipseItem
 {
 public:
-	KeypointItem(int id, qreal x, qreal y, int r, const QString & info, const QColor & color = Qt::green, QGraphicsItem * parent = 0);
+	KeypointItem(int id, qreal x, qreal y, int r, const cv::KeyPoint & kpt, int wordID = -1, const QColor & color = Qt::green, QGraphicsItem * parent = 0);
 	virtual ~KeypointItem();
 
 	void setColor(const QColor & color);
+	void setWordID(int id) {wordID_ = id;}
 	int id() const {return id_;}
 
 protected:
@@ -55,9 +57,10 @@ private:
 	void hideDescription();
 
 private:
-	QString info_;
 	QGraphicsRectItem * placeHolder_;
 	int id_;
+	cv::KeyPoint kpt_;
+	int wordID_;
 };
 
 } // namespace find_object

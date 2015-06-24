@@ -183,7 +183,7 @@ MainWindow::MainWindow(FindObject * findObject, Camera * camera, QWidget * paren
 
 	//buttons
 	connect(ui_->pushButton_restoreDefaults, SIGNAL(clicked()), ui_->toolBox, SLOT(resetCurrentPage()));
-	connect(ui_->pushButton_updateObjects, SIGNAL(clicked()), this, SLOT(updateObjects()));
+	connect(ui_->pushButton_updateObjects, SIGNAL(clicked()), this, SLOT(updateObjects(const QList<int> &)));
 	connect(ui_->horizontalSlider_objectsSize, SIGNAL(valueChanged(int)), this, SLOT(updateObjectsSize()));
 
 	ui_->actionStop_camera->setEnabled(false);
@@ -247,7 +247,7 @@ MainWindow::MainWindow(FindObject * findObject, Camera * camera, QWidget * paren
 			iter!=findObject_->objects().constEnd();
 			++iter)
 		{
-			ObjWidget * obj = new ObjWidget(iter.key(), iter.value()->keypoints(), cvtCvMat2QImage(iter.value()->image()));
+			ObjWidget * obj = new ObjWidget(iter.key(), iter.value()->keypoints(), iter.value()->words(), cvtCvMat2QImage(iter.value()->image()));
 			objWidgets_.insert(obj->id(), obj);
 			this->showObject(obj);
 		}
@@ -366,7 +366,7 @@ void MainWindow::loadSession()
 			{
 				if(iter.value())
 				{
-					ObjWidget * obj = new ObjWidget(iter.key(), iter.value()->keypoints(), cvtCvMat2QImage(iter.value()->image()));
+					ObjWidget * obj = new ObjWidget(iter.key(), iter.value()->keypoints(), iter.value()->words(), cvtCvMat2QImage(iter.value()->image()));
 					objWidgets_.insert(obj->id(), obj);
 					ui_->actionSave_objects->setEnabled(true);
 					ui_->actionSave_session->setEnabled(true);
@@ -714,7 +714,9 @@ void MainWindow::addObjectFromScene()
 		ui_->actionSave_objects->setEnabled(true);
 		ui_->actionSave_session->setEnabled(true);
 		showObject(obj);
-		updateVocabulary();
+		QList<int> ids;
+		ids.push_back(obj->id());
+		updateVocabulary(ids);
 		objectsModified_ = true;
 	}
 	if(resumeCamera || sceneImage_.empty())
@@ -764,7 +766,7 @@ int MainWindow::addObjectFromFile(const QString & filePath)
 	const ObjSignature * s = findObject_->addObject(filePath);
 	if(s)
 	{
-		ObjWidget * obj = new ObjWidget(s->id(), std::vector<cv::KeyPoint>(), cvtCvMat2QImage(s->image()));
+		ObjWidget * obj = new ObjWidget(s->id(), std::vector<cv::KeyPoint>(), QMultiMap<int,int>(), cvtCvMat2QImage(s->image()));
 		objWidgets_.insert(obj->id(), obj);
 		ui_->actionSave_objects->setEnabled(true);
 		ui_->actionSave_session->setEnabled(true);
@@ -787,7 +789,7 @@ void MainWindow::addObjectFromTcp(const cv::Mat & image, int id, const QString &
 	const ObjSignature * s = findObject_->addObject(image, id, filePath);
 	if(s)
 	{
-		ObjWidget * obj = new ObjWidget(s->id(), std::vector<cv::KeyPoint>(), cvtCvMat2QImage(s->image()));
+		ObjWidget * obj = new ObjWidget(s->id(), std::vector<cv::KeyPoint>(), QMultiMap<int,int>(), cvtCvMat2QImage(s->image()));
 		objWidgets_.insert(obj->id(), obj);
 		ui_->actionSave_objects->setEnabled(true);
 		ui_->actionSave_session->setEnabled(true);
@@ -977,27 +979,32 @@ void MainWindow::showObject(ObjWidget * obj)
 
 void MainWindow::updateObjects(const QList<int> & ids)
 {
-	if(ids.size())
+	if(objWidgets_.size())
 	{
-		this->statusBar()->showMessage(tr("Updating %1 objects...").arg(ids.size()));
+		this->statusBar()->showMessage(tr("Updating %1 objects...").arg(ids.size()==0?objWidgets_.size():ids.size()));
 
 		findObject_->updateObjects(ids);
 
-		updateVocabulary();
+		QList<int> idsTmp = ids;
+		if(idsTmp.size() == 0)
+		{
+			idsTmp = objWidgets_.keys();
+		}
 
 		QList<ObjSignature*> signatures = findObject_->objects().values();
 		for(int i=0; i<signatures.size(); ++i)
 		{
-			if(ids.contains(signatures[i]->id()))
+			if(idsTmp.contains(signatures[i]->id()))
 			{
-				QImage qtImage = cvtCvMat2QImage(signatures[i]->image());
-				objWidgets_.value(signatures[i]->id())->setData(signatures[i]->keypoints(), qtImage, signatures[i]->rect());
+				objWidgets_.value(signatures[i]->id())->updateData(signatures[i]->keypoints());
 
 				//update object labels
 				QLabel * title = qFindChild<QLabel*>(this, QString("%1title").arg(signatures[i]->id()));
 				title->setText(QString("%1 (%2)").arg(signatures[i]->id()).arg(QString::number(signatures[i]->keypoints().size())));
 			}
 		}
+
+		updateVocabulary(ids);
 
 		if(!camera_->isRunning() && !sceneImage_.empty())
 		{
@@ -1007,23 +1014,34 @@ void MainWindow::updateObjects(const QList<int> & ids)
 	}
 }
 
-void MainWindow::updateObjects()
-{
-	updateObjects(objWidgets_.keys());
-}
-
-void MainWindow::updateVocabulary()
+void MainWindow::updateVocabulary(const QList<int> & ids)
 {
 	this->statusBar()->showMessage(tr("Updating vocabulary..."));
 
 	QTime time;
 	time.start();
-	findObject_->updateVocabulary();
+	findObject_->updateVocabulary(ids);
 
-	if(findObject_->vocabulary()->size())
+	QList<int> idsTmp = ids;
+	if(idsTmp.size() == 0)
 	{
-		ui_->label_timeIndexing->setNum(time.elapsed());
-		ui_->label_vocabularySize->setNum(findObject_->vocabulary()->size());
+		idsTmp = objWidgets_.keys();
+	}
+	QList<ObjSignature*> signatures = findObject_->objects().values();
+	for(int i=0; i<signatures.size(); ++i)
+	{
+		if(idsTmp.contains(signatures[i]->id()))
+		{
+			objWidgets_.value(signatures[i]->id())->updateWords(signatures[i]->words());
+		}
+	}
+
+	ui_->label_timeIndexing->setNum(time.elapsed());
+	ui_->label_vocabularySize->setNum(findObject_->vocabulary()->size());
+	if(ids.size() && findObject_->vocabulary()->size() == 0 && Settings::getGeneral_vocabularyFixed() && Settings::getGeneral_invertedSearch())
+	{
+		QMessageBox::warning(this, tr("Vocabulary update"), tr("\"General/VocabularyFixed=true\" and the "
+				"vocabulary is empty. New features cannot be matched to any words in the vocabulary."));
 	}
 	lastObjectsUpdateParameters_ = Settings::getParameters();
 	this->statusBar()->clearMessage();
@@ -1172,6 +1190,10 @@ void MainWindow::update(const cv::Mat & image)
 	for(QMap<int, ObjWidget*>::iterator iter=objWidgets_.begin(); iter!=objWidgets_.end(); ++iter)
 	{
 		iter.value()->resetKptsColor();
+		if(!Settings::getGeneral_invertedSearch())
+		{
+			iter.value()->resetKptsWordID();
+		}
 	}
 
 	QTime guiRefreshTime;
@@ -1184,7 +1206,8 @@ void MainWindow::update(const cv::Mat & image)
 		ui_->label_timeSkewAffine->setNum(info.timeStamps_.value(DetectionInfo::kTimeSkewAffine, 0));
 		ui_->label_timeExtraction->setNum(info.timeStamps_.value(DetectionInfo::kTimeDescriptorExtraction, 0));
 		ui_->label_timeSubPix->setNum(info.timeStamps_.value(DetectionInfo::kTimeSubPixelRefining, 0));
-		ui_->imageView_source->setData(info.sceneKeypoints_, cvtCvMat2QImage(sceneImage_));
+		ui_->imageView_source->updateImage(cvtCvMat2QImage(sceneImage_));
+		ui_->imageView_source->updateData(info.sceneKeypoints_, info.sceneWords_);
 		if(!findObject_->vocabulary()->size())
 		{
 			ui_->label_timeIndexing->setNum(info.timeStamps_.value(DetectionInfo::kTimeIndexing, 0));
@@ -1221,6 +1244,10 @@ void MainWindow::update(const cv::Mat & image)
 				{
 					obj->setKptColor(iter.key(), obj->color());
 					ui_->imageView_source->setKptColor(iter.value(), obj->color());
+					if(!Settings::getGeneral_invertedSearch())
+					{
+						obj->setKptWordID(iter.key(), ui_->imageView_source->words().value(iter.value(), -1));
+					}
 				}
 			}
 			else if(!info.objDetected_.contains(id))
@@ -1263,6 +1290,8 @@ void MainWindow::update(const cv::Mat & image)
 		}
 
 		// Add homography rectangles when homographies are computed
+		int maxHomographyScoreId = -1;
+		int maxHomographyScore = 0;
 		QMultiMap<int, QMultiMap<int,int> >::const_iterator inliersIter = info.objDetectedInliers_.constBegin();
 		QMultiMap<int, QMultiMap<int,int> >::const_iterator outliersIter = info.objDetectedOutliers_.constBegin();
 		for(QMultiMap<int,QTransform>::iterator iter = info.objDetected_.begin();
@@ -1270,6 +1299,13 @@ void MainWindow::update(const cv::Mat & image)
 				++iter, ++inliersIter, ++outliersIter)
 		{
 			int id = iter.key();
+
+			if(maxHomographyScoreId == -1 || maxHomographyScore < inliersIter.value().size())
+			{
+				maxHomographyScoreId = id;
+				maxHomographyScore = inliersIter.value().size();
+			}
+
 			ObjWidget * obj = objWidgets_.value(id);
 			UASSERT(obj != 0);
 
@@ -1294,6 +1330,10 @@ void MainWindow::update(const cv::Mat & image)
 			{
 				obj->setKptColor(iter.key(), obj->color());
 				ui_->imageView_source->setKptColor(iter.value(), obj->color());
+				if(!Settings::getGeneral_invertedSearch())
+				{
+					obj->setKptWordID(iter.key(), ui_->imageView_source->words().value(iter.value(), -1));
+				}
 			}
 
 			QLabel * label = ui_->dockWidget_objects->findChild<QLabel*>(QString("%1detection").arg(id));
@@ -1339,9 +1379,9 @@ void MainWindow::update(const cv::Mat & image)
 		ui_->label_maxMatchedDistance->setNum(info.maxMatchedDistance_);
 
 		//Scroll objects slider to the best score
-		if(maxScoreId>=0 && Settings::getGeneral_autoScroll())
+		if((maxScoreId>=0 || maxHomographyScoreId>=0) && Settings::getGeneral_autoScroll())
 		{
-			QLabel * label = ui_->dockWidget_objects->findChild<QLabel*>(QString("%1title").arg(maxScoreId));
+			QLabel * label = ui_->dockWidget_objects->findChild<QLabel*>(QString("%1title").arg(maxHomographyScoreId>=0?maxHomographyScoreId:maxScoreId));
 			if(label)
 			{
 				ui_->objects_area->verticalScrollBar()->setValue(label->pos().y());
@@ -1385,7 +1425,8 @@ void MainWindow::update(const cv::Mat & image)
 		ui_->label_timeSkewAffine->setNum(info.timeStamps_.value(DetectionInfo::kTimeSkewAffine, 0));
 		ui_->label_timeExtraction->setNum(info.timeStamps_.value(DetectionInfo::kTimeDescriptorExtraction, 0));
 		ui_->label_timeSubPix->setNum(info.timeStamps_.value(DetectionInfo::kTimeSubPixelRefining, 0));
-		ui_->imageView_source->setData(info.sceneKeypoints_, cvtCvMat2QImage(sceneImage_));
+		ui_->imageView_source->updateImage(cvtCvMat2QImage(sceneImage_));
+		ui_->imageView_source->updateData(info.sceneKeypoints_, info.sceneWords_);
 	}
 
 
@@ -1454,6 +1495,7 @@ void MainWindow::notifyParametersChanged(const QStringList & paramChanged)
 			else if( (iter->contains("NearestNeighbor") && Settings::getGeneral_invertedSearch()) ||
 					  iter->compare(Settings::kGeneral_invertedSearch()) == 0 ||
 					  (iter->compare(Settings::kGeneral_vocabularyIncremental()) == 0 && Settings::getGeneral_invertedSearch()) ||
+					  (iter->compare(Settings::kGeneral_vocabularyFixed()) == 0 && Settings::getGeneral_invertedSearch()) ||
 					  (iter->compare(Settings::kGeneral_threads()) == 0 && !Settings::getGeneral_invertedSearch()) )
 			{
 				nearestNeighborParamsChanged = true;
@@ -1478,7 +1520,7 @@ void MainWindow::notifyParametersChanged(const QStringList & paramChanged)
 	{
 		if(detectorDescriptorParamsChanged)
 		{
-			this->updateObjects(objWidgets_.keys());
+			this->updateObjects();
 		}
 		else if(nearestNeighborParamsChanged)
 		{

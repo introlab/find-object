@@ -80,7 +80,7 @@ public:
 
 	void updateDetectorExtractor();
 	void updateObjects(const QList<int> & ids = QList<int>());
-	void updateVocabulary();
+	void updateVocabulary(const QList<int> & ids = QList<int>());
 
 	const QMap<int, ObjSignature*> & objects() const {return objects_;}
 	const Vocabulary * vocabulary() const {return vocabulary_;}

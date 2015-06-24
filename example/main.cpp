@@ -79,8 +79,6 @@ int main(int argc, char * argv[])
 
 	// GUI stuff
 	QApplication app(argc, argv);
-	ObjWidget objWidget;
-	ObjWidget sceneWidget;
 
 	time.start();
 	//Load as grayscale
@@ -199,8 +197,8 @@ int main(int argc, char * argv[])
 		// PROCESS NEAREST NEIGHBOR RESULTS
 		////////////////////////////
 		// Set gui data
-		objWidget.setData(objectKeypoints, cvtCvMat2QImage(objectImg));
-		sceneWidget.setData(sceneKeypoints, cvtCvMat2QImage(sceneImg));
+		ObjWidget objWidget(0, objectKeypoints, QMultiMap<int,int>(), cvtCvMat2QImage(objectImg));
+		ObjWidget sceneWidget(0, sceneKeypoints, QMultiMap<int,int>(), cvtCvMat2QImage(sceneImg));
 
 		// Find correspondences by NNDR (Nearest Neighbor Distance Ratio)
 		float nndrRatio = 0.8f;

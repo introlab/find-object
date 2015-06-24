@@ -53,14 +53,18 @@ class FINDOBJECT_EXP ObjWidget : public QWidget
 
 public:
 	ObjWidget(QWidget * parent = 0);
-	ObjWidget(int id, const std::vector<cv::KeyPoint> & keypoints, const QImage & image, QWidget * parent = 0);
+	ObjWidget(int id, const std::vector<cv::KeyPoint> & keypoints, const QMultiMap<int,int> & words, const QImage & image, QWidget * parent = 0);
 	virtual ~ObjWidget();
 
 	void setId(int id);
-	void setData(const std::vector<cv::KeyPoint> & keypoints, const QImage & image, const QRect & rect = QRect());
+	void updateImage(const QImage & image);
+	void updateData(const std::vector<cv::KeyPoint> & keypoints, const QMultiMap<int, int> & words=QMultiMap<int, int>());
+	void updateWords(const QMultiMap<int,int> & words);
 	void setTextLabel(const QString & text);
 	void resetKptsColor();
+	void resetKptsWordID();
 	void setKptColor(int index, const QColor & color);
+	void setKptWordID(int index, int wordId);
 	void setGraphicsViewMode(bool on);
 	void setAutoScale(bool autoScale);
 	void setSizedFeatures(bool on);
@@ -75,6 +79,7 @@ public:
 	int id() const {return id_;}
 	const QColor & color() const {return color_;}
 	const std::vector<cv::KeyPoint> keypoints() const {return keypoints_;}
+	const QMap<int,int> & words() const {return words_;}
 	const QPixmap & pixmap() const {return pixmap_;}
 	QColor defaultColor() const;
 	bool isImageShown() const;
@@ -110,6 +115,7 @@ private:
 private:
 	int id_;
 	std::vector<cv::KeyPoint> keypoints_;
+	QMap<int,int> words_; //<keypoint, word>
 	QPixmap pixmap_;
 	QRect rect_;
 	QList<KeypointItem*> keypointItems_;

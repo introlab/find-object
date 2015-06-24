@@ -33,11 +33,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace find_object {
 
-KeypointItem::KeypointItem(int id, qreal x, qreal y, int r, const QString & info, const QColor & color, QGraphicsItem * parent) :
+KeypointItem::KeypointItem(int id, qreal x, qreal y, int r, const cv::KeyPoint & kpt, int wordID, const QColor & color, QGraphicsItem * parent) :
 	QGraphicsEllipseItem(x, y, r, r, parent),
-	info_(info),
 	placeHolder_(0),
-	id_(id)
+	id_(id),
+	kpt_(kpt),
+	wordID_(wordID)
 {
 	this->setPen(QPen(color));
 	this->setBrush(QBrush(color));
@@ -70,13 +71,21 @@ void KeypointItem::showDescription()
 	{
 		if(!placeHolder_)
 		{
+			QString info = QString( "Keypoint = %1\n"
+									"Word = %2\n"
+									"Response = %3\n"
+									"Angle = %4\n"
+									"X = %5\n"
+									"Y = %6\n"
+									"Size = %7").arg(id_).arg(wordID_).arg(kpt_.response).arg(kpt_.angle).arg(kpt_.pt.x).arg(kpt_.pt.y).arg(kpt_.size);
+
 			placeHolder_ = new QGraphicsRectItem();
 			placeHolder_->setVisible(false);
 			this->scene()->addItem(placeHolder_);
 			placeHolder_->setBrush(QBrush(QColor ( 0, 0, 0, 170 ))); // Black transparent background
 			QGraphicsTextItem * text = new QGraphicsTextItem(placeHolder_);
 			text->setDefaultTextColor(this->pen().color().rgb());
-			text->setPlainText(info_);
+			text->setPlainText(info);
 			placeHolder_->setRect(text->boundingRect());
 		}
 

@@ -275,7 +275,8 @@ class FINDOBJECT_EXP Settings
 	PARAMETER(General, multiDetectionRadius, int, 30, "Ignore detection of the same object in X pixels radius of the previous detections.");
 	PARAMETER(General, port, int, 0, "Port on objects detected are published. If port=0, a port is chosen automatically.")
 	PARAMETER(General, autoScroll, bool, true, "Auto scroll to detected object in Objects panel.");
-	PARAMETER(General, vocabularyIncremental, bool, false, "The vocabulary is created incrementally. When new objects are added, their descriptors are compared to those already in vocabulary to find if the visual word already exist or not. \"NearestNeighbor/nndrRatio\" is used to compare descriptors.");
+	PARAMETER(General, vocabularyFixed, bool, false, "If the vocabulary is fixed, no new words will be added to it when adding new objects.");
+	PARAMETER(General, vocabularyIncremental, bool, false, "The vocabulary is created incrementally. When new objects are added, their descriptors are compared to those already in vocabulary to find if the visual word already exist or not. \"NearestNeighbor/nndrRatio\" and \"NearestNeighbor/minDistance\" are used to compare descriptors.");
 	PARAMETER(General, vocabularyUpdateMinWords, int, 2000, "When the vocabulary is incremental (see \"General/vocabularyIncremental\"), after X words added to vocabulary, the internal index is updated with new words. This parameter lets avoiding to reconstruct the whole nearest neighbor index after each time descriptors of an object are added to vocabulary. 0 means no incremental update.");
 	PARAMETER(General, sendNoObjDetectedEvents, bool, true, "When there are no objects detected, send an empty object detection event.");
 	PARAMETER(General, autoPauseOnDetection, bool, false, "Auto pause the camera when an object is detected.");

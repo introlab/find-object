@@ -28,6 +28,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "find_object/FindObject.h"
 #include "find_object/Settings.h"
 #include "find_object/utilite/ULogger.h"
+#include "utilite/UConversion.h"
 
 #include "ObjSignature.h"
 #include "utilite/UDirectory.h"
@@ -144,12 +145,12 @@ bool FindObject::saveSession(const QString & path)
 
 int FindObject::loadObjects(const QString & dirPath, bool recursive)
 {
-	int loadedObjects = 0;
 	QString formats = Settings::getGeneral_imageFormats().remove('*').remove('.');
 
 	QStringList paths;
 	paths.append(dirPath);
 
+	QList<int> idsLoaded;
 	while(paths.size())
 	{
 		QString currentDir = paths.front();
@@ -159,9 +160,10 @@ int FindObject::loadObjects(const QString & dirPath, bool recursive)
 			const std::list<std::string> & names = dir.getFileNames(); // sorted in natural order
 			for(std::list<std::string>::const_iterator iter=names.begin(); iter!=names.end(); ++iter)
 			{
-				if(this->addObject((currentDir.toStdString()+dir.separator()+*iter).c_str()))
+				const ObjSignature * s = this->addObject((currentDir.toStdString()+dir.separator()+*iter).c_str());
+				if(s)
 				{
-					++loadedObjects;
+					idsLoaded.push_back(s->id());
 				}
 			}
 		}
@@ -179,13 +181,13 @@ int FindObject::loadObjects(const QString & dirPath, bool recursive)
 		}
 	}
 
-	if(loadedObjects)
+	if(idsLoaded.size())
 	{
-		this->updateObjects();
-		this->updateVocabulary();
+		this->updateObjects(idsLoaded);
+		this->updateVocabulary(idsLoaded);
 	}
 
-	return loadedObjects;
+	return idsLoaded.size();
 }
 
 const ObjSignature * FindObject::addObject(const QString & filePath)
@@ -279,7 +281,7 @@ void FindObject::addObjectAndUpdate(const cv::Mat & image, int id, const QString
 		QList<int> ids;
 		ids.push_back(s->id());
 		updateObjects(ids);
-		updateVocabulary();
+		updateVocabulary(ids);
 	}
 }
 
@@ -739,14 +741,38 @@ void FindObject::clearVocabulary()
 	vocabulary_->clear();
 }
 
-void FindObject::updateVocabulary()
+void FindObject::updateVocabulary(const QList<int> & ids)
 {
-	clearVocabulary();
 	int count = 0;
 	int dim = -1;
 	int type = -1;
+	QList<ObjSignature*> objectsList;
+	if(ids.size())
+	{
+		for(int i=0; i<ids.size(); ++i)
+		{
+			if(objects_.contains(ids[i]))
+			{
+				objectsList.push_back(objects_[ids[i]]);
+			}
+			else
+			{
+				UERROR("Not found object %d!", ids[i]);
+			}
+		}
+		if(vocabulary_->size())
+		{
+			dim = vocabulary_->dim();
+			type = vocabulary_->type();
+		}
+	}
+	else
+	{
+		clearVocabulary();
+		objectsList = objects_.values();
+	}
+
 	// Get the total size and verify descriptors
-	QList<ObjSignature*> objectsList = objects_.values();
 	for(int i=0; i<objectsList.size(); ++i)
 	{
 		if(!objectsList.at(i)->descriptors().empty())
@@ -774,94 +800,119 @@ void FindObject::updateVocabulary()
 	{
 		UINFO("Updating global descriptors matrix: Objects=%d, total descriptors=%d, dim=%d, type=%d",
 				(int)objects_.size(), count, dim, type);
-		if(Settings::getGeneral_invertedSearch() || Settings::getGeneral_threads() == 1)
+		if(!Settings::getGeneral_invertedSearch())
 		{
-			// If only one thread, put all descriptors in the same cv::Mat
-			objectsDescriptors_.insert(0, cv::Mat(count, dim, type));
-			int row = 0;
-			for(int i=0; i<objectsList.size(); ++i)
+			if(Settings::getGeneral_threads() == 1)
 			{
-				if(objectsList.at(i)->descriptors().rows)
+				// If only one thread, put all descriptors in the same cv::Mat
+				int row = 0;
+				bool vocabularyEmpty = objectsDescriptors_.size() == 0;
+				if(vocabularyEmpty)
 				{
-					cv::Mat dest(objectsDescriptors_.begin().value(), cv::Range(row, row+objectsList.at(i)->descriptors().rows));
-					objectsList.at(i)->descriptors().copyTo(dest);
-					row += objectsList.at(i)->descriptors().rows;
-					// dataRange contains the upper_bound for each
-					// object (the last descriptors position in the
-					// global object descriptors matrix)
+					UASSERT(objectsDescriptors_.size() == 0);
+					objectsDescriptors_.insert(0, cv::Mat(count, dim, type));
+				}
+				else
+				{
+					row = objectsDescriptors_.begin().value().rows;
+				}
+				for(int i=0; i<objectsList.size(); ++i)
+				{
+					objectsList[i]->setWords(QMultiMap<int,int>());
 					if(objectsList.at(i)->descriptors().rows)
 					{
-						dataRange_.insert(row-1, objectsList.at(i)->id());
+						if(vocabularyEmpty)
+						{
+							cv::Mat dest(objectsDescriptors_.begin().value(), cv::Range(row, row+objectsList.at(i)->descriptors().rows));
+							objectsList.at(i)->descriptors().copyTo(dest);
+						}
+						else
+						{
+							UASSERT_MSG(objectsDescriptors_.begin().value().cols == objectsList.at(i)->descriptors().cols,
+									uFormat("%d vs %d", objectsDescriptors_.begin().value().cols, objectsList.at(i)->descriptors().cols).c_str());
+							UASSERT(objectsDescriptors_.begin().value().type() == objectsList.at(i)->descriptors().type());
+							objectsDescriptors_.begin().value().push_back(objectsList.at(i)->descriptors());
+						}
+
+						row += objectsList.at(i)->descriptors().rows;
+						// dataRange contains the upper_bound for each
+						// object (the last descriptors position in the
+						// global object descriptors matrix)
+						if(objectsList.at(i)->descriptors().rows)
+						{
+							dataRange_.insert(row-1, objectsList.at(i)->id());
+						}
 					}
 				}
 			}
-
-			if(Settings::getGeneral_invertedSearch())
+			else
 			{
-				sessionModified_ = true;
-				QTime time;
-				time.start();
-				bool incremental = Settings::getGeneral_vocabularyIncremental() && !Settings::getGeneral_vocabularyFixed();
-				if(incremental)
-				{
-					UINFO("Creating incremental vocabulary...");
-				}
-				else if(Settings::getGeneral_vocabularyFixed())
-				{
-					UINFO("Updating vocabulary correspondences only (vocabulary is fixed)...");
-				}
-				else
-				{
-					UINFO("Creating vocabulary...");
-				}
-				QTime localTime;
-				localTime.start();
-				int updateVocabularyMinWords = Settings::getGeneral_vocabularyUpdateMinWords();
-				int addedWords = 0;
 				for(int i=0; i<objectsList.size(); ++i)
 				{
-					QMultiMap<int, int> words = vocabulary_->addWords(objectsList[i]->descriptors(), objectsList.at(i)->id());
-					objectsList[i]->setWords(words);
-					addedWords += words.uniqueKeys().size();
-					bool updated = false;
-					if(incremental && addedWords && addedWords >= updateVocabularyMinWords)
-					{
-						vocabulary_->update();
-						addedWords = 0;
-						updated = true;
-					}
-					UINFO("Object %d, %d words from %d descriptors (%d words, %d ms) %s",
-							objectsList[i]->id(),
-							words.uniqueKeys().size(),
-							objectsList[i]->descriptors().rows,
-							vocabulary_->size(),
-							localTime.restart(),
-							updated?"updated":"");
-				}
-				if(addedWords && !Settings::getGeneral_vocabularyFixed())
-				{
-					vocabulary_->update();
-				}
-
-				if(incremental)
-				{
-					UINFO("Creating incremental vocabulary... done! size=%d (%d ms)", vocabulary_->size(), time.elapsed());
-				}
-				else if(Settings::getGeneral_vocabularyFixed())
-				{
-					UINFO("Updating vocabulary correspondences only (vocabulary is fixed)... done! size=%d (%d ms)", time.elapsed());
-				}
-				else
-				{
-					UINFO("Creating vocabulary... done! size=%d (%d ms)", vocabulary_->size(), time.elapsed());
+					objectsList[i]->setWords(QMultiMap<int,int>());
+					objectsDescriptors_.insert(objectsList.at(i)->id(), objectsList.at(i)->descriptors());
 				}
 			}
 		}
 		else
 		{
+			// Inverted index on (vocabulary)
+			sessionModified_ = true;
+			QTime time;
+			time.start();
+			bool incremental = Settings::getGeneral_vocabularyIncremental() && !Settings::getGeneral_vocabularyFixed();
+			if(incremental)
+			{
+				UINFO("Creating incremental vocabulary...");
+			}
+			else if(Settings::getGeneral_vocabularyFixed())
+			{
+				UINFO("Updating vocabulary correspondences only (vocabulary is fixed)...");
+			}
+			else
+			{
+				UINFO("Creating vocabulary...");
+			}
+			QTime localTime;
+			localTime.start();
+			int updateVocabularyMinWords = Settings::getGeneral_vocabularyUpdateMinWords();
+			int addedWords = 0;
 			for(int i=0; i<objectsList.size(); ++i)
 			{
-				objectsDescriptors_.insert(objectsList.at(i)->id(), objectsList.at(i)->descriptors());
+				QMultiMap<int, int> words = vocabulary_->addWords(objectsList[i]->descriptors(), objectsList.at(i)->id());
+				objectsList[i]->setWords(words);
+				addedWords += words.uniqueKeys().size();
+				bool updated = false;
+				if(incremental && addedWords && addedWords >= updateVocabularyMinWords)
+				{
+					vocabulary_->update();
+					addedWords = 0;
+					updated = true;
+				}
+				UINFO("Object %d, %d words from %d descriptors (%d words, %d ms) %s",
+						objectsList[i]->id(),
+						words.uniqueKeys().size(),
+						objectsList[i]->descriptors().rows,
+						vocabulary_->size(),
+						localTime.restart(),
+						updated?"updated":"");
+			}
+			if(addedWords && !Settings::getGeneral_vocabularyFixed())
+			{
+				vocabulary_->update();
+			}
+
+			if(incremental)
+			{
+				UINFO("Creating incremental vocabulary... done! size=%d (%d ms)", vocabulary_->size(), time.elapsed());
+			}
+			else if(Settings::getGeneral_vocabularyFixed())
+			{
+				UINFO("Updating vocabulary correspondences only (vocabulary is fixed)... done! size=%d (%d ms)", vocabulary_->size(), time.elapsed());
+			}
+			else
+			{
+				UINFO("Creating vocabulary... done! size=%d (%d ms)", vocabulary_->size(), time.elapsed());
 			}
 		}
 	}
@@ -1202,6 +1253,7 @@ bool FindObject::detect(const cv::Mat & image, find_object::DetectionInfo & info
 				words = vocabulary_->addWords(info.sceneDescriptors_, -1);
 				vocabulary_->update();
 				info.timeStamps_.insert(DetectionInfo::kTimeIndexing, time.restart());
+				info.sceneWords_ = words;
 			}
 
 			for(QMap<int, ObjSignature*>::iterator iter=objects_.begin(); iter!=objects_.end(); ++iter)
@@ -1274,9 +1326,10 @@ bool FindObject::detect(const cv::Mat & image, find_object::DetectionInfo & info
 
 					if(matched)
 					{
+						int wordId = results.at<int>(i,0);
 						if(Settings::getGeneral_invertedSearch())
 						{
-							int wordId = results.at<int>(i,0);
+							info.sceneWords_.insertMulti(wordId, i);
 							QList<int> objIds = vocabulary_->wordToObjects().values(wordId);
 							for(int j=0; j<objIds.size(); ++j)
 							{
@@ -1294,7 +1347,6 @@ bool FindObject::detect(const cv::Mat & image, find_object::DetectionInfo & info
 							int fisrtObjectDescriptorIndex = (iter == dataRange_.begin())?0:(--iter).key()+1;
 							int objectDescriptorIndex = i - fisrtObjectDescriptorIndex;
 
-							int wordId = results.at<int>(i,0);
 							if(words.count(wordId) == 1)
 							{
 								info.matches_.find(objectId).value().insert(objectDescriptorIndex, words.value(wordId));

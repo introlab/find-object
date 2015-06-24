@@ -44,6 +44,8 @@ public:
 	void update();
 	void search(const cv::Mat & descriptors, cv::Mat & results, cv::Mat & dists, int k);
 	int size() const {return indexedDescriptors_.rows + notIndexedDescriptors_.rows;}
+	int dim() const {return !indexedDescriptors_.empty()?indexedDescriptors_.cols:notIndexedDescriptors_.cols;}
+	int type() const {return !indexedDescriptors_.empty()?indexedDescriptors_.type():notIndexedDescriptors_.type();}
 	const QMultiMap<int, int> & wordToObjects() const {return wordToObjects_;}
 	const cv::Mat & indexedDescriptors() const {return indexedDescriptors_;}
 
