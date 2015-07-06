@@ -123,7 +123,7 @@ class FINDOBJECT_EXP Settings
 	PARAMETER(Feature2D, 6SubPix, bool, false, "Refines the corner locations. With SIFT/SURF, features are already subpixel, so no need to activate this.");
 	PARAMETER(Feature2D, 7SubPixWinSize, int, 3, "Half of the side length of the search window. For example, if winSize=Size(5,5) , then a 5*2+1 x 5*2+1 = 11 x 11 search window is used.");
 	PARAMETER(Feature2D, 8SubPixIterations, int, 30, "The process of corner position refinement stops after X iterations.");
-	PARAMETER(Feature2D, 9SubPixEps, float, 0.02, "The process of corner position refinement stops when the corner position moves by less than epsilon on some iteration.");
+	PARAMETER(Feature2D, 9SubPixEps, float, 0.02f, "The process of corner position refinement stops when the corner position moves by less than epsilon on some iteration.");
 
 	PARAMETER(Feature2D, Brief_bytes, int, 32, "Bytes is a length of descriptor in bytes. It can be equal 16, 32 or 64 bytes.");
 
@@ -293,7 +293,7 @@ class FINDOBJECT_EXP Settings
 	PARAMETER(Homography, opticalFlowWinSize, int, 16, "Size of the search window at each pyramid level.");
 	PARAMETER(Homography, opticalFlowMaxLevel, int, 3, "0-based maximal pyramid level number; if set to 0, pyramids are not used (single level), if set to 1, two levels are used, and so on; if pyramids are passed to input then algorithm will use as many levels as pyramids have but no more than maxLevel.");
 	PARAMETER(Homography, opticalFlowIterations, int, 30, "Specifying the termination criteria of the iterative search algorithm (after the specified maximum number of iterations).");
-	PARAMETER(Homography, opticalFlowEps, float, 0.01, "Specifying the termination criteria of the iterative search algorithm (when the search window moves by less than epsilon).");
+	PARAMETER(Homography, opticalFlowEps, float, 0.01f, "Specifying the termination criteria of the iterative search algorithm (when the search window moves by less than epsilon).");
 
 public:
 	virtual ~Settings(){}
