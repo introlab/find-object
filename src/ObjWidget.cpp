@@ -71,7 +71,7 @@ ObjWidget::ObjWidget(int id, const std::vector<cv::KeyPoint> & keypoints, const 
 	graphicsView_(0),
 	graphicsViewInitialized_(false),
 	alpha_(100),
-	color_(QColor((Qt::GlobalColor)((id % 11 + 7)==Qt::yellow?Qt::gray:(id % 11 + 7))))
+	color_(QColor((Qt::GlobalColor)((id % 10 + 7)==Qt::yellow?Qt::darkYellow:(id % 10 + 7))))
 {
 	setupUi();
 	this->updateImage(image);
@@ -136,7 +136,7 @@ void ObjWidget::setupUi()
 
 void ObjWidget::setId(int id)
 {
-	color_ = QColor((Qt::GlobalColor)((id % 11 + 7)==Qt::yellow?Qt::gray:(id % 11 + 7)));
+	color_ = QColor((Qt::GlobalColor)((id % 10 + 7)==Qt::yellow?Qt::darkYellow:(id % 10 + 7)));
 	id_=id;
 	if(id_)
 	{
@@ -274,7 +274,7 @@ void ObjWidget::updateImage(const QImage & image)
 void ObjWidget::updateData(const std::vector<cv::KeyPoint> & keypoints, const QMultiMap<int, int> & words)
 {
 	keypoints_ = keypoints;
-	kptColors_ = QVector<QColor>((int)keypoints.size(), defaultColor());
+	kptColors_ = QVector<QColor>((int)keypoints.size(), defaultColor(0));
 	keypointItems_.clear();
 	rectItems_.clear();
 	this->updateWords(words);
@@ -297,9 +297,14 @@ void ObjWidget::updateWords(const QMultiMap<int,int> & words)
 	{
 		words_.insert(iter.value(), iter.key());
 	}
-	for(int i=0; i<keypointItems_.size(); ++i)
+	for(int i=0; i<kptColors_.size(); ++i)
 	{
-		keypointItems_[i]->setWordID(words_.value(i,-1));
+		kptColors_[i] = defaultColor(words_.size()?words_.value(i,-1):0);
+		if(keypointItems_.size() == kptColors_.size())
+		{
+			keypointItems_[i]->setWordID(words_.value(i,-1));
+			keypointItems_[i]->setColor(defaultColor(words_.size()?keypointItems_[i]->wordID():0));
+		}
 	}
 }
 
@@ -307,10 +312,14 @@ void ObjWidget::resetKptsColor()
 {
 	for(int i=0; i<kptColors_.size(); ++i)
 	{
-		kptColors_[i] = defaultColor();
-		if(graphicsViewMode_->isChecked())
+		if(keypointItems_.size() == kptColors_.size())
 		{
-			keypointItems_[i]->setColor(this->defaultColor());
+			kptColors_[i] = defaultColor(keypointItems_[i]->wordID());
+			keypointItems_[i]->setColor(this->defaultColor(keypointItems_[i]->wordID()));
+		}
+		else
+		{
+			kptColors_[i] = defaultColor(words_.value(i,-1));
 		}
 	}
 	qDeleteAll(rectItems_.begin(), rectItems_.end());
@@ -738,6 +747,8 @@ void ObjWidget::drawKeypoints(QPainter * painter)
 			item->setVisible(this->isFeaturesShown());
 			item->setZValue(2);
 			graphicsView_->scene()->addItem(item);
+			item->setColor(defaultColor(item->wordID()));
+			kptColors_[i] = defaultColor(item->wordID());
 			keypointItems_.append(item);
 		}
 
@@ -752,9 +763,9 @@ void ObjWidget::drawKeypoints(QPainter * painter)
 	}
 }
 
-QColor ObjWidget::defaultColor() const
+QColor ObjWidget::defaultColor(int id) const
 {
-	QColor color(Qt::yellow);
+	QColor color(id >= 0 ? Qt::yellow : Qt::white);
 	color.setAlpha(alpha_);
 	return color;
 }

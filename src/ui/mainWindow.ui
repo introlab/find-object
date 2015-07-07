@@ -225,6 +225,9 @@
     <addaction name="actionLoad_objects"/>
     <addaction name="actionSave_objects"/>
     <addaction name="separator"/>
+    <addaction name="actionLoad_vocabulary"/>
+    <addaction name="actionSave_vocabulary"/>
+    <addaction name="separator"/>
     <addaction name="actionLoad_settings"/>
     <addaction name="actionSave_settings"/>
     <addaction name="separator"/>
@@ -892,6 +895,16 @@
   <action name="actionShow_objects_features">
    <property name="text">
     <string>Show objects features</string>
+   </property>
+  </action>
+  <action name="actionLoad_vocabulary">
+   <property name="text">
+    <string>Load vocabulary...</string>
+   </property>
+  </action>
+  <action name="actionSave_vocabulary">
+   <property name="text">
+    <string>Save vocabulary...</string>
    </property>
   </action>
  </widget>

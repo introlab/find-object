@@ -69,6 +69,9 @@ public:
 	bool saveSession(const QString & path);
 	bool isSessionModified() const {return sessionModified_;}
 
+	bool saveVocabulary(const QString & filePath) const;
+	bool loadVocabulary(const QString & filePath);
+
 	int loadObjects(const QString & dirPath, bool recursive = false); // call updateObjects()
 	const ObjSignature * addObject(const QString & filePath);
 	const ObjSignature * addObject(const cv::Mat & image, int id=0, const QString & filePath = QString());

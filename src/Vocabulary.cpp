@@ -60,6 +60,8 @@ void Vocabulary::clear()
 
 	if(Settings::getGeneral_vocabularyFixed() && Settings::getGeneral_invertedSearch())
 	{
+		this->update(); // if vocabulary structure has changed
+
 		// If the dictionary is fixed, don't clear indexed descriptors
 		return;
 	}
@@ -67,39 +69,79 @@ void Vocabulary::clear()
 	indexedDescriptors_ = cv::Mat();
 }
 
-void Vocabulary::save(QDataStream & streamPtr) const
+void Vocabulary::save(QDataStream & streamSessionPtr) const
 {
-	if(!indexedDescriptors_.empty() && !wordToObjects_.empty())
-	{
-		UASSERT(notIndexedDescriptors_.empty() && notIndexedWordIds_.empty());
+	// save index
+	streamSessionPtr << wordToObjects_;
 
-		// save index
-		streamPtr << wordToObjects_;
-
-		// save words
-		qint64 dataSize = indexedDescriptors_.elemSize()*indexedDescriptors_.cols*indexedDescriptors_.rows;
-		streamPtr << indexedDescriptors_.rows <<
-				indexedDescriptors_.cols <<
-				indexedDescriptors_.type() <<
-				dataSize;
-		streamPtr << QByteArray((char*)indexedDescriptors_.data, dataSize);
-	}
+	// save words
+	qint64 dataSize = indexedDescriptors_.elemSize()*indexedDescriptors_.cols*indexedDescriptors_.rows;
+	streamSessionPtr << indexedDescriptors_.rows <<
+			indexedDescriptors_.cols <<
+			indexedDescriptors_.type() <<
+			dataSize;
+	streamSessionPtr << QByteArray((char*)indexedDescriptors_.data, dataSize);
 }
 
-void Vocabulary::load(QDataStream & streamPtr)
+void Vocabulary::load(QDataStream & streamSessionPtr)
 {
 	// load index
-	streamPtr >> wordToObjects_;
+	streamSessionPtr >> wordToObjects_;
 
 	// load words
 	int rows,cols,type;
 	qint64 dataSize;
-	streamPtr >> rows >> cols >> type >> dataSize;
+	streamSessionPtr >> rows >> cols >> type >> dataSize;
 	QByteArray data;
-	streamPtr >> data;
+	streamSessionPtr >> data;
 	indexedDescriptors_ = cv::Mat(rows, cols, type, data.data()).clone();
 
 	update();
+}
+
+bool Vocabulary::save(const QString & filename) const
+{
+	// save descriptors
+	cv::FileStorage fs(filename.toStdString(), cv::FileStorage::WRITE);
+	if(fs.isOpened())
+	{
+		fs << "Descriptors" << indexedDescriptors_;
+		return true;
+	}
+	else
+	{
+		UERROR("Failed to open vocabulary file \"%s\"", filename.toStdString().c_str());
+	}
+	return false;
+}
+
+bool Vocabulary::load(const QString & filename)
+{
+	// save descriptors
+	cv::FileStorage fs(filename.toStdString(), cv::FileStorage::READ);
+	if(fs.isOpened())
+	{
+		cv::Mat tmp;
+		fs["Descriptors"] >> tmp;
+
+		if(!tmp.empty())
+		{
+			// clear index
+			wordToObjects_.clear();
+			indexedDescriptors_ = tmp;
+			update();
+			return true;
+		}
+		else
+		{
+			UERROR("Failed to read \"Descriptors\" matrix field (doesn't exist or is empty) from vocabulary file \"%s\"", filename.toStdString().c_str());
+		}
+	}
+	else
+	{
+		UERROR("Failed to open vocabulary file \"%s\"", filename.toStdString().c_str());
+	}
+	return false;
 }
 
 QMultiMap<int, int> Vocabulary::addWords(const cv::Mat & descriptors, int objectId)
@@ -119,7 +161,21 @@ QMultiMap<int, int> Vocabulary::addWords(const cv::Mat & descriptors, int object
 		bool globalSearch = false;
 		if(!indexedDescriptors_.empty() && indexedDescriptors_.rows >= (int)k)
 		{
-			UASSERT(indexedDescriptors_.type() == descriptors.type() && indexedDescriptors_.cols == descriptors.cols);
+			if(indexedDescriptors_.type() != descriptors.type() || indexedDescriptors_.cols != descriptors.cols)
+			{
+				if(Settings::getGeneral_vocabularyFixed())
+				{
+					UERROR("Descriptors (type=%d size=%d) to search in vocabulary are not the same type/size as those in the vocabulary (type=%d size=%d)! Empty words returned.",
+							descriptors.type(), descriptors.cols, indexedDescriptors_.type(), indexedDescriptors_.cols);
+					return words;
+				}
+				else
+				{
+					UFATAL("Descriptors (type=%d size=%d) to search in vocabulary are not the same type/size as those in the vocabulary (type=%d size=%d)!",
+							descriptors.type(), descriptors.cols, indexedDescriptors_.type(), indexedDescriptors_.cols);
+				}
+			}
+
 			this->search(descriptors, results, dists, k);
 
 			if( dists.type() == CV_32S )

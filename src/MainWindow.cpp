@@ -183,7 +183,7 @@ MainWindow::MainWindow(FindObject * findObject, Camera * camera, QWidget * paren
 
 	//buttons
 	connect(ui_->pushButton_restoreDefaults, SIGNAL(clicked()), ui_->toolBox, SLOT(resetCurrentPage()));
-	connect(ui_->pushButton_updateObjects, SIGNAL(clicked()), this, SLOT(updateObjects(const QList<int> &)));
+	connect(ui_->pushButton_updateObjects, SIGNAL(clicked()), this, SLOT(updateObjects()));
 	connect(ui_->horizontalSlider_objectsSize, SIGNAL(valueChanged(int)), this, SLOT(updateObjectsSize()));
 
 	ui_->actionStop_camera->setEnabled(false);
@@ -211,6 +211,8 @@ MainWindow::MainWindow(FindObject * findObject, Camera * camera, QWidget * paren
 	connect(ui_->actionLoad_settings, SIGNAL(triggered()), this, SLOT(loadSettings()));
 	connect(ui_->actionSave_session, SIGNAL(triggered()), this, SLOT(saveSession()));
 	connect(ui_->actionLoad_session, SIGNAL(triggered()), this, SLOT(loadSession()));
+	connect(ui_->actionSave_vocabulary, SIGNAL(triggered()), this, SLOT(saveVocabulary()));
+	connect(ui_->actionLoad_vocabulary, SIGNAL(triggered()), this, SLOT(loadVocabulary()));
 	connect(ui_->actionShow_objects_features, SIGNAL(triggered()), this, SLOT(showObjectsFeatures()));
 	connect(ui_->actionHide_objects_features, SIGNAL(triggered()), this, SLOT(hideObjectsFeatures()));
 
@@ -251,6 +253,13 @@ MainWindow::MainWindow(FindObject * findObject, Camera * camera, QWidget * paren
 			objWidgets_.insert(obj->id(), obj);
 			this->showObject(obj);
 		}
+		ui_->actionSave_objects->setEnabled(true);
+		ui_->actionSave_session->setEnabled(true);
+	}
+	if(findObject_->vocabulary()->size())
+	{
+		ui_->label_vocabularySize->setNum(findObject_->vocabulary()->size());
+		ui_->actionSave_session->setEnabled(true);
 	}
 
 
@@ -583,6 +592,66 @@ bool MainWindow::saveObjects()
 		return count > 0;
 	}
 	return false;
+}
+
+void MainWindow::loadVocabulary()
+{
+	if(!Settings::getGeneral_vocabularyFixed() ||
+	   !Settings::getGeneral_invertedSearch())
+	{
+		QMessageBox::StandardButton b = QMessageBox::question(this, tr("Load vocabulary..."),
+				tr("Parameters \"General/vocabularyFixed\" and \"General/invertedSearch\" should be enabled to load a vocabulary. "
+					"Do you want to enable them now?"),
+					QMessageBox::Cancel | QMessageBox::Yes);
+		if(b == QMessageBox::Yes)
+		{
+			Settings::setGeneral_vocabularyFixed(true);
+			Settings::setGeneral_invertedSearch(true);
+		}
+	}
+	if(Settings::getGeneral_vocabularyFixed() &&
+	   Settings::getGeneral_invertedSearch())
+	{
+		QString path = QFileDialog::getOpenFileName(this, tr("Load vocabulary..."), Settings::workingDirectory(), "Data (*.yaml *.xml)");
+		if(!path.isEmpty())
+		{
+			if(findObject_->loadVocabulary(path))
+			{
+				ui_->label_vocabularySize->setNum(findObject_->vocabulary()->size());
+				ui_->actionSave_session->setEnabled(findObject_->vocabulary()->size() || findObject_->objects().size());
+				QMessageBox::information(this, tr("Loading..."), tr("Vocabulary loaded from \"%1\" (%2 words).").arg(path).arg(findObject_->vocabulary()->size()));
+			}
+			else
+			{
+				QMessageBox::warning(this, tr("Loading..."), tr("Failed to load vocabulary \"%1\"!").arg(path));
+			}
+		}
+	}
+}
+
+void MainWindow::saveVocabulary()
+{
+	if(findObject_->vocabulary()->size() == 0)
+	{
+		QMessageBox::warning(this, tr("Saving vocabulary..."), tr("Vocabulary is empty!"));
+		return;
+	}
+	QString path = QFileDialog::getSaveFileName(this, tr("Save vocabulary..."), Settings::workingDirectory(), "Data (*.yaml *.xml)");
+	if(!path.isEmpty())
+	{
+		if(QFileInfo(path).suffix().compare("yaml") != 0 && QFileInfo(path).suffix().compare("xml") != 0)
+		{
+			path.append(".yaml");
+		}
+		if(findObject_->saveVocabulary(path))
+		{
+			QMessageBox::information(this, tr("Saving..."), tr("Vocabulary saved to \"%1\" (%2 words).").arg(path).arg(findObject_->vocabulary()->size()));
+		}
+		else
+		{
+			QMessageBox::warning(this, tr("Saving..."), tr("Failed to save vocabulary \"%1\"!").arg(path));
+		}
+	}
 }
 
 void MainWindow::removeObject(find_object::ObjWidget * object)
@@ -977,6 +1046,11 @@ void MainWindow::showObject(ObjWidget * obj)
 	}
 }
 
+void MainWindow::updateObjects()
+{
+	updateObjects(QList<int>());
+}
+
 void MainWindow::updateObjects(const QList<int> & ids)
 {
 	if(objWidgets_.size())
@@ -1045,6 +1119,7 @@ void MainWindow::updateVocabulary(const QList<int> & ids)
 	}
 	lastObjectsUpdateParameters_ = Settings::getParameters();
 	this->statusBar()->clearMessage();
+	ui_->dockWidget_objects->update();
 }
 
 void MainWindow::startProcessing()

@@ -99,15 +99,19 @@ void showUsage()
 			"  --console              Don't use the GUI (by default the camera will be\n"
 			"                           started automatically). Option --objects must also be\n"
 			"                           used with valid objects.\n"
-			"  --session \"path\"       Path to a session to load (*.bin).\n"
+			"  --session \"path\"       Path to a session to load (*.bin). Use \"--session_new\" to\n"
+			"                           create a session instead (will be saved to \"path\" on exit, only\n"
+			"                           on console mode).\n"
 			"  --object \"path\"        Path to an object to detect.\n"
 			"  --objects \"path\"       Directory of the objects to detect (--object is ignored).\n"
 			"  --config \"path\"        Path to configuration file (default: %s).\n"
-			"                           If set to \"\", default parameters are used "
+			"                           If set to \"\", default parameters are used\n"
 			"                           without saving modified parameters on closing.\n"
 			"  --scene \"path\"         Path to a scene image file.\n"
+			"  --vocabulary \"path\"    Path to a vocabulary file (*.yaml *.xml). Parameters \"General/invertedSearch\"\n"
+			"                           and \"General/vocabularyFixed\" will be also enabled. Ignored if \"--session\" is set.\n"
 			"  --images_not_saved     Don't keep images in RAM after the features are extracted (only\n"
-			"                         in console mode). Images won't be saved if an output session is set.\n"
+			"                           in console mode). Images won't be saved if an output session is set.\n"
 			"  --debug                Show debug log.\n"
 			"  --debug-time           Show debug log with time.\n"
 			"  --params               Show all parameters.\n"
@@ -133,10 +137,12 @@ int main(int argc, char* argv[])
 	//////////////////////////
 	bool guiMode = true;
 	QString sessionPath = "";
+	bool sessionNew = false;
 	QString objectsPath = "";
 	QString objectPath = "";
 	QString scenePath = "";
 	QString configPath = find_object::Settings::iniDefaultPath();
+	QString vocabularyPath = "";
 	QString jsonPath;
 	find_object::ParametersMap customParameters;
 	bool imagesSaved = true;
@@ -176,8 +182,15 @@ int main(int argc, char* argv[])
 			continue;
 		}
 		if(strcmp(argv[i], "-session") == 0 ||
-		   strcmp(argv[i], "--session") == 0)
+		   strcmp(argv[i], "--session") == 0 ||
+		   strcmp(argv[i], "-session_new") == 0 ||
+		   strcmp(argv[i], "--session_new") == 0)
 		{
+			if(strcmp(argv[i], "-session_new") == 0 ||
+			   strcmp(argv[i], "--session_new") == 0)
+			{
+				sessionNew = true;
+			}
 			++i;
 			if(i < argc)
 			{
@@ -186,9 +199,10 @@ int main(int argc, char* argv[])
 				{
 					sessionPath.replace('~', QDir::homePath());
 				}
-				if(!QFile(sessionPath).exists())
+
+				if(!sessionNew && !QFile(sessionPath).exists())
 				{
-					UERROR("Session path not valid : %s", sessionPath.toStdString().c_str());
+					UERROR("Session path not valid : %s (if you want to create a new session, use \"--session_new\")", sessionPath.toStdString().c_str());
 					showUsage();
 				}
 			}
@@ -235,6 +249,29 @@ int main(int argc, char* argv[])
 				if(!QFile(scenePath).exists())
 				{
 					UERROR("Scene path not valid : %s", scenePath.toStdString().c_str());
+					showUsage();
+				}
+			}
+			else
+			{
+				showUsage();
+			}
+			continue;
+		}
+		if(strcmp(argv[i], "-vocabulary") == 0 ||
+		   strcmp(argv[i], "--vocabulary") == 0)
+		{
+			++i;
+			if(i < argc)
+			{
+				vocabularyPath = argv[i];
+				if(vocabularyPath.contains('~'))
+				{
+					vocabularyPath.replace('~', QDir::homePath());
+				}
+				if(!QFile(vocabularyPath).exists())
+				{
+					UERROR("Vocabulary path not valid : %s", vocabularyPath.toStdString().c_str());
 					showUsage();
 				}
 			}
@@ -365,7 +402,14 @@ int main(int argc, char* argv[])
 	UINFO("   GUI mode = %s", guiMode?"true":"false");
 	if(!sessionPath.isEmpty())
 	{
-		UINFO("   Session path: \"%s\"", sessionPath.toStdString().c_str());
+		if(sessionNew)
+		{
+			UINFO("   Session path: \"%s\" [NEW]", sessionPath.toStdString().c_str());
+		}
+		else
+		{
+			UINFO("   Session path: \"%s\"", sessionPath.toStdString().c_str());
+		}
 	}
 	else if(!objectsPath.isEmpty())
 	{
@@ -381,6 +425,21 @@ int main(int argc, char* argv[])
 		UINFO("   JSON path: \"%s\"", jsonPath.toStdString().c_str());
 	}
 	UINFO("   Settings path: \"%s\"", configPath.toStdString().c_str());
+	UINFO("   Vocabulary path: \"%s\"", vocabularyPath.toStdString().c_str());
+
+	if(!vocabularyPath.isEmpty())
+	{
+		if(customParameters.contains(find_object::Settings::kGeneral_vocabularyFixed()))
+		{
+			UWARN("\"General/vocabularyFixed\" custom parameter overwritten as a fixed vocabulary is used.");
+		}
+		if(customParameters.contains(find_object::Settings::kGeneral_invertedSearch()))
+		{
+			UWARN("\"General/invertedSearch\" custom parameter overwritten as a fixed vocabulary is used.");
+		}
+		customParameters[find_object::Settings::kGeneral_vocabularyFixed()] = true;
+		customParameters[find_object::Settings::kGeneral_invertedSearch()] = true;
+	}
 
 	for(find_object::ParametersMap::iterator iter= customParameters.begin(); iter!=customParameters.end(); ++iter)
 	{
@@ -405,8 +464,14 @@ int main(int argc, char* argv[])
 
 	// Load objects if path is set
 	int objectsLoaded = 0;
-	if(!sessionPath.isEmpty())
+	if(!sessionPath.isEmpty() && !sessionNew)
 	{
+		if(!vocabularyPath.isEmpty() && !findObject->loadVocabulary(vocabularyPath))
+		{
+			UWARN("Vocabulary \"%s\" is not loaded as a session \"%s\" is already loaded",
+					vocabularyPath.toStdString().c_str(),
+					sessionPath.toStdString().c_str());
+		}
 		if(!findObject->loadSession(sessionPath))
 		{
 			UERROR("Could not load session \"%s\"", sessionPath.toStdString().c_str());
@@ -418,6 +483,10 @@ int main(int argc, char* argv[])
 	}
 	else if(!objectsPath.isEmpty())
 	{
+		if(!vocabularyPath.isEmpty() && !findObject->loadVocabulary(vocabularyPath))
+		{
+			UERROR("Failed to load vocabulary \"%s\"", vocabularyPath.toStdString().c_str());
+		}
 		objectsLoaded = findObject->loadObjects(objectsPath);
 		if(!objectsLoaded)
 		{
@@ -426,6 +495,11 @@ int main(int argc, char* argv[])
 	}
 	else if(!objectPath.isEmpty())
 	{
+		if(!vocabularyPath.isEmpty() && !findObject->loadVocabulary(vocabularyPath))
+		{
+			UERROR("Failed to load vocabulary \"%s\"", vocabularyPath.toStdString().c_str());
+		}
+
 		const find_object::ObjSignature * obj = findObject->addObject(objectPath);
 		if(obj)
 		{
@@ -438,6 +512,11 @@ int main(int argc, char* argv[])
 			UWARN("No object loaded from \"%s\"", objectsPath.toStdString().c_str());
 		}
 	}
+	else if(!vocabularyPath.isEmpty() && !findObject->loadVocabulary(vocabularyPath))
+	{
+		UERROR("Failed to load vocabulary \"%s\"", vocabularyPath.toStdString().c_str());
+	}
+
 	cv::Mat scene;
 	if(!scenePath.isEmpty())
 	{
@@ -468,13 +547,6 @@ int main(int argc, char* argv[])
 	}
 	else
 	{
-		if(objectsLoaded == 0)
-		{
-			UERROR("In console mode, at least one object must be loaded! See -console option.");
-			delete findObject;
-			showUsage();
-		}
-
 		QCoreApplication app(argc, argv);
 
 		if(!scene.empty())
@@ -535,13 +607,20 @@ int main(int argc, char* argv[])
 			{
 				app.exec();
 
-				if(!sessionPath.isEmpty() && findObject->isSessionModified())
+				if(!sessionPath.isEmpty())
 				{
-					UINFO("The session has been modified, updating the session file...");
-					if(findObject->saveSession(sessionPath))
+					if(findObject->isSessionModified())
 					{
-						UINFO("Session \"%s\" successfully saved (%d objects)!",
-								sessionPath.toStdString().c_str(), findObject->objects().size());
+						UINFO("The session has been modified, updating the session file...");
+						if(findObject->saveSession(sessionPath))
+						{
+							UINFO("Session \"%s\" successfully saved (%d objects)!",
+									sessionPath.toStdString().c_str(), findObject->objects().size());
+						}
+					}
+					else if(sessionNew)
+					{
+						UINFO("The session has not been modified, session file not created...");
 					}
 				}
 			}

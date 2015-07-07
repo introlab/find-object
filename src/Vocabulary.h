@@ -49,8 +49,10 @@ public:
 	const QMultiMap<int, int> & wordToObjects() const {return wordToObjects_;}
 	const cv::Mat & indexedDescriptors() const {return indexedDescriptors_;}
 
-	void save(QDataStream & streamPtr) const;
-	void load(QDataStream & streamPtr);
+	void save(QDataStream & streamSessionPtr) const;
+	void load(QDataStream & streamSessionPtr);
+	bool save(const QString & filename) const;
+	bool load(const QString & filename);
 
 private:
 	cv::flann::Index flannIndex_;

@@ -81,7 +81,7 @@ public:
 	const std::vector<cv::KeyPoint> keypoints() const {return keypoints_;}
 	const QMap<int,int> & words() const {return words_;}
 	const QPixmap & pixmap() const {return pixmap_;}
-	QColor defaultColor() const;
+	QColor defaultColor(int id) const;
 	bool isImageShown() const;
 	bool isFeaturesShown() const;
 	bool isSizedFeatures() const;

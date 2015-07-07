@@ -44,6 +44,7 @@ public:
 
 	void setColor(const QColor & color);
 	void setWordID(int id) {wordID_ = id;}
+	int wordID() const {return wordID_;}
 	int id() const {return id_;}
 
 protected:

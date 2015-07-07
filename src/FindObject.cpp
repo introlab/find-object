@@ -143,6 +143,29 @@ bool FindObject::saveSession(const QString & path)
 	return false;
 }
 
+bool FindObject::saveVocabulary(const QString & filePath) const
+{
+	return vocabulary_->save(filePath);
+}
+
+bool FindObject::loadVocabulary(const QString & filePath)
+{
+	if(!Settings::getGeneral_vocabularyFixed() || !Settings::getGeneral_invertedSearch())
+	{
+		UWARN("Doesn't make sense to load a vocabulary if \"General/vocabularyFixed\" and \"General/invertedSearch\" are not enabled! It will "
+			  "be cleared at the time the objects are updated.");
+	}
+	if(vocabulary_->load(filePath))
+	{
+		if(objects_.size())
+		{
+			updateVocabulary();
+		}
+		return true;
+	}
+	return false;
+}
+
 int FindObject::loadObjects(const QString & dirPath, bool recursive)
 {
 	QString formats = Settings::getGeneral_imageFormats().remove('*').remove('.');
@@ -192,7 +215,6 @@ int FindObject::loadObjects(const QString & dirPath, bool recursive)
 
 const ObjSignature * FindObject::addObject(const QString & filePath)
 {
-	UINFO("Load file %s", filePath.toStdString().c_str());
 	if(!filePath.isNull())
 	{
 		cv::Mat img = cv::imread(filePath.toStdString().c_str(), cv::IMREAD_GRAYSCALE);
@@ -218,8 +240,26 @@ const ObjSignature * FindObject::addObject(const QString & filePath)
 					id = 0;
 				}
 			}
-			return this->addObject(img, id, filePath);
+			else
+			{
+				UERROR("File name doesn't contain \".\" (\"%s\")", filePath.toStdString().c_str());
+			}
+
+			const ObjSignature * s = this->addObject(img, id, filePath);
+			if(s)
+			{
+				UINFO("Added object %d (%s)", s->id(), filePath.toStdString().c_str());
+				return s;
+			}
 		}
+		else
+		{
+			UERROR("Could not read image \"%s\"", filePath.toStdString().c_str());
+		}
+	}
+	else
+	{
+		UERROR("File path is null!?");
 	}
 	return 0;
 }

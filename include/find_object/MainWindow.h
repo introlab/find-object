@@ -87,6 +87,8 @@ private Q_SLOTS:
 	void saveSettings();
 	void loadObjects();
 	bool saveObjects();
+	void loadVocabulary();
+	void saveVocabulary();
 	void addObjectFromScene();
 	void addObjectsFromFiles(const QStringList & fileNames);
 	void addObjectsFromFiles();
@@ -104,7 +106,7 @@ private Q_SLOTS:
 	void showHideControls();
 	void showObjectsFeatures();
 	void hideObjectsFeatures();
-	void updateObjects(const QList<int> & ids = QList<int>());
+	void updateObjects();
 	void notifyParametersChanged(const QStringList & param);
 	void moveCameraFrame(int frame);
 	void rectHovered(int objId);
@@ -122,6 +124,7 @@ private:
 	void showObject(find_object::ObjWidget * obj);
 	void updateObjectSize(find_object::ObjWidget * obj);
 	void updateVocabulary(const QList<int> & ids = QList<int>());
+	void updateObjects(const QList<int> & ids);
 
 private:
 	Ui_mainWindow * ui_;
