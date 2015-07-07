@@ -102,7 +102,7 @@ cv::Mat cvtQImage2CvMat(const QImage & image)
 	return cvImage;
 }
 
-
+#if CV_MAJOR_VERSION < 3
 QImage cvtIplImage2QImage(const IplImage * image)
 {
 	QImage qtemp;
@@ -154,5 +154,6 @@ IplImage * cvtQImage2IplImage(const QImage & image)
 	}
 	return iplTmp;
 }
+#endif
 
 } // namespace find_object
