@@ -14,7 +14,7 @@ ENDIF()
 #######################
 # VERSION
 #######################
-SET(PROJECT_VERSION "0.5.1")
+SET(PROJECT_VERSION "0.6.0")
 SET(PROJECT_PREFIX find_object)
 
 STRING(REGEX MATCHALL "[0-9]" PROJECT_VERSION_PARTS "${PROJECT_VERSION}")

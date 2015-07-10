@@ -40,7 +40,7 @@ AboutDialog::AboutDialog(QWidget * parent) :
 	ui_->label_version->setText(PROJECT_VERSION);
 
 	QString cv_version = CV_VERSION;
-	#if RTABMAP_NONFREE == 1
+	#if FINDOBJECT_NONFREE == 1
 		cv_version.append(" [With nonfree]");
 	#else
 		cv_version.append(" [Without nonfree]");
