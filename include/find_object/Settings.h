@@ -38,9 +38,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace find_object {
 
-class KeypointDetector;
-class DescriptorExtractor;
-class GPUFeature2D;
+class Feature2D;
 
 typedef QMap<QString, QVariant> ParametersMap; // Key, value
 typedef QMap<QString, QString> ParametersType; // Key, type
@@ -107,7 +105,7 @@ class FINDOBJECT_EXP Settings
 	PARAMETER(Camera, 1deviceId, int, 0, "Device ID (default 0).");
 	PARAMETER(Camera, 2imageWidth, int, 0, "Image width (0 means default width from camera).");
 	PARAMETER(Camera, 3imageHeight, int, 0, "Image height (0 means default height from camera).");
-	PARAMETER(Camera, 4imageRate, double, 2.0, "Image rate in Hz (0 Hz means as fast as possible)."); // Hz
+	PARAMETER(Camera, 4imageRate, double, 10.0, "Image rate in Hz (0 Hz means as fast as possible)."); // Hz
 	PARAMETER(Camera, 5mediaPath, QString, "", "Video file or directory of images. If set, the camera is not used. See General->videoFormats and General->imageFormats for available formats.");
 	PARAMETER(Camera, 6useTcpCamera, bool, false, "Use TCP/IP input camera.");
 	PARAMETER(Camera, 8port, int, 0, "The images server's port when useTcpCamera is checked. Only one client at the same time is allowed.");
@@ -140,7 +138,8 @@ class FINDOBJECT_EXP Settings
 	PARAMETER(Feature2D, Fast_threshold, int, 10, "Threshold on difference between intensity of the central pixel and pixels of a circle around this pixel.");
 	PARAMETER(Feature2D, Fast_nonmaxSuppression, bool, true, "If true, non-maximum suppression is applied to detected corners (keypoints).");
 	PARAMETER(Feature2D, Fast_gpu, bool, false, "GPU-FAST: Use GPU version of FAST. This option is enabled only if OpenCV is built with CUDA and GPUs are detected.");
-	PARAMETER(Feature2D, Fast_keypointsRatio, double, 0.05, "Used with FAST GPU.");
+	PARAMETER(Feature2D, Fast_keypointsRatio, double, 0.05, "Used with FAST GPU (OpenCV 2).");
+	PARAMETER(Feature2D, Fast_maxNpoints, int, 5000, "Used with FAST GPU (OpenCV 3).");
 
 	PARAMETER(Feature2D, AGAST_threshold, int, 10, "Threshold on difference between intensity of the central pixel and pixels of a circle around this pixel.");
 	PARAMETER(Feature2D, AGAST_nonmaxSuppression, bool, true, "If true, non-maximum suppression is applied to detected corners (keypoints).");
@@ -173,6 +172,7 @@ class FINDOBJECT_EXP Settings
 	PARAMETER(Feature2D, ORB_scoreType, int, 0, "The default HARRIS_SCORE=0 means that Harris algorithm is used to rank features (the score is written to KeyPoint::score and is used to retain best nfeatures features); FAST_SCORE=1 is alternative value of the parameter that produces slightly less stable keypoints, but it is a little faster to compute.");
 	PARAMETER(Feature2D, ORB_patchSize, int, 31, "size of the patch used by the oriented BRIEF descriptor. Of course, on smaller pyramid layers the perceived image area covered by a feature will be larger.");
 	PARAMETER(Feature2D, ORB_gpu, bool, false, "GPU-ORB: Use GPU version of ORB. This option is enabled only if OpenCV is built with CUDA and GPUs are detected.");
+	PARAMETER(Feature2D, ORB_blurForDescriptor, bool, false, "GPU-ORB: blurForDescriptor parameter (OpenCV 3).");
 
 	PARAMETER(Feature2D, MSER_delta, int, 5, "");
 	PARAMETER(Feature2D, MSER_minArea, int, 60, "");
@@ -318,8 +318,8 @@ public:
 	static void resetParameter(const QString & key) {if(defaultParameters_.contains(key)) parameters_.insert(key, defaultParameters_.value(key));}
 	static QVariant getParameter(const QString & key) {return parameters_.value(key, QVariant());}
 
-	static KeypointDetector * createKeypointDetector();
-	static DescriptorExtractor * createDescriptorExtractor();
+	static Feature2D * createKeypointDetector();
+	static Feature2D * createDescriptorExtractor();
 
 	static QString currentDescriptorType();
 	static QString currentDetectorType();
@@ -344,36 +344,36 @@ private:
 	static QString iniPath_;
 };
 
-class KeypointDetector
+class Feature2D
 {
 public:
-	KeypointDetector(cv::Ptr<cv::FeatureDetector> & featureDetector);
-	KeypointDetector(GPUFeature2D * gpuFeature2D);
-	virtual ~KeypointDetector();
+#if CV_MAJOR_VERSION < 3
+	Feature2D(cv::Ptr<cv::FeatureDetector> featureDetector);
+	Feature2D(cv::Ptr<cv::DescriptorExtractor> descriptorExtractor);
+#endif
+	Feature2D(cv::Ptr<cv::Feature2D> feature2D);
+	Feature2D() {}
+	virtual ~Feature2D() {}
 
-	void detect(const cv::Mat & image,
+	virtual void detect(const cv::Mat & image,
 			std::vector<cv::KeyPoint> & keypoints,
 			const cv::Mat & mask = cv::Mat());
 
-private:
-	cv::Ptr<cv::FeatureDetector> featureDetector_;
-	GPUFeature2D * gpuFeature2D_;
-};
-
-class DescriptorExtractor
-{
-public:
-	DescriptorExtractor(cv::Ptr<cv::DescriptorExtractor> & descriptorExtractor);
-	DescriptorExtractor(GPUFeature2D * gpuFeature2D);
-	virtual ~DescriptorExtractor();
-
-	void compute(const cv::Mat & image,
+	virtual void compute(const cv::Mat & image,
 			std::vector<cv::KeyPoint> & keypoints,
 			cv::Mat & descriptors);
 
+	virtual void detectAndCompute(const cv::Mat & image,
+			std::vector<cv::KeyPoint> & keypoints,
+			cv::Mat & descriptors,
+			const cv::Mat & mask = cv::Mat());
+
 private:
+#if CV_MAJOR_VERSION < 3
+	cv::Ptr<cv::FeatureDetector> featureDetector_;
 	cv::Ptr<cv::DescriptorExtractor> descriptorExtractor_;
-	GPUFeature2D * gpuFeature2D_;
+#endif
+	cv::Ptr<cv::Feature2D> feature2D_;
 };
 
 } // namespace find_object

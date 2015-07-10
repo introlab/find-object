@@ -372,6 +372,96 @@ std::vector<cv::KeyPoint> limitKeypoints(const std::vector<cv::KeyPoint> & keypo
 	return kptsKept;
 }
 
+void limitKeypoints(std::vector<cv::KeyPoint> & keypoints, cv::Mat & descriptors, int maxKeypoints)
+{
+	UASSERT(keypoints.size() == descriptors.rows);
+	std::vector<cv::KeyPoint> kptsKept;
+	cv::Mat descriptorsKept;
+	if(maxKeypoints > 0 && (int)keypoints.size() > maxKeypoints)
+	{
+		descriptorsKept = cv::Mat(1, descriptors.cols, descriptors.type());
+
+		// Sort words by response
+		std::multimap<float, int> reponseMap; // <response,id>
+		for(unsigned int i = 0; i <keypoints.size(); ++i)
+		{
+			//Keep track of the data, to be easier to manage the data in the next step
+			reponseMap.insert(std::pair<float, int>(fabs(keypoints[i].response), i));
+		}
+
+		// Remove them
+		std::multimap<float, int>::reverse_iterator iter = reponseMap.rbegin();
+		kptsKept.resize(maxKeypoints);
+		descriptorsKept.reserve(maxKeypoints);
+		for(unsigned int k=0; k < kptsKept.size() && iter!=reponseMap.rend(); ++k, ++iter)
+		{
+			kptsKept[k] = keypoints[iter->second];
+			descriptorsKept.push_back(descriptors.row(iter->second));
+		}
+	}
+	keypoints = kptsKept;
+	descriptors = descriptorsKept;
+}
+
+void computeFeatures(
+		Feature2D * detector,
+		Feature2D * extractor,
+		const cv::Mat & image,
+		const cv::Mat & mask,
+		std::vector<cv::KeyPoint> & keypoints,
+		cv::Mat & descriptors,
+		int & timeDetection,
+		int & timeExtraction)
+{
+	QTime timeStep;
+	timeStep.start();
+	keypoints.clear();
+	descriptors = cv::Mat();
+
+	int maxFeatures = Settings::getFeature2D_3MaxFeatures();
+	if(Settings::currentDetectorType() == Settings::currentDescriptorType())
+	{
+		detector->detectAndCompute(image, keypoints, descriptors, mask);
+		if(maxFeatures > 0 && (int)keypoints.size() > maxFeatures)
+		{
+			limitKeypoints(keypoints, descriptors, maxFeatures);
+		}
+		timeDetection=timeStep.restart();
+		timeExtraction = 0;
+	}
+	else
+	{
+		detector->detect(image, keypoints, mask);
+		if(maxFeatures > 0 && (int)keypoints.size() > maxFeatures)
+		{
+			keypoints = limitKeypoints(keypoints, maxFeatures);
+		}
+		timeDetection=timeStep.restart();
+
+		//Extract descriptors
+		try
+		{
+			extractor->compute(image, keypoints, descriptors);
+		}
+		catch(cv::Exception & e)
+		{
+			UERROR("Descriptor exception: %s. Maybe some keypoints are invalid "
+					"for the selected descriptor extractor.", e.what());
+			descriptors = cv::Mat();
+			keypoints.clear();
+		}
+		catch ( const std::exception& e )
+		{
+			// standard exceptions
+			UERROR("Descriptor exception: %s. Maybe some keypoints are invalid "
+					"for the selected descriptor extractor.", e.what());
+			descriptors = cv::Mat();
+			keypoints.clear();
+		}
+		timeExtraction+=timeStep.restart();
+	}
+}
+
 
 // taken from ASIFT example https://github.com/Itseez/opencv/blob/master/samples/python2/asift.py
 // affine - is an affine transform matrix from skew_img to img
@@ -433,8 +523,8 @@ class AffineExtractionThread : public QThread
 {
 public:
 	AffineExtractionThread(
-			KeypointDetector * detector,
-			DescriptorExtractor * extractor,
+			Feature2D * detector,
+			Feature2D * extractor,
 			const cv::Mat & image,
 			float tilt,
 			float phi) :
@@ -469,56 +559,47 @@ protected:
 		timeSkewAffine_=timeStep.restart();
 
 		//Detect features
-		detector_->detect(skewImage, keypoints_, skewMask);
+		computeFeatures(
+				detector_,
+				extractor_,
+				skewImage,
+				skewMask,
+				keypoints_,
+				descriptors_,
+				timeDetection_,
+				timeExtraction_);
+		timeStep.start();
 
-		if(keypoints_.size())
+		// Transform points to original image coordinates
+		for(unsigned int i=0; i<keypoints_.size(); ++i)
 		{
-			int maxFeatures = Settings::getFeature2D_3MaxFeatures();
-			if(maxFeatures > 0 && (int)keypoints_.size() > maxFeatures)
-			{
-				keypoints_ = limitKeypoints(keypoints_, maxFeatures);
-			}
-			timeDetection_=timeStep.restart();
-
-			//Extract descriptors
-			extractor_->compute(skewImage, keypoints_, descriptors_);
-			timeExtraction_=timeStep.restart();
-
-			// Transform points to original image coordinates
-			for(unsigned int i=0; i<keypoints_.size(); ++i)
-			{
-				cv::Mat p = (cv::Mat_<float>(3, 1) << keypoints_[i].pt.x, keypoints_[i].pt.y, 1);
-				cv::Mat pa = Ai * p;
-				keypoints_[i].pt.x = pa.at<float>(0,0);
-				keypoints_[i].pt.y = pa.at<float>(1,0);
-			}
-
-			if(keypoints_.size() && Settings::getFeature2D_6SubPix())
-			{
-				// Sub pixel should be done after descriptors extraction
-				std::vector<cv::Point2f> corners;
-				cv::KeyPoint::convert(keypoints_, corners);
-				cv::cornerSubPix(image_,
-						corners,
-						cv::Size(Settings::getFeature2D_7SubPixWinSize(), Settings::getFeature2D_7SubPixWinSize()),
-						cv::Size(-1,-1),
-						cv::TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, Settings::getFeature2D_8SubPixIterations(), Settings::getFeature2D_9SubPixEps() ));
-				UASSERT(corners.size() == keypoints_.size());
-				for(unsigned int i=0; i<corners.size(); ++i)
-				{
-					keypoints_[i].pt = corners[i];
-				}
-				timeSubPix_ +=timeStep.restart();
-			}
+			cv::Mat p = (cv::Mat_<float>(3, 1) << keypoints_[i].pt.x, keypoints_[i].pt.y, 1);
+			cv::Mat pa = Ai * p;
+			keypoints_[i].pt.x = pa.at<float>(0,0);
+			keypoints_[i].pt.y = pa.at<float>(1,0);
 		}
-		else
+
+		if(keypoints_.size() && Settings::getFeature2D_6SubPix())
 		{
-			timeDetection_=timeStep.restart();
+			// Sub pixel should be done after descriptors extraction
+			std::vector<cv::Point2f> corners;
+			cv::KeyPoint::convert(keypoints_, corners);
+			cv::cornerSubPix(image_,
+					corners,
+					cv::Size(Settings::getFeature2D_7SubPixWinSize(), Settings::getFeature2D_7SubPixWinSize()),
+					cv::Size(-1,-1),
+					cv::TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, Settings::getFeature2D_8SubPixIterations(), Settings::getFeature2D_9SubPixEps() ));
+			UASSERT(corners.size() == keypoints_.size());
+			for(unsigned int i=0; i<corners.size(); ++i)
+			{
+				keypoints_[i].pt = corners[i];
+			}
+			timeSubPix_ +=timeStep.restart();
 		}
 	}
 private:
-	KeypointDetector * detector_;
-	DescriptorExtractor * extractor_;
+	Feature2D * detector_;
+	Feature2D * extractor_;
 	cv::Mat image_;
 	float tilt_;
 	float phi_;
@@ -535,8 +616,8 @@ class ExtractFeaturesThread : public QThread
 {
 public:
 	ExtractFeaturesThread(
-			KeypointDetector * detector,
-			DescriptorExtractor * extractor,
+			Feature2D * detector,
+			Feature2D * extractor,
 			int objectId,
 			const cv::Mat & image) :
 		detector_(detector),
@@ -572,49 +653,21 @@ protected:
 
 		if(!Settings::getFeature2D_4Affine())
 		{
-			keypoints_.clear();
-			descriptors_ = cv::Mat();
-			detector_->detect(image_, keypoints_);
-			UDEBUG("Detected %d keypoints from object %d...", (int)keypoints_.size(), objectId_);
+			computeFeatures(
+					detector_,
+					extractor_,
+					image_,
+					cv::Mat(),
+					keypoints_,
+					descriptors_,
+					timeDetection_,
+					timeExtraction_);
+			timeStep.start();
 
 			if(keypoints_.size())
 			{
-				int maxFeatures = Settings::getFeature2D_3MaxFeatures();
-				if(maxFeatures > 0 && (int)keypoints_.size() > maxFeatures)
-				{
-					int previousCount = (int)keypoints_.size();
-					keypoints_ = limitKeypoints(keypoints_, maxFeatures);
-					UDEBUG("obj=%d, %d keypoints removed, (kept %d), min/max response=%f/%f", objectId_, previousCount-(int)keypoints_.size(), (int)keypoints_.size(), keypoints_.size()?keypoints_.back().response:0.0f, keypoints_.size()?keypoints_.front().response:0.0f);
-				}
-				timeDetection_+=timeStep.restart();
-
-				try
-				{
-					extractor_->compute(image_, keypoints_, descriptors_);
-					UDEBUG("Extracted %d descriptors from object %d...", descriptors_.rows, objectId_);
-				}
-				catch(cv::Exception & e)
-				{
-					UERROR("Descriptor exception: %s. Maybe some keypoints are invalid "
-							"for the selected descriptor extractor.", e.what());
-					descriptors_ = cv::Mat();
-					keypoints_.clear();
-				}
-				catch ( const std::exception& e )
-				{
-				    // standard exceptions
-					UERROR("Descriptor exception: %s. Maybe some keypoints are invalid "
-							"for the selected descriptor extractor.", e.what());
-					descriptors_ = cv::Mat();
-					keypoints_.clear();
-				}
-				timeExtraction_+=timeStep.restart();
-
-				if((int)keypoints_.size() != descriptors_.rows)
-				{
-					UERROR("obj=%d kpt=%d != descriptors=%d", objectId_, (int)keypoints_.size(), descriptors_.rows);
-				}
-				else if(Settings::getFeature2D_6SubPix())
+				UDEBUG("Detected %d features from object %d...", (int)keypoints_.size(), objectId_);
+				if(Settings::getFeature2D_6SubPix())
 				{
 					// Sub pixel should be done after descriptors extraction
 					std::vector<cv::Point2f> corners;
@@ -634,7 +687,6 @@ protected:
 			}
 			else
 			{
-				timeDetection_+=timeStep.restart();
 				UWARN("no features detected in object %d !?!", objectId_);
 			}
 		}
@@ -692,8 +744,8 @@ protected:
 		UINFO("%d descriptors extracted from object %d (in %d ms)", descriptors_.rows, objectId_, time.elapsed());
 	}
 private:
-	KeypointDetector * detector_;
-	DescriptorExtractor * extractor_;
+	Feature2D * detector_;
+	Feature2D * extractor_;
 	int objectId_;
 	cv::Mat image_;
 	std::vector<cv::KeyPoint> keypoints_;

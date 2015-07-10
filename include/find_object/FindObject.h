@@ -47,8 +47,7 @@ namespace find_object {
 
 class ObjSignature;
 class Vocabulary;
-class KeypointDetector;
-class DescriptorExtractor;
+class Feature2D;
 
 class FINDOBJECT_EXP FindObject : public QObject
 {
@@ -104,8 +103,8 @@ private:
 	Vocabulary * vocabulary_;
 	QMap<int, cv::Mat> objectsDescriptors_;
 	QMap<int, int> dataRange_; // <last id of object's descriptor, id>
-	KeypointDetector * detector_;
-	DescriptorExtractor * extractor_;
+	Feature2D * detector_;
+	Feature2D * extractor_;
 	bool sessionModified_;
 	bool keepImagesInRAM_;
 };

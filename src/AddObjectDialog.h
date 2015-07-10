@@ -40,8 +40,7 @@ namespace find_object {
 class ObjWidget;
 class Camera;
 class KeypointItem;
-class KeypointDetector;
-class DescriptorExtractor;
+class Feature2D;
 class ObjSignature;
 
 class AddObjectDialog : public QDialog {
@@ -78,8 +77,8 @@ private:
 	ObjSignature * objSignature_;
 	cv::Mat cameraImage_;
 	cv::Rect roi_;
-	KeypointDetector * detector_;
-	DescriptorExtractor * extractor_;
+	Feature2D * detector_;
+	Feature2D * extractor_;
 
 	enum State{kTakePicture, kSelectFeatures, kVerifySelection, kClosing};
 	int state_;

@@ -168,6 +168,10 @@ void ParametersToolBox::updateParametersVisibility()
 					{
 						((QWidget*)objects[i])->setVisible(true);
 					}
+					else if(objects[i]->objectName().contains("Fast") && detectorName == QString("ORB"))
+					{
+						((QWidget*)objects[i])->setVisible(true);	// ORB uses some FAST parameters
+					}
 					else if(!objects[i]->objectName().split('/').at(1).at(0).isDigit())
 					{
 						((QWidget*)objects[i])->setVisible(false);
@@ -547,6 +551,37 @@ void ParametersToolBox::changeParameter(const int & value)
 		QCheckBox * checkBox = qobject_cast<QCheckBox*>(sender());
 		if(comboBox)
 		{
+			if(comboBox->objectName().compare(Settings::kFeature2D_1Detector()) == 0)
+			{
+				QComboBox * descriptorBox = (QComboBox*)this->getParameterWidget(Settings::kFeature2D_2Descriptor());
+				if(comboBox->objectName().compare(Settings::kFeature2D_1Detector()) == 0 &&
+				   comboBox->currentText() != descriptorBox->currentText() &&
+				   Settings::getFeature2D_2Descriptor().contains(comboBox->currentText()))
+				{
+					QMessageBox::StandardButton b = QMessageBox::question(this,
+							tr("Use corresponding descriptor type?"),
+							tr("Current selected detector type (\"%1\") has its own corresponding descriptor type.\n"
+							   "Do you want to use its corresponding descriptor?")
+							   .arg(comboBox->currentText()),
+							   QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
+					if(b == QMessageBox::Yes)
+					{
+						int index = descriptorBox->findText(comboBox->currentText());
+						if(index >= 0)
+						{
+							QString tmp = Settings::getFeature2D_2Descriptor();
+							*tmp.begin() = '0'+index;
+							Settings::setFeature2D_2Descriptor(tmp);
+							this->updateParameter(Settings::kFeature2D_2Descriptor());
+						}
+						else
+						{
+							UERROR("Combo box detector type not found \"%s\"?!", comboBox->currentText().toStdString().c_str());
+						}
+					}
+				}
+			}
+
 			bool nnStrategyChanged = false;
 			//verify binary issue with nearest neighbor strategy
 			if(comboBox->objectName().compare(Settings::kFeature2D_2Descriptor()) == 0 ||

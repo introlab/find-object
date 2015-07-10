@@ -271,23 +271,8 @@ void Settings::saveWindowSettings(const QByteArray & windowGeometry, const QByte
 	}
 }
 
-class GPUFeature2D
-{
-public:
-	GPUFeature2D() {}
-	virtual ~GPUFeature2D() {}
-
-	virtual void detectKeypoints(const cv::Mat & image,
-			std::vector<cv::KeyPoint> & keypoints,
-			const cv::Mat & mask = cv::Mat()) = 0;
-
-	virtual void computeDescriptors(const cv::Mat & image,
-			std::vector<cv::KeyPoint> & keypoints,
-			cv::Mat & descriptors) = 0;
-};
-
 #if FINDOBJECT_NONFREE == 1
-class GPUSURF : public GPUFeature2D
+class GPUSURF : public Feature2D
 {
 public:
 	GPUSURF(double hessianThreshold,
@@ -306,7 +291,7 @@ public:
 	}
 	virtual ~GPUSURF() {}
 
-    void detectKeypoints(const cv::Mat & image,
+	virtual void detect(const cv::Mat & image,
     		std::vector<cv::KeyPoint> & keypoints,
     		const cv::Mat & mask = cv::Mat())
     {
@@ -327,7 +312,7 @@ public:
 		}
     }
 
-    void computeDescriptors( const cv::Mat& image,
+	virtual void compute( const cv::Mat& image,
     		std::vector<cv::KeyPoint>& keypoints,
     		cv::Mat& descriptors)
     {
@@ -358,6 +343,41 @@ public:
 			descriptorsGPU.download(descriptors);
 		}
     }
+
+	virtual void detectAndCompute( const cv::Mat& image,
+				std::vector<cv::KeyPoint>& keypoints,
+				cv::Mat& descriptors,
+				const cv::Mat & mask = cv::Mat())
+	{
+		std::vector<float> d;
+		CVCUDA::GpuMat imgGpu(image);
+		CVCUDA::GpuMat descriptorsGPU;
+		CVCUDA::GpuMat maskGpu(mask);
+		try
+		{
+			surf_(imgGpu, maskGpu, keypoints, descriptorsGPU, false);
+		}
+		catch(cv::Exception &e)
+		{
+			UERROR("GPUSURF error: %s \n(If something about layer_rows, parameter nOctaves=%d of SURF "
+					"is too high for the size of the image (%d,%d).)",
+					e.msg.c_str(),
+					surf_.nOctaves,
+					image.cols,
+					image.rows);
+		}
+
+		// Download descriptors
+		if (descriptorsGPU.empty())
+			descriptors = cv::Mat();
+		else
+		{
+			UASSERT(descriptorsGPU.type() == CV_32F);
+			descriptors = cv::Mat(descriptorsGPU.size(), CV_32F);
+			descriptorsGPU.download(descriptors);
+		}
+	}
+
 private:
 #if CV_MAJOR_VERSION < 3
     CVCUDA::SURF_GPU surf_;
@@ -367,29 +387,31 @@ private:
 };
 #endif
 
-class GPUFAST : public GPUFeature2D
+class GPUFAST : public Feature2D
 {
 public:
 	GPUFAST(int threshold=Settings::defaultFeature2D_Fast_threshold(),
 			bool nonmaxSuppression=Settings::defaultFeature2D_Fast_nonmaxSuppression(),
-			double keypointsRatio=Settings::defaultFeature2D_Fast_keypointsRatio())
 #if CV_MAJOR_VERSION < 3
+			double keypointsRatio=Settings::defaultFeature2D_Fast_keypointsRatio())
 	: fast_(threshold,
 			  nonmaxSuppression,
 			  keypointsRatio)
 #else
+			int max_npoints=Settings::defaultFeature2D_Fast_maxNpoints())
 #ifdef HAVE_OPENCV_CUDAFEATURES2D
-	: fast_(threshold,
-			  nonmaxSuppression,
-			  keypointsRatio)
+	: fast_(CVCUDA::FastFeatureDetector::create(
+			threshold,
+			nonmaxSuppression,
+			CVCUDA::FastFeatureDetector::TYPE_9_16,
+			max_npoints))
 #endif
 #endif
 	{
 	}
 	virtual ~GPUFAST() {}
 
-protected:
-	void detectKeypoints(const cv::Mat & image,
+	virtual void detect(const cv::Mat & image,
 			std::vector<cv::KeyPoint> & keypoints,
 			const cv::Mat & mask = cv::Mat())
     {
@@ -399,15 +421,24 @@ protected:
     	fast_(imgGpu, maskGpu, keypoints);
 #else
 #ifdef HAVE_OPENCV_CUDAFEATURES2D
-		fast_(imgGpu, maskGpu, keypoints);
+    	CVCUDA::GpuMat keypointsGpu(keypoints);
+		fast_->detectAsync(imgGpu, keypointsGpu, maskGpu);
+		fast_->convert(keypointsGpu, keypoints);
 #endif
 #endif
     }
-	void computeDescriptors( const cv::Mat& image,
+	virtual void compute( const cv::Mat& image,
 		std::vector<cv::KeyPoint>& keypoints,
 		cv::Mat& descriptors)
 	{
 		UERROR("GPUFAST:computeDescriptors() Should not be used!");
+	}
+	virtual void detectAndCompute( const cv::Mat& image,
+		std::vector<cv::KeyPoint>& keypoints,
+		cv::Mat& descriptors,
+		const cv::Mat & mask = cv::Mat())
+	{
+		UERROR("GPUFAST:detectAndCompute() Should not be used!");
 	}
 
 private:
@@ -415,12 +446,12 @@ private:
     CVCUDA::FAST_GPU fast_;
 #else
 #ifdef HAVE_OPENCV_CUDAFEATURES2D
-    CVCUDA::FAST_GPU fast_;
+    cv::Ptr<CVCUDA::FastFeatureDetector> fast_;
 #endif
 #endif
 };
 
-class GPUORB : public GPUFeature2D
+class GPUORB : public Feature2D
 {
 public:
 	GPUORB(int nFeatures = Settings::defaultFeature2D_ORB_nFeatures(),
@@ -432,8 +463,8 @@ public:
             int scoreType = Settings::defaultFeature2D_ORB_scoreType(),
             int patchSize = Settings::defaultFeature2D_ORB_patchSize(),
             int fastThreshold = Settings::defaultFeature2D_Fast_threshold(),
-            bool fastNonmaxSupression = Settings::defaultFeature2D_Fast_nonmaxSuppression())
 #if CV_MAJOR_VERSION < 3
+            bool fastNonmaxSupression = Settings::defaultFeature2D_Fast_nonmaxSuppression())
 		: orb_(nFeatures,
 			 scaleFactor,
 			 nLevels,
@@ -443,30 +474,28 @@ public:
 			 scoreType,
 			 patchSize)
 #else
+			bool blurForDescriptor = Settings::defaultFeature2D_ORB_blurForDescriptor())
 #ifdef HAVE_OPENCV_CUDAFEATURES2D
-		: orb_(nFeatures,
+		: orb_(CVCUDA::ORB::create(nFeatures,
 			 scaleFactor,
 			 nLevels,
 			 edgeThreshold ,
 			 firstLevel,
 			 WTA_K,
 			 scoreType,
-			 patchSize)
+			 patchSize,
+			 fastThreshold,
+			 blurForDescriptor))
 #endif
 #endif
 	{
 #if CV_MAJOR_VERSION < 3
 		orb_.setFastParams(fastThreshold, fastNonmaxSupression);
-#else
-#ifdef HAVE_OPENCV_CUDAFEATURES2D
-		orb_.setFastParams(fastThreshold, fastNonmaxSupression);
-#endif
 #endif
 	}
 	virtual ~GPUORB() {}
 
-protected:
-	void detectKeypoints(const cv::Mat & image,
+	virtual void detect(const cv::Mat & image,
 			std::vector<cv::KeyPoint> & keypoints,
 			const cv::Mat & mask = cv::Mat())
     {
@@ -480,7 +509,9 @@ protected:
     		orb_(imgGpu, maskGpu, keypoints);
 #else
 #ifdef HAVE_OPENCV_CUDAFEATURES2D
-    		orb_(imgGpu, maskGpu, keypoints);
+    		CVCUDA::GpuMat keypointsGpu;
+    		orb_->detectAsync(imgGpu, keypointsGpu, maskGpu);
+    		orb_->convert(keypointsGpu, keypoints);
 #endif
 #endif
     	}
@@ -493,7 +524,7 @@ protected:
 		}
     }
 
-    void computeDescriptors( const cv::Mat& image,
+	virtual void compute( const cv::Mat& image,
         		std::vector<cv::KeyPoint>& keypoints,
         		cv::Mat& descriptors)
 	{
@@ -508,7 +539,9 @@ protected:
 			orb_(imgGpu, CVCUDA::GpuMat(), keypoints, descriptorsGPU); // No option to use provided keypoints!?
 #else
 #ifdef HAVE_OPENCV_CUDAFEATURES2D
-			orb_(imgGpu, CVCUDA::GpuMat(), keypoints, descriptorsGPU); // No option to use provided keypoints!?
+			UERROR("OpenCV 3 ORB-GPU doesn't support extracting ORB descriptors from already extracted keypoints. "
+				   "Use ORB as feature detector too or desactivate ORB-GPU.");
+			//orb_->computeAsync(imgGpu, keypoints, descriptorsGPU, true);
 #endif
 #endif
 		}
@@ -529,20 +562,61 @@ protected:
 			descriptorsGPU.download(descriptors);
 		}
 	}
+
+	virtual void detectAndCompute( const cv::Mat& image,
+				std::vector<cv::KeyPoint>& keypoints,
+				cv::Mat& descriptors,
+				const cv::Mat & mask = cv::Mat())
+	{
+		std::vector<float> d;
+
+		CVCUDA::GpuMat imgGpu(image);
+		CVCUDA::GpuMat descriptorsGPU;
+		CVCUDA::GpuMat maskGpu(mask);
+
+		try
+		{
+#if CV_MAJOR_VERSION < 3
+			orb_(imgGpu, CVCUDA::GpuMat(), keypoints, descriptorsGPU); // No option to use provided keypoints!?
+#else
+#ifdef HAVE_OPENCV_CUDAFEATURES2D
+			CVCUDA::GpuMat keypointsGpu;
+			orb_->detectAndComputeAsync(imgGpu, maskGpu, keypointsGpu, descriptorsGPU, false);
+			orb_->convert(keypointsGpu, keypoints);
+#endif
+#endif
+		}
+		catch(cv::Exception &e)
+		{
+			UERROR("GPUORB error: %s \n(If something about matrix size, the image/object may be too small (%d,%d).)",
+					e.msg.c_str(),
+					image.cols,
+					image.rows);
+		}
+		// Download descriptors
+		if (descriptorsGPU.empty())
+			descriptors = cv::Mat();
+		else
+		{
+			UASSERT(descriptorsGPU.type() == CV_8U);
+			descriptors = cv::Mat(descriptorsGPU.size(), CV_8U);
+			descriptorsGPU.download(descriptors);
+		}
+	}
+
 private:
 #if CV_MAJOR_VERSION < 3
     CVCUDA::ORB_GPU orb_;
 #else
 #ifdef HAVE_OPENCV_CUDAFEATURES2D
-    CVCUDA::ORB_GPU orb_;
+    cv::Ptr<CVCUDA::ORB> orb_;
 #endif
 #endif
 };
 
-KeypointDetector * Settings::createKeypointDetector()
+Feature2D * Settings::createKeypointDetector()
 {
-	cv::Ptr<cv::FeatureDetector> detector;
-	GPUFeature2D * detectorGPU = 0;
+	Feature2D * feature2D = 0;
 	QString str = getFeature2D_1Detector();
 	QStringList split = str.split(':');
 	if(split.size()==2)
@@ -572,14 +646,14 @@ KeypointDetector * Settings::createKeypointDetector()
 				if(strategies.at(index).compare("Dense") == 0)
 				{
 #if CV_MAJOR_VERSION < 3
-					detector = cv::Ptr<cv::FeatureDetector>(new cv::DenseFeatureDetector(
+					feature2D = new Feature2D(cv::Ptr<cv::FeatureDetector>(new cv::DenseFeatureDetector(
 								getFeature2D_Dense_initFeatureScale(),
 								getFeature2D_Dense_featureScaleLevels(),
 								getFeature2D_Dense_featureScaleMul(),
 								getFeature2D_Dense_initXyStep(),
 								getFeature2D_Dense_initImgBound(),
 								getFeature2D_Dense_varyXyStepWithScale(),
-								getFeature2D_Dense_varyImgBoundWithScale()));
+								getFeature2D_Dense_varyImgBoundWithScale())));
 #else
 					UWARN("Find-Object is not built with OpenCV 2 so Dense cannot be used!");
 #endif
@@ -589,7 +663,7 @@ KeypointDetector * Settings::createKeypointDetector()
 				{
 					if(getFeature2D_Fast_gpu() && CVCUDA::getCudaEnabledDeviceCount())
 					{
-						detectorGPU = new GPUFAST(
+						feature2D = new GPUFAST(
 								getFeature2D_Fast_threshold(),
 								getFeature2D_Fast_nonmaxSuppression());
 						UDEBUG("type=%s GPU", strategies.at(index).toStdString().c_str());
@@ -597,13 +671,13 @@ KeypointDetector * Settings::createKeypointDetector()
 					else
 					{
 #if CV_MAJOR_VERSION < 3
-						detector = cv::Ptr<cv::FeatureDetector>(new cv::FastFeatureDetector(
+						feature2D = new Feature2D(cv::Ptr<cv::FeatureDetector>(new cv::FastFeatureDetector(
+								getFeature2D_Fast_threshold(),
+								getFeature2D_Fast_nonmaxSuppression())));
+#else
+						feature2D = new Feature2D(cv::FastFeatureDetector::create(
 								getFeature2D_Fast_threshold(),
 								getFeature2D_Fast_nonmaxSuppression()));
-#else
-						detector = cv::FastFeatureDetector::create(
-								getFeature2D_Fast_threshold(),
-								getFeature2D_Fast_nonmaxSuppression());
 #endif
 						UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 					}
@@ -613,37 +687,48 @@ KeypointDetector * Settings::createKeypointDetector()
 #if CV_MAJOR_VERSION < 3
 					UWARN("Find-Object is not built with OpenCV 3 so AGAST cannot be used!");
 #else
-					detector = cv::AgastFeatureDetector::create(
+					feature2D = new Feature2D(cv::AgastFeatureDetector::create(
 							getFeature2D_AGAST_threshold(),
-							getFeature2D_AGAST_nonmaxSuppression());
+							getFeature2D_AGAST_nonmaxSuppression()));
 #endif
 					UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 				}
 				else if(strategies.at(index).compare("GFTT") == 0)
 				{
 #if CV_MAJOR_VERSION < 3
-					detector = cv::Ptr<cv::FeatureDetector>(new cv::GFTTDetector(
+					feature2D = new Feature2D(cv::Ptr<cv::FeatureDetector>(new cv::GFTTDetector(
+							getFeature2D_GFTT_maxCorners(),
+							getFeature2D_GFTT_qualityLevel(),
+							getFeature2D_GFTT_minDistance(),
+							getFeature2D_GFTT_blockSize(),
+							getFeature2D_GFTT_useHarrisDetector(),
+							getFeature2D_GFTT_k())));
+#else
+					feature2D = new Feature2D(cv::GFTTDetector::create(
 							getFeature2D_GFTT_maxCorners(),
 							getFeature2D_GFTT_qualityLevel(),
 							getFeature2D_GFTT_minDistance(),
 							getFeature2D_GFTT_blockSize(),
 							getFeature2D_GFTT_useHarrisDetector(),
 							getFeature2D_GFTT_k()));
-#else
-					detector = cv::GFTTDetector::create(
-							getFeature2D_GFTT_maxCorners(),
-							getFeature2D_GFTT_qualityLevel(),
-							getFeature2D_GFTT_minDistance(),
-							getFeature2D_GFTT_blockSize(),
-							getFeature2D_GFTT_useHarrisDetector(),
-							getFeature2D_GFTT_k());
 #endif
 					UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 				}
 				else if(strategies.at(index).compare("MSER") == 0)
 				{
 #if CV_MAJOR_VERSION < 3
-					detector = cv::Ptr<cv::FeatureDetector>(new cv::MSER(
+					feature2D = new Feature2D(cv::Ptr<cv::FeatureDetector>(new cv::MSER(
+							getFeature2D_MSER_delta(),
+							getFeature2D_MSER_minArea(),
+							getFeature2D_MSER_maxArea(),
+							getFeature2D_MSER_maxVariation(),
+							getFeature2D_MSER_minDiversity(),
+							getFeature2D_MSER_maxEvolution(),
+							getFeature2D_MSER_areaThreshold(),
+							getFeature2D_MSER_minMargin(),
+							getFeature2D_MSER_edgeBlurSize())));
+#else
+					feature2D = new Feature2D(cv::MSER::create(
 							getFeature2D_MSER_delta(),
 							getFeature2D_MSER_minArea(),
 							getFeature2D_MSER_maxArea(),
@@ -653,17 +738,6 @@ KeypointDetector * Settings::createKeypointDetector()
 							getFeature2D_MSER_areaThreshold(),
 							getFeature2D_MSER_minMargin(),
 							getFeature2D_MSER_edgeBlurSize()));
-#else
-					detector = cv::MSER::create(
-							getFeature2D_MSER_delta(),
-							getFeature2D_MSER_minArea(),
-							getFeature2D_MSER_maxArea(),
-							getFeature2D_MSER_maxVariation(),
-							getFeature2D_MSER_minDiversity(),
-							getFeature2D_MSER_maxEvolution(),
-							getFeature2D_MSER_areaThreshold(),
-							getFeature2D_MSER_minMargin(),
-							getFeature2D_MSER_edgeBlurSize());
 #endif
 					UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 				}
@@ -671,7 +745,7 @@ KeypointDetector * Settings::createKeypointDetector()
 				{
 					if(getFeature2D_ORB_gpu() && CVCUDA::getCudaEnabledDeviceCount())
 					{
-						detectorGPU = new GPUORB(
+						feature2D = new GPUORB(
 								getFeature2D_ORB_nFeatures(),
 								getFeature2D_ORB_scaleFactor(),
 								getFeature2D_ORB_nLevels(),
@@ -681,13 +755,17 @@ KeypointDetector * Settings::createKeypointDetector()
 								getFeature2D_ORB_scoreType(),
 								getFeature2D_ORB_patchSize(),
 								getFeature2D_Fast_threshold(),
+#if CV_MAJOR_VERSION < 3
 								getFeature2D_Fast_nonmaxSuppression());
+#else
+								getFeature2D_ORB_blurForDescriptor());
+#endif
 						UDEBUG("type=%s (GPU)", strategies.at(index).toStdString().c_str());
 					}
 					else
 					{
 #if CV_MAJOR_VERSION < 3
-						detector = cv::Ptr<cv::FeatureDetector>(new cv::ORB(
+						feature2D = new Feature2D(cv::Ptr<cv::Feature2D>(new cv::ORB(
 								getFeature2D_ORB_nFeatures(),
 								getFeature2D_ORB_scaleFactor(),
 								getFeature2D_ORB_nLevels(),
@@ -695,9 +773,9 @@ KeypointDetector * Settings::createKeypointDetector()
 								getFeature2D_ORB_firstLevel(),
 								getFeature2D_ORB_WTA_K(),
 								getFeature2D_ORB_scoreType(),
-								getFeature2D_ORB_patchSize()));
+								getFeature2D_ORB_patchSize())));
 #else
-						detector = cv::ORB::create(
+						feature2D = new Feature2D(cv::ORB::create(
 								getFeature2D_ORB_nFeatures(),
 								getFeature2D_ORB_scaleFactor(),
 								getFeature2D_ORB_nLevels(),
@@ -705,7 +783,8 @@ KeypointDetector * Settings::createKeypointDetector()
 								getFeature2D_ORB_firstLevel(),
 								getFeature2D_ORB_WTA_K(),
 								getFeature2D_ORB_scoreType(),
-								getFeature2D_ORB_patchSize());
+								getFeature2D_ORB_patchSize(),
+								getFeature2D_Fast_threshold()));
 #endif
 						UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 					}
@@ -713,20 +792,20 @@ KeypointDetector * Settings::createKeypointDetector()
 				else if(strategies.at(index).compare("Star") == 0)
 				{
 #if CV_MAJOR_VERSION < 3
-					detector = cv::Ptr<cv::FeatureDetector>(new cv::StarFeatureDetector(
+					feature2D = new Feature2D(cv::Ptr<cv::FeatureDetector>(new cv::StarFeatureDetector(
+								getFeature2D_Star_maxSize(),
+								getFeature2D_Star_responseThreshold(),
+								getFeature2D_Star_lineThresholdProjected(),
+								getFeature2D_Star_lineThresholdBinarized(),
+								getFeature2D_Star_suppressNonmaxSize())));
+#else
+#ifdef HAVE_OPENCV_XFEATURES2D
+					feature2D = new Feature2D(cv::xfeatures2d::StarDetector::create(
 								getFeature2D_Star_maxSize(),
 								getFeature2D_Star_responseThreshold(),
 								getFeature2D_Star_lineThresholdProjected(),
 								getFeature2D_Star_lineThresholdBinarized(),
 								getFeature2D_Star_suppressNonmaxSize()));
-#else
-#ifdef HAVE_OPENCV_XFEATURES2D
-					detector = cv::xfeatures2d::StarDetector::create(
-								getFeature2D_Star_maxSize(),
-								getFeature2D_Star_responseThreshold(),
-								getFeature2D_Star_lineThresholdProjected(),
-								getFeature2D_Star_lineThresholdBinarized(),
-								getFeature2D_Star_suppressNonmaxSize());
 #else
 					UWARN("Find-Object is not built with OpenCV xfeatures2d module so Star cannot be used!");
 #endif
@@ -736,15 +815,15 @@ KeypointDetector * Settings::createKeypointDetector()
 				else if(strategies.at(index).compare("BRISK") == 0)
 				{
 #if CV_MAJOR_VERSION < 3
-					detector = cv::Ptr<cv::FeatureDetector>(new cv::BRISK(
+					feature2D = new Feature2D(cv::Ptr<cv::Feature2D>(new cv::BRISK(
+							getFeature2D_BRISK_thresh(),
+							getFeature2D_BRISK_octaves(),
+							getFeature2D_BRISK_patternScale())));
+#else
+					feature2D = new Feature2D(cv::BRISK::create(
 							getFeature2D_BRISK_thresh(),
 							getFeature2D_BRISK_octaves(),
 							getFeature2D_BRISK_patternScale()));
-#else
-					detector = cv::BRISK::create(
-							getFeature2D_BRISK_thresh(),
-							getFeature2D_BRISK_octaves(),
-							getFeature2D_BRISK_patternScale());
 #endif
 					UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 				}
@@ -753,13 +832,13 @@ KeypointDetector * Settings::createKeypointDetector()
 #if CV_MAJOR_VERSION < 3
 					UWARN("Find-Object is not built with OpenCV 3 so KAZE cannot be used!");
 #else
-					detector = cv::KAZE::create(
+					feature2D = new Feature2D(cv::KAZE::create(
 							getFeature2D_KAZE_extended(),
 							getFeature2D_KAZE_upright(),
 							getFeature2D_KAZE_threshold(),
 							getFeature2D_KAZE_nOctaves(),
 							getFeature2D_KAZE_nOctaveLayers(),
-							cv::KAZE::DIFF_PM_G2); // FIXME: make a parameter
+							cv::KAZE::DIFF_PM_G2)); // FIXME: make a parameter
 #endif
 					UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 				}
@@ -768,14 +847,14 @@ KeypointDetector * Settings::createKeypointDetector()
 #if CV_MAJOR_VERSION < 3
 					UWARN("Find-Object is not built with OpenCV 3 so AKAZE cannot be used!");
 #else
-					detector = cv::AKAZE::create(
+					feature2D = new Feature2D(cv::AKAZE::create(
 							cv::AKAZE::DESCRIPTOR_MLDB, // FIXME: make a parameter
 							getFeature2D_AKAZE_descriptorSize(),
 							getFeature2D_AKAZE_descriptorChannels(),
 							getFeature2D_AKAZE_threshold(),
 							getFeature2D_AKAZE_nOctaves(),
 							getFeature2D_AKAZE_nOctaveLayers(),
-							cv::KAZE::DIFF_PM_G2); // FIXME: make a parameter
+							cv::KAZE::DIFF_PM_G2)); // FIXME: make a parameter
 #endif
 					UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 				}
@@ -783,19 +862,19 @@ KeypointDetector * Settings::createKeypointDetector()
 				else if(strategies.at(index).compare("SIFT") == 0)
 				{
 #if CV_MAJOR_VERSION < 3
-					detector = cv::Ptr<cv::FeatureDetector>(new cv::SIFT(
+					feature2D = new Feature2D(cv::Ptr<cv::Feature2D>(new cv::SIFT(
+							getFeature2D_SIFT_nfeatures(),
+							getFeature2D_SIFT_nOctaveLayers(),
+							getFeature2D_SIFT_contrastThreshold(),
+							getFeature2D_SIFT_edgeThreshold(),
+							getFeature2D_SIFT_sigma())));
+#else
+					feature2D = new Feature2D(cv::xfeatures2d::SIFT::create(
 							getFeature2D_SIFT_nfeatures(),
 							getFeature2D_SIFT_nOctaveLayers(),
 							getFeature2D_SIFT_contrastThreshold(),
 							getFeature2D_SIFT_edgeThreshold(),
 							getFeature2D_SIFT_sigma()));
-#else
-					detector = cv::xfeatures2d::SIFT::create(
-							getFeature2D_SIFT_nfeatures(),
-							getFeature2D_SIFT_nOctaveLayers(),
-							getFeature2D_SIFT_contrastThreshold(),
-							getFeature2D_SIFT_edgeThreshold(),
-							getFeature2D_SIFT_sigma());
 #endif
 					UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 				}
@@ -803,7 +882,7 @@ KeypointDetector * Settings::createKeypointDetector()
 				{
 					if(getFeature2D_SURF_gpu() && CVCUDA::getCudaEnabledDeviceCount())
 					{
-						detectorGPU = new GPUSURF(
+						feature2D = new GPUSURF(
 								getFeature2D_SURF_hessianThreshold(),
 								getFeature2D_SURF_nOctaves(),
 								getFeature2D_SURF_nOctaveLayers(),
@@ -815,19 +894,19 @@ KeypointDetector * Settings::createKeypointDetector()
 					else
 					{
 #if CV_MAJOR_VERSION < 3
-						detector = cv::Ptr<cv::FeatureDetector>(new cv::SURF(
+						feature2D = new Feature2D(cv::Ptr<cv::Feature2D>(new cv::SURF(
+							getFeature2D_SURF_hessianThreshold(),
+							getFeature2D_SURF_nOctaves(),
+							getFeature2D_SURF_nOctaveLayers(),
+							getFeature2D_SURF_extended(),
+							getFeature2D_SURF_upright())));
+#else
+						feature2D = new Feature2D(cv::xfeatures2d::SURF::create(
 							getFeature2D_SURF_hessianThreshold(),
 							getFeature2D_SURF_nOctaves(),
 							getFeature2D_SURF_nOctaveLayers(),
 							getFeature2D_SURF_extended(),
 							getFeature2D_SURF_upright()));
-#else
-						detector = cv::xfeatures2d::SURF::create(
-							getFeature2D_SURF_hessianThreshold(),
-							getFeature2D_SURF_nOctaves(),
-							getFeature2D_SURF_nOctaveLayers(),
-							getFeature2D_SURF_extended(),
-							getFeature2D_SURF_upright());
 #endif
 						UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 					}
@@ -837,21 +916,12 @@ KeypointDetector * Settings::createKeypointDetector()
 		}
 	}
 
-	UASSERT(detectorGPU!=0 || !detector.empty());
-	if(detectorGPU)
-	{
-		return new KeypointDetector(detectorGPU);
-	}
-	else
-	{
-		return new KeypointDetector(detector);
-	}
+	return feature2D;
 }
 
-DescriptorExtractor * Settings::createDescriptorExtractor()
+Feature2D * Settings::createDescriptorExtractor()
 {
-	cv::Ptr<cv::DescriptorExtractor> extractor;
-	GPUFeature2D * extractorGPU = 0;
+	Feature2D * feature2D = 0;
 	QString str = getFeature2D_2Descriptor();
 	QStringList split = str.split(':');
 	if(split.size()==2)
@@ -880,12 +950,12 @@ DescriptorExtractor * Settings::createDescriptorExtractor()
 				if(strategies.at(index).compare("Brief") == 0)
 				{
 #if CV_MAJOR_VERSION < 3
-					extractor = cv::Ptr<cv::DescriptorExtractor>(new cv::BriefDescriptorExtractor(
-								getFeature2D_Brief_bytes()));
+					feature2D = new Feature2D(cv::Ptr<cv::DescriptorExtractor>(new cv::BriefDescriptorExtractor(
+								getFeature2D_Brief_bytes())));
 #else
 #ifdef HAVE_OPENCV_XFEATURES2D
-					extractor = cv::xfeatures2d::BriefDescriptorExtractor::create(
-								getFeature2D_Brief_bytes());
+					feature2D = new Feature2D(cv::xfeatures2d::BriefDescriptorExtractor::create(
+								getFeature2D_Brief_bytes()));
 #else
 					UWARN("Find-Object is not built with OpenCV xfeatures2d module so Brief cannot be used!");
 #endif
@@ -896,7 +966,7 @@ DescriptorExtractor * Settings::createDescriptorExtractor()
 				{
 					if(getFeature2D_ORB_gpu() && CVCUDA::getCudaEnabledDeviceCount())
 					{
-						extractorGPU = new GPUORB(
+						feature2D = new GPUORB(
 								getFeature2D_ORB_nFeatures(),
 								getFeature2D_ORB_scaleFactor(),
 								getFeature2D_ORB_nLevels(),
@@ -912,7 +982,7 @@ DescriptorExtractor * Settings::createDescriptorExtractor()
 					else
 					{
 #if CV_MAJOR_VERSION < 3
-						extractor = cv::Ptr<cv::DescriptorExtractor>(new cv::ORB(
+						feature2D = new Feature2D(cv::Ptr<cv::Feature2D>(new cv::ORB(
 								getFeature2D_ORB_nFeatures(),
 								getFeature2D_ORB_scaleFactor(),
 								getFeature2D_ORB_nLevels(),
@@ -920,9 +990,9 @@ DescriptorExtractor * Settings::createDescriptorExtractor()
 								getFeature2D_ORB_firstLevel(),
 								getFeature2D_ORB_WTA_K(),
 								getFeature2D_ORB_scoreType(),
-								getFeature2D_ORB_patchSize()));
+								getFeature2D_ORB_patchSize())));
 #else
-						extractor = cv::ORB::create(
+						feature2D = new Feature2D(cv::ORB::create(
 								getFeature2D_ORB_nFeatures(),
 								getFeature2D_ORB_scaleFactor(),
 								getFeature2D_ORB_nLevels(),
@@ -930,7 +1000,8 @@ DescriptorExtractor * Settings::createDescriptorExtractor()
 								getFeature2D_ORB_firstLevel(),
 								getFeature2D_ORB_WTA_K(),
 								getFeature2D_ORB_scoreType(),
-								getFeature2D_ORB_patchSize());
+								getFeature2D_ORB_patchSize(),
+								getFeature2D_Fast_threshold()));
 #endif
 						UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 					}
@@ -938,15 +1009,15 @@ DescriptorExtractor * Settings::createDescriptorExtractor()
 				else if(strategies.at(index).compare("BRISK") == 0)
 				{
 #if CV_MAJOR_VERSION < 3
-					extractor = cv::Ptr<cv::DescriptorExtractor>(new cv::BRISK(
+					feature2D = new Feature2D(cv::Ptr<cv::Feature2D>(new cv::BRISK(
+							getFeature2D_BRISK_thresh(),
+							getFeature2D_BRISK_octaves(),
+							getFeature2D_BRISK_patternScale())));
+#else
+					feature2D = new Feature2D(cv::BRISK::create(
 							getFeature2D_BRISK_thresh(),
 							getFeature2D_BRISK_octaves(),
 							getFeature2D_BRISK_patternScale()));
-#else
-					extractor = cv::BRISK::create(
-							getFeature2D_BRISK_thresh(),
-							getFeature2D_BRISK_octaves(),
-							getFeature2D_BRISK_patternScale());
 #endif
 					UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 				}
@@ -955,13 +1026,13 @@ DescriptorExtractor * Settings::createDescriptorExtractor()
 #if CV_MAJOR_VERSION < 3
 					UWARN("Find-Object is not built with OpenCV 3 so KAZE cannot be used!");
 #else
-					extractor = cv::KAZE::create(
+					feature2D = new Feature2D(cv::KAZE::create(
 							getFeature2D_KAZE_extended(),
 							getFeature2D_KAZE_upright(),
 							getFeature2D_KAZE_threshold(),
 							getFeature2D_KAZE_nOctaves(),
 							getFeature2D_KAZE_nOctaveLayers(),
-							cv::KAZE::DIFF_PM_G2); // FIXME: make a parameter
+							cv::KAZE::DIFF_PM_G2)); // FIXME: make a parameter
 #endif
 					UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 				}
@@ -970,32 +1041,32 @@ DescriptorExtractor * Settings::createDescriptorExtractor()
 #if CV_MAJOR_VERSION < 3
 					UWARN("Find-Object is not built with OpenCV 3 so AKAZE cannot be used!");
 #else
-					extractor = cv::AKAZE::create(
+					feature2D = new Feature2D(cv::AKAZE::create(
 							cv::AKAZE::DESCRIPTOR_MLDB, // FIXME: make a parameter
 							getFeature2D_AKAZE_descriptorSize(),
 							getFeature2D_AKAZE_descriptorChannels(),
 							getFeature2D_AKAZE_threshold(),
 							getFeature2D_AKAZE_nOctaves(),
 							getFeature2D_AKAZE_nOctaveLayers(),
-							cv::KAZE::DIFF_PM_G2); // FIXME: make a parameter
+							cv::KAZE::DIFF_PM_G2)); // FIXME: make a parameter
 #endif
 					UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 				}
 				else if(strategies.at(index).compare("FREAK") == 0)
 				{
 #if CV_MAJOR_VERSION < 3
-					extractor = cv::Ptr<cv::DescriptorExtractor>(new cv::FREAK(
+					feature2D = new Feature2D(cv::Ptr<cv::DescriptorExtractor>(new cv::FREAK(
+							getFeature2D_FREAK_orientationNormalized(),
+							getFeature2D_FREAK_scaleNormalized(),
+							getFeature2D_FREAK_patternScale(),
+							getFeature2D_FREAK_nOctaves())));
+#else
+#ifdef HAVE_OPENCV_XFEATURES2D
+					feature2D = new Feature2D(cv::xfeatures2d::FREAK::create(
 							getFeature2D_FREAK_orientationNormalized(),
 							getFeature2D_FREAK_scaleNormalized(),
 							getFeature2D_FREAK_patternScale(),
 							getFeature2D_FREAK_nOctaves()));
-#else
-#ifdef HAVE_OPENCV_XFEATURES2D
-					extractor = cv::xfeatures2d::FREAK::create(
-							getFeature2D_FREAK_orientationNormalized(),
-							getFeature2D_FREAK_scaleNormalized(),
-							getFeature2D_FREAK_patternScale(),
-							getFeature2D_FREAK_nOctaves());
 #else
 					UWARN("Find-Object is not built with OpenCV xfeatures2d module so Freak cannot be used!");
 #endif
@@ -1006,24 +1077,24 @@ DescriptorExtractor * Settings::createDescriptorExtractor()
 #ifdef HAVE_OPENCV_XFEATURES2D
 				else if(strategies.at(index).compare("LUCID") == 0)
 				{
-					extractor = cv::xfeatures2d::LUCID::create(
+					feature2D = new Feature2D(cv::xfeatures2d::LUCID::create(
 							getFeature2D_LUCID_kernel(),
-							getFeature2D_LUCID_blur_kernel());
+							getFeature2D_LUCID_blur_kernel()));
 
 					UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 				}
 				else if(strategies.at(index).compare("LATCH") == 0)
 				{
-					extractor = cv::xfeatures2d::LATCH::create(
+					feature2D = new Feature2D(cv::xfeatures2d::LATCH::create(
 							getFeature2D_LATCH_bytes(),
 							getFeature2D_LATCH_rotationInvariance(),
-							getFeature2D_LATCH_half_ssd_size());
+							getFeature2D_LATCH_half_ssd_size()));
 
 					UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 				}
 				else if(strategies.at(index).compare("DAISY") == 0)
 				{
-					extractor = cv::xfeatures2d::DAISY::create(
+					feature2D = new Feature2D(cv::xfeatures2d::DAISY::create(
 							getFeature2D_DAISY_radius(),
 							getFeature2D_DAISY_q_radius(),
 							getFeature2D_DAISY_q_theta(),
@@ -1031,7 +1102,7 @@ DescriptorExtractor * Settings::createDescriptorExtractor()
 							cv::xfeatures2d::DAISY::NRM_NONE,
 							cv::noArray(),
 							getFeature2D_DAISY_interpolation(),
-							getFeature2D_DAISY_use_orientation());
+							getFeature2D_DAISY_use_orientation()));
 
 					UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 				}
@@ -1040,19 +1111,19 @@ DescriptorExtractor * Settings::createDescriptorExtractor()
 				else if(strategies.at(index).compare("SIFT") == 0)
 				{
 #if CV_MAJOR_VERSION < 3
-					extractor = cv::Ptr<cv::DescriptorExtractor>(new cv::SIFT(
+					feature2D = new Feature2D(cv::Ptr<cv::Feature2D>(new cv::SIFT(
+							getFeature2D_SIFT_nfeatures(),
+							getFeature2D_SIFT_nOctaveLayers(),
+							getFeature2D_SIFT_contrastThreshold(),
+							getFeature2D_SIFT_edgeThreshold(),
+							getFeature2D_SIFT_sigma())));
+#else
+					feature2D = new Feature2D(cv::xfeatures2d::SIFT::create(
 							getFeature2D_SIFT_nfeatures(),
 							getFeature2D_SIFT_nOctaveLayers(),
 							getFeature2D_SIFT_contrastThreshold(),
 							getFeature2D_SIFT_edgeThreshold(),
 							getFeature2D_SIFT_sigma()));
-#else
-					extractor = cv::xfeatures2d::SIFT::create(
-							getFeature2D_SIFT_nfeatures(),
-							getFeature2D_SIFT_nOctaveLayers(),
-							getFeature2D_SIFT_contrastThreshold(),
-							getFeature2D_SIFT_edgeThreshold(),
-							getFeature2D_SIFT_sigma());
 #endif
 					UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 				}
@@ -1060,7 +1131,7 @@ DescriptorExtractor * Settings::createDescriptorExtractor()
 				{
 					if(getFeature2D_SURF_gpu() && CVCUDA::getCudaEnabledDeviceCount())
 					{
-						extractorGPU = new GPUSURF(
+						feature2D = new GPUSURF(
 								getFeature2D_SURF_hessianThreshold(),
 								getFeature2D_SURF_nOctaves(),
 								getFeature2D_SURF_nOctaveLayers(),
@@ -1072,19 +1143,19 @@ DescriptorExtractor * Settings::createDescriptorExtractor()
 					else
 					{
 #if CV_MAJOR_VERSION < 3
-						extractor = cv::Ptr<cv::DescriptorExtractor>(new cv::SURF(
+						feature2D = new Feature2D(cv::Ptr<cv::Feature2D>(new cv::SURF(
+								getFeature2D_SURF_hessianThreshold(),
+								getFeature2D_SURF_nOctaves(),
+								getFeature2D_SURF_nOctaveLayers(),
+								getFeature2D_SURF_extended(),
+								getFeature2D_SURF_upright())));
+#else
+						feature2D = new Feature2D(cv::xfeatures2d::SURF::create(
 								getFeature2D_SURF_hessianThreshold(),
 								getFeature2D_SURF_nOctaves(),
 								getFeature2D_SURF_nOctaveLayers(),
 								getFeature2D_SURF_extended(),
 								getFeature2D_SURF_upright()));
-#else
-						extractor = cv::xfeatures2d::SURF::create(
-								getFeature2D_SURF_hessianThreshold(),
-								getFeature2D_SURF_nOctaves(),
-								getFeature2D_SURF_nOctaveLayers(),
-								getFeature2D_SURF_extended(),
-								getFeature2D_SURF_upright());
 #endif
 						UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 					}
@@ -1094,15 +1165,7 @@ DescriptorExtractor * Settings::createDescriptorExtractor()
 		}
 	}
 
-	UASSERT(extractorGPU!=0 || !extractor.empty());
-	if(extractorGPU)
-	{
-		return new DescriptorExtractor(extractorGPU);
-	}
-	else
-	{
-		return new DescriptorExtractor(extractor);
-	}
+	return feature2D;
 }
 
 QString Settings::currentDetectorType()
@@ -1317,67 +1380,82 @@ int Settings::getHomographyMethod()
 	return method;
 }
 
-KeypointDetector::KeypointDetector(cv::Ptr<cv::FeatureDetector> & featureDetector) :
-	featureDetector_(featureDetector),
-	gpuFeature2D_(0)
+#if CV_MAJOR_VERSION < 3
+Feature2D::Feature2D(cv::Ptr<cv::FeatureDetector> featureDetector) :
+	featureDetector_(featureDetector)
 {
 	UASSERT(!featureDetector_.empty());
 }
-KeypointDetector::KeypointDetector(GPUFeature2D * gpuFeature2D) :
-	gpuFeature2D_(gpuFeature2D)
+Feature2D::Feature2D(cv::Ptr<cv::DescriptorExtractor> descriptorExtractor) :
+	descriptorExtractor_(descriptorExtractor)
 {
-	UASSERT(gpuFeature2D_!=0);
+	UASSERT(!descriptorExtractor_.empty());
 }
-KeypointDetector::~KeypointDetector()
+#endif
+Feature2D::Feature2D(cv::Ptr<cv::Feature2D> feature2D) :
+	feature2D_(feature2D)
 {
-	if(gpuFeature2D_)
-	{
-		delete gpuFeature2D_;
-	}
+	UASSERT(!feature2D_.empty());
 }
-void KeypointDetector::detect(const cv::Mat & image,
+
+void Feature2D::detect(const cv::Mat & image,
 		std::vector<cv::KeyPoint> & keypoints,
 		const cv::Mat & mask)
 {
+#if CV_MAJOR_VERSION < 3
 	if(!featureDetector_.empty())
 	{
 		featureDetector_->detect(image, keypoints, mask);
 	}
-	else // assume GPU
+	else
+#endif
+	if(!feature2D_.empty())
 	{
-		gpuFeature2D_->detectKeypoints(image, keypoints, mask);
+		feature2D_->detect(image, keypoints, mask);
+	}
+	else
+	{
+		UERROR("Feature2D not set!?!?");
 	}
 }
 
-DescriptorExtractor::DescriptorExtractor(cv::Ptr<cv::DescriptorExtractor> & descriptorExtractor) :
-	descriptorExtractor_(descriptorExtractor),
-	gpuFeature2D_(0)
-{
-	UASSERT(!descriptorExtractor_.empty());
-}
-DescriptorExtractor::DescriptorExtractor(GPUFeature2D * gpuFeature2D) :
-	gpuFeature2D_(gpuFeature2D)
-{
-	UASSERT(gpuFeature2D_!=0);
-}
-DescriptorExtractor::~DescriptorExtractor()
-{
-	if(gpuFeature2D_)
-	{
-		delete gpuFeature2D_;
-	}
-}
-void DescriptorExtractor::compute(const cv::Mat & image,
+void Feature2D::compute(const cv::Mat & image,
 		std::vector<cv::KeyPoint> & keypoints,
 		cv::Mat & descriptors)
 {
+#if CV_MAJOR_VERSION < 3
 	if(!descriptorExtractor_.empty())
 	{
 		descriptorExtractor_->compute(image, keypoints, descriptors);
 	}
-	else // assume GPU
+	else
+#endif
+	if(!feature2D_.empty())
 	{
-		gpuFeature2D_->computeDescriptors(image, keypoints, descriptors);
+		feature2D_->compute(image, keypoints, descriptors);
+	}
+	else
+	{
+		UERROR("Feature2D not set!?!?");
+	}
+}
+
+void Feature2D::detectAndCompute(const cv::Mat & image,
+		std::vector<cv::KeyPoint> & keypoints,
+		cv::Mat & descriptors,
+		const cv::Mat & mask)
+{
+	if(!feature2D_.empty())
+	{
+#if CV_MAJOR_VERSION < 3
+		(*feature2D_)(image, mask, keypoints, descriptors);
+#else
+		feature2D_->detectAndCompute(image, mask, keypoints, descriptors);
+#endif
+	}
+	else
+	{
+		UERROR("Cannot use Feature2D::detectAndCompute() if feature2D member is not set.");
 	}
 }
 
