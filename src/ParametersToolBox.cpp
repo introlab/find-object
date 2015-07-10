@@ -569,9 +569,10 @@ void ParametersToolBox::changeParameter(const int & value)
 						int index = descriptorBox->findText(comboBox->currentText());
 						if(index >= 0)
 						{
-							QString tmp = Settings::getFeature2D_2Descriptor();
-							*tmp.begin() = '0'+index;
-							Settings::setFeature2D_2Descriptor(tmp);
+							QStringList tmp = Settings::getFeature2D_2Descriptor().split(':');
+							UASSERT(tmp.size() == 2);
+							QString newTmp = QString('0'+index)+":"+tmp.back();
+							Settings::setFeature2D_2Descriptor(newTmp);
 							this->updateParameter(Settings::kFeature2D_2Descriptor());
 						}
 						else
