@@ -30,7 +30,7 @@ Source:
 ### Run
 ```bash
  $ roscore &
- # Launch your preferred ubs camera driver
+ # Launch your preferred usb camera driver
  $ rosrun uvc_camera uvc_camera_node &
  $ rosrun find_object_2d find_object_2d image:=image_raw
 ```
