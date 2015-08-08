@@ -643,6 +643,38 @@ Feature2D * Settings::createKeypointDetector()
 				}
 #endif
 
+#if CV_MAJOR_VERSION < 3
+				if(strategies.at(index).compare("AGAST") == 0 ||
+				   strategies.at(index).compare("KAZE") == 0 ||
+				   strategies.at(index).compare("AKAZE") == 0)
+				{
+					index = Settings::defaultFeature2D_1Detector().split(':').first().toInt();
+					UERROR("Find-Object is built with OpenCV 2 so "
+							"AGAST/KAZE/AKAZE cannot be used! Using default \"%s\" instead.",
+							strategies.at(index).toStdString().c_str());
+
+				}
+#else
+				if(strategies.at(index).compare("Dense") == 0)
+				{
+					index = Settings::defaultFeature2D_1Detector().split(':').first().toInt();
+					UERROR("Find-Object is built with OpenCV 3 so "
+							"Dense cannot be used! Using default \"%s\" instead.",
+							strategies.at(index).toStdString().c_str());
+
+				}
+#ifndef HAVE_OPENCV_XFEATURES2D
+				if(strategies.at(index).compare("Star") == 0)
+				{
+					index = Settings::defaultFeature2D_1Detector().split(':').first().toInt();
+					UERROR("Find-Object is not built with OpenCV xfeatures2d module so "
+							"Star cannot be used! Using default \"%s\" instead.",
+							strategies.at(index).toStdString().c_str());
+
+				}
+#endif
+#endif
+
 				if(strategies.at(index).compare("Dense") == 0)
 				{
 #if CV_MAJOR_VERSION < 3
@@ -945,6 +977,33 @@ Feature2D * Settings::createDescriptorExtractor()
 							strategies.at(index).toStdString().c_str());
 
 				}
+#endif
+
+#if CV_MAJOR_VERSION < 3
+				if(strategies.at(index).compare("KAZE") == 0 ||
+				   strategies.at(index).compare("AKAZE") == 0)
+				{
+					index = Settings::defaultFeature2D_2Descriptor().split(':').first().toInt();
+					UERROR("Find-Object is built with OpenCV 2 so "
+							"KAZE/AKAZE cannot be used! Using default \"%s\" instead.",
+							strategies.at(index).toStdString().c_str());
+
+				}
+#else
+#ifndef HAVE_OPENCV_XFEATURES2D
+				if(strategies.at(index).compare("Brief") == 0 ||
+				   strategies.at(index).compare("FREAK") == 0 ||
+				   strategies.at(index).compare("LUCID") == 0 ||
+				   strategies.at(index).compare("LATCH") == 0 ||
+				   strategies.at(index).compare("DAISY") == 0)
+				{
+					index = Settings::defaultFeature2D_2Descriptor().split(':').first().toInt();
+					UERROR("Find-Object is not built with OpenCV xfeatures2d module so "
+							"Brief/FREAK/LUCID/LATCH/DAISY cannot be used! Using default \"%s\" instead.",
+							strategies.at(index).toStdString().c_str());
+
+				}
+#endif
 #endif
 
 				if(strategies.at(index).compare("Brief") == 0)
