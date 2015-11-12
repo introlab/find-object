@@ -260,7 +260,7 @@ ELSE()
    ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
    ## is used, also find other catkin packages
    find_package(catkin REQUIRED COMPONENTS 
-           cv_bridge roscpp rospy sensor_msgs std_msgs image_transport genmsg message_filters pcl_ros tf
+           cv_bridge roscpp rospy sensor_msgs std_msgs image_transport genmsg message_filters tf
    )
 
    ## Generate messages in the 'msg' folder
@@ -286,7 +286,7 @@ ELSE()
    ## CATKIN_DEPENDS: catkin_packages dependent projects also need
    ## DEPENDS: system dependencies of this project that dependent projects also need
    catkin_package(
-     CATKIN_DEPENDS cv_bridge roscpp rospy sensor_msgs std_msgs image_transport message_filters pcl_ros tf
+     CATKIN_DEPENDS cv_bridge roscpp rospy sensor_msgs std_msgs image_transport message_filters tf
    )
 
    ###########
