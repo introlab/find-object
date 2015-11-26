@@ -211,8 +211,7 @@ August 2014</li>
 <a id="binaries-recommended" class="anchor" href="#binaries-recommended" aria-hidden="true"><span class="octicon octicon-link"></span></a>Binaries (recommended)</h2>
 
 <ul>
-<li>Windows : Download the <code>Find-Object-#.#.#-Win32.exe</code> or <code>Find-Object-#.#.#-Win32.zip</code> in the <a href="news">News</a> section above.</li>
-<li>Mac OS X : Download the <code>Find-Object-#.#.#-Darwin.dmg</code> file in the <a href="#news">News</a> section above.</li>
+<li>Windows, Mac OS X: See <a href="https://github.com/introlab/find-object/releases">releases</a> page.</li>
 <li>Linux : See <a href="#from-source">From source</a> below.</li>
 </ul>
 
@@ -234,7 +233,7 @@ August 2014</li>
 <li>Visual Studio or MinGW (only for Windows)</li>
 </ul>
 
-<div class="highlight highlight-bash"><pre>Ubuntu <span class="pl-c1">:</span>
+<div class="highlight highlight-source-shell"><pre>Ubuntu <span class="pl-c1">:</span>
  $ sudo apt-get install cmake libqt4-dev libopencv2.4-dev</pre></div>
 
 <h3>
@@ -244,7 +243,7 @@ August 2014</li>
 <li>Download ZIP file on top of this page or clone the latest version from GIT:</li>
 </ul>
 
-<div class="highlight highlight-bash"><pre> $ git clone https://github.com/introlab/find-object.git</pre></div>
+<div class="highlight highlight-source-shell"><pre> $ git clone https://github.com/introlab/find-object.git</pre></div>
 
 <h3>
 <a id="build" class="anchor" href="#build" aria-hidden="true"><span class="octicon octicon-link"></span></a>Build</h3>
@@ -253,7 +252,7 @@ August 2014</li>
 <li>Unix (Ubuntu, Mac OS X):</li>
 </ul>
 
-<div class="highlight highlight-bash"><pre> $ <span class="pl-c1">cd</span> find_object/build
+<div class="highlight highlight-source-shell"><pre> $ <span class="pl-c1">cd</span> find_object/build
  $ cmake -DCMAKE_BUILD_TYPE=Release ..
  $ make
  $ <span class="pl-c1">cd</span> ../bin
@@ -263,7 +262,7 @@ August 2014</li>
 <li>Windows (Visual Studio):</li>
 </ul>
 
-<div class="highlight highlight-bash"><pre> $ <span class="pl-c1">cd</span> find_object/build
+<div class="highlight highlight-source-shell"><pre> $ <span class="pl-c1">cd</span> find_object/build
  $ cmake -G<span class="pl-s"><span class="pl-pds">"</span>NMake Makefiles<span class="pl-pds">"</span></span> -DCMAKE_BUILD_TYPE=Release ..
  $ nmake
  $ <span class="pl-c1">cd</span> ../bin
@@ -273,7 +272,7 @@ August 2014</li>
 <li>Windows (MinGW):</li>
 </ul>
 
-<div class="highlight highlight-bash"><pre> $ <span class="pl-c1">cd</span> find_object/build
+<div class="highlight highlight-source-shell"><pre> $ <span class="pl-c1">cd</span> find_object/build
  $ cmake -G<span class="pl-s"><span class="pl-pds">"</span>MinGW Makefiles<span class="pl-pds">"</span></span> -DCMAKE_BUILD_TYPE=Release ..
  $ make
  $ <span class="pl-c1">cd</span> ../bin
@@ -306,7 +305,7 @@ August 2014</li>
 </li>
 </ul>
 
-<div class="highlight highlight-bash"><pre> $ sudo rm /usr/local/bin/find_object
+<div class="highlight highlight-source-shell"><pre> $ sudo rm /usr/local/bin/find_object
  $ rm -rf <span class="pl-k">~</span>/.find_object</pre></div>
 
 <h1>
@@ -316,7 +315,7 @@ August 2014</li>
 <li>Here an example of features extraction (with OpenCV C++ interface) and nearest neighbor search with Flann library. This code can be found in this sample application <a href="https://github.com/introlab/find-object/blob/master/example/main.cpp">main.cpp</a>. Sample images from OpenCV : <a href="https://raw.githubusercontent.com/introlab/find-object/master/bin/box.png">box.png</a> and <a href="https://raw.githubusercontent.com/introlab/find-object/master/bin/box_in_scene.png">box_in_scene.png</a>. Example results:</li>
 </ul>
 
-<div class="highlight highlight-bash"><pre>./find_object-example box.png box_in_scene.png
+<div class="highlight highlight-source-shell"><pre>./find_object-example box.png box_in_scene.png
 Loading images: 5 ms
 Object: 198 keypoints detected <span class="pl-k">in</span> 12 ms
 Scene: 355 keypoints detected <span class="pl-k">in</span> 27 ms
@@ -329,7 +328,7 @@ Inliers=34 Outliers=12</pre></div>
 
 <p><img src="https://raw.githubusercontent.com/wiki/introlab/find-object/doc/Box_example.png"></p>
 
-<div class="highlight highlight-cpp"><pre><span class="pl-c">// OpenCV stuff</span>
+<div class="highlight highlight-source-c++"><pre><span class="pl-c">// OpenCV stuff</span>
 #<span class="pl-k">include</span> <span class="pl-s"><span class="pl-pds">&lt;</span>opencv2/core/core.hpp<span class="pl-pds">&gt;</span></span>
 #<span class="pl-k">include</span> <span class="pl-s"><span class="pl-pds">&lt;</span>opencv2/highgui/highgui.hpp<span class="pl-pds">&gt;</span></span>
 #<span class="pl-k">include</span> <span class="pl-s"><span class="pl-pds">&lt;</span>opencv2/features2d/features2d.hpp<span class="pl-pds">&gt;</span></span>
