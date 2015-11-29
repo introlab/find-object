@@ -29,7 +29,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <QtGui/QPen>
 #include <QtGui/QBrush>
-#include <QtGui/QGraphicsScene>
+#include <QGraphicsScene>
 
 namespace find_object {
 
@@ -38,7 +38,7 @@ RectItem::RectItem(int id, const QRectF &rect, QGraphicsItem * parent) :
 	placeHolder_(0),
 	id_(id)
 {
-	this->setAcceptsHoverEvents(true);
+	this->setAcceptHoverEvents(true);
 	this->setFlag(QGraphicsItem::ItemIsFocusable, true);
 	this->setFlag(QGraphicsItem::ItemIsSelectable, true);
 }
@@ -53,7 +53,7 @@ void RectItem::setColor(const QColor & color)
 	this->setBrush(QBrush(color));
 	if(placeHolder_)
 	{
-		QList<QGraphicsItem *> items = placeHolder_->children();
+		QList<QGraphicsItem *> items = placeHolder_->childItems();
 		if(items.size())
 		{
 			((QGraphicsTextItem *)items.front())->setDefaultTextColor(this->pen().color().rgb());

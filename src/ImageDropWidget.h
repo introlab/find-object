@@ -8,7 +8,7 @@
 #ifndef IMAGEDROPWIDGET_H_
 #define IMAGEDROPWIDGET_H_
 
-#include <QtGui/QWidget>
+#include <QWidget>
 
 namespace find_object {
 

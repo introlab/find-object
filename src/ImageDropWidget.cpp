@@ -10,6 +10,7 @@
 #include <QtGui/QDragEnterEvent>
 #include <QtCore/QRegExp>
 #include <QtCore/QUrl>
+#include <QMimeData>
 
 namespace find_object {
 

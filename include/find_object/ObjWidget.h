@@ -31,7 +31,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "find_object/FindObjectExp.h" // DLL export/import defines
 
 #include <opencv2/features2d/features2d.hpp>
-#include <QtGui/QWidget>
+#include <QWidget>
 #include <QtCore/QMultiMap>
 
 class QAction;

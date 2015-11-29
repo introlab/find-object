@@ -34,20 +34,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <opencv2/highgui/highgui.hpp>
 
-#include <QtGui/QWidget>
-#include <QtGui/QContextMenuEvent>
-#include <QtGui/QMenu>
-#include <QtGui/QMenu>
-#include <QtGui/QFileDialog>
-#include <QtGui/QAction>
-#include <QtGui/QGraphicsView>
-#include <QtGui/QGraphicsScene>
-#include <QtGui/QVBoxLayout>
-#include <QtGui/QGraphicsRectItem>
-#include <QtGui/QInputDialog>
-#include <QtGui/QPen>
-#include <QtGui/QLabel>
-#include <QtGui/QColorDialog>
+#include <QWidget>
+#include <QContextMenuEvent>
+#include <QMenu>
+#include <QFileDialog>
+#include <QAction>
+#include <QGraphicsView>
+#include <QGraphicsScene>
+#include <QVBoxLayout>
+#include <QGraphicsRectItem>
+#include <QInputDialog>
+#include <QPen>
+#include <QLabel>
+#include <QColorDialog>
 
 #include <QtCore/QDir>
 

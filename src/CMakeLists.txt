@@ -34,15 +34,21 @@ SET(qrc
    ./resources.qrc
 )
 
-# generate rules for building source files from the resources
-QT4_ADD_RESOURCES(srcs_qrc ${qrc})
+IF("${FINDOBJECT_QT_VERSION}" STREQUAL "4")
+    # generate rules for building source files from the resources
+    QT4_ADD_RESOURCES(srcs_qrc ${qrc})
 
-#Generate .h files from the .ui files
-QT4_WRAP_UI(moc_uis ${uis})
+    #Generate .h files from the .ui files
+    QT4_WRAP_UI(moc_uis ${uis})
 
-#This will generate moc_* for Qt
-QT4_WRAP_CPP(moc_srcs ${headers_ui})
-### Qt Gui stuff  end###
+    #This will generate moc_* for Qt
+    QT4_WRAP_CPP(moc_srcs ${headers_ui})
+    ### Qt Gui stuff  end###
+ELSE()
+    QT5_ADD_RESOURCES(srcs_qrc ${qrc})
+    QT5_WRAP_UI(moc_uis ${uis})
+    QT5_WRAP_CPP(moc_srcs ${headers_ui})
+ENDIF()
 
 SET(SRC_FILES 
    ./MainWindow.cpp
@@ -95,7 +101,9 @@ IF(CATKIN_BUILD)
    )
 ENDIF(CATKIN_BUILD)
 
-INCLUDE(${QT_USE_FILE})
+IF("${FINDOBJECT_QT_VERSION}" STREQUAL "4")
+    INCLUDE(${QT_USE_FILE})
+ENDIF()
 
 SET(LIBRARIES
    ${QT_LIBRARIES} 
@@ -115,29 +123,32 @@ INCLUDE_DIRECTORIES(${INCLUDE_DIRS})
 ADD_LIBRARY(find_object ${SRC_FILES})
 # Linking with Qt libraries
 TARGET_LINK_LIBRARIES(find_object ${LIBRARIES})
+IF("${FINDOBJECT_QT_VERSION}" STREQUAL "5")
+    QT5_USE_MODULES(find_object Widgets Core Gui Network PrintSupport)
+ENDIF()
 IF(CATKIN_BUILD)
    set_target_properties(find_object PROPERTIES  OUTPUT_NAME find_object_2d)
 ENDIF(CATKIN_BUILD)
 
 IF(NOT CATKIN_BUILD)
    INSTALL(TARGETS find_object
-      RUNTIME DESTINATION "${INSTALL_BIN_DIR}" COMPONENT runtime
-      LIBRARY DESTINATION "${INSTALL_LIB_DIR}" COMPONENT devel
-      ARCHIVE DESTINATION "${INSTALL_LIB_DIR}" COMPONENT devel)
+      RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT runtime
+      LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT devel
+      ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT devel)
       
    install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../include/ DESTINATION "${INSTALL_INCLUDE_DIR}" COMPONENT devel FILES_MATCHING PATTERN "*.h" PATTERN ".svn" EXCLUDE)
 ELSE()
    add_executable(find_object_2d ros/find_object_2d_node.cpp)
    target_link_libraries(find_object_2d find_object ${LIBRARIES})
-   add_dependencies(find_object_2d find_object_2d_generate_messages_cpp)
+   add_dependencies(find_object_2d ${${PROJECT_NAME}_EXPORTED_TARGETS})
 
    add_executable(print_objects_detected ros/print_objects_detected_node.cpp)
    target_link_libraries(print_objects_detected ${LIBRARIES})
-   add_dependencies(print_objects_detected find_object_2d_generate_messages_cpp)
+   add_dependencies(print_objects_detected ${${PROJECT_NAME}_EXPORTED_TARGETS})
 
    add_executable(tf_example ros/tf_example_node.cpp)
    target_link_libraries(tf_example ${LIBRARIES})
-   add_dependencies(tf_example find_object_2d_generate_messages_cpp)
+   add_dependencies(tf_example ${${PROJECT_NAME}_EXPORTED_TARGETS})
 
    ## Mark executables and/or libraries for installation
    install(TARGETS 

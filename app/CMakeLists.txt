@@ -5,7 +5,9 @@ SET(INCLUDE_DIRS
 	${OpenCV_INCLUDE_DIRS}
 )
 
-INCLUDE(${QT_USE_FILE})
+IF("${FINDOBJECT_QT_VERSION}" STREQUAL "4")
+    INCLUDE(${QT_USE_FILE})
+ENDIF()
 
 SET(LIBRARIES
     ${QT_LIBRARIES} 
@@ -50,6 +52,9 @@ ELSE()
 ENDIF()
 # Linking with Qt libraries
 TARGET_LINK_LIBRARIES(find_object_app find_object ${LIBRARIES})
+IF("${FINDOBJECT_QT_VERSION}" STREQUAL "5")
+    QT5_USE_MODULES(find_object_app Widgets Core Gui Network PrintSupport)
+ENDIF()
 
 IF(APPLE AND BUILD_AS_BUNDLE)
   SET_TARGET_PROPERTIES(find_object_app PROPERTIES
@@ -66,7 +71,7 @@ ENDIF()
 # Installation stuff
 #--------------------------- 
 INSTALL(TARGETS find_object_app
-        RUNTIME DESTINATION "${INSTALL_BIN_DIR}" COMPONENT runtime
+        RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT runtime
         BUNDLE DESTINATION "${CMAKE_BUNDLE_LOCATION}" COMPONENT runtime)
         
 #---------------------------

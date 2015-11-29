@@ -29,7 +29,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <QtGui/QPen>
 #include <QtGui/QBrush>
-#include <QtGui/QGraphicsScene>
+#include <QGraphicsScene>
 
 namespace find_object {
 
@@ -42,7 +42,7 @@ KeypointItem::KeypointItem(int id, qreal x, qreal y, int r, const cv::KeyPoint &
 {
 	this->setPen(QPen(color));
 	this->setBrush(QBrush(color));
-	this->setAcceptsHoverEvents(true);
+	this->setAcceptHoverEvents(true);
 	this->setFlag(QGraphicsItem::ItemIsFocusable, true);
 	this->setFlag(QGraphicsItem::ItemIsSelectable, true);
 }
@@ -57,7 +57,7 @@ void KeypointItem::setColor(const QColor & color)
 	this->setBrush(QBrush(color));
 	if(placeHolder_)
 	{
-		QList<QGraphicsItem *> items = placeHolder_->children();
+		QList<QGraphicsItem *> items = placeHolder_->childItems();
 		if(items.size())
 		{
 			((QGraphicsTextItem *)items.front())->setDefaultTextColor(this->pen().color().rgb());

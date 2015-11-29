@@ -28,14 +28,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "find_object/Settings.h"
 
 #include "ParametersToolBox.h"
-#include <QtGui/QComboBox>
-#include <QtGui/QDoubleSpinBox>
-#include <QtGui/QLineEdit>
-#include <QtGui/QLabel>
-#include <QtGui/QGroupBox>
-#include <QtGui/QCheckBox>
-#include <QtGui/QVBoxLayout>
-#include <QtGui/QMessageBox>
+#include <QComboBox>
+#include <QDoubleSpinBox>
+#include <QLineEdit>
+#include <QLabel>
+#include <QGroupBox>
+#include <QCheckBox>
+#include <QVBoxLayout>
+#include <QMessageBox>
 #include <stdio.h>
 #include "find_object/utilite/ULogger.h"
 #include <opencv2/opencv_modules.hpp>

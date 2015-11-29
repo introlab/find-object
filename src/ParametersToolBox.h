@@ -28,7 +28,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef PARAMETERSTOOLBOX_H_
 #define PARAMETERSTOOLBOX_H_
 
-#include <QtGui/QToolBox>
+#include <QToolBox>
 
 class QVBoxLayout;
 class QAbstractButton;

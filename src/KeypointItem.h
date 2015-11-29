@@ -28,8 +28,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef KEYPOINTITEM_H_
 #define KEYPOINTITEM_H_
 
-#include <QtGui/QGraphicsEllipseItem>
-#include <QtGui/QGraphicsTextItem>
+#include <QGraphicsEllipseItem>
+#include <QGraphicsTextItem>
 #include <QtGui/QPen>
 #include <QtGui/QBrush>
 #include <opencv2/features2d/features2d.hpp>

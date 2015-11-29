@@ -47,6 +47,7 @@ AboutDialog::AboutDialog(QWidget * parent) :
 	#endif
 
 	ui_->label_version_opencv->setText(cv_version);
+	ui_->label_version_qt->setText(QT_VERSION_STR);
 }
 
 AboutDialog::~AboutDialog()

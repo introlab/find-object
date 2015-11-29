@@ -1,10 +1,15 @@
-### Qt Gui stuff ###
+
 SET(headers_ui 
 	ImagesTcpServer.h
 )
-#This will generate moc_* for Qt
-QT4_WRAP_CPP(moc_srcs ${headers_ui})
-### Qt Gui stuff  end###
+
+IF("${FINDOBJECT_QT_VERSION}" STREQUAL "4")
+    #This will generate moc_* for Qt
+    QT4_WRAP_CPP(moc_srcs ${headers_ui})
+    ### Qt Gui stuff  end###
+ELSE()
+    QT5_WRAP_CPP(moc_srcs ${headers_ui})
+ENDIF()
 
 SET(SRC_FILES
     ImagesTcpServer.cpp
@@ -18,7 +23,9 @@ SET(INCLUDE_DIRS
     ${OpenCV_INCLUDE_DIRS}
 )
 
-INCLUDE(${QT_USE_FILE})
+IF("${FINDOBJECT_QT_VERSION}" STREQUAL "4")
+    INCLUDE(${QT_USE_FILE})
+ENDIF()
 
 SET(LIBRARIES
 	${OpenCV_LIBS} 
@@ -32,11 +39,14 @@ INCLUDE_DIRECTORIES(${INCLUDE_DIRS})
 # The extension is automatically found.
 ADD_EXECUTABLE(tcpImagesServer ${SRC_FILES})
 TARGET_LINK_LIBRARIES(tcpImagesServer find_object ${LIBRARIES})
+IF("${FINDOBJECT_QT_VERSION}" STREQUAL "5")
+    QT5_USE_MODULES(tcpImagesServer Widgets Core Gui Network PrintSupport)
+ENDIF()
 
 SET_TARGET_PROPERTIES( tcpImagesServer 
   PROPERTIES OUTPUT_NAME ${PROJECT_PREFIX}-tcpImagesServer)
   
 INSTALL(TARGETS tcpImagesServer
-        RUNTIME DESTINATION bin COMPONENT runtime
+        RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT runtime
         BUNDLE DESTINATION "${CMAKE_BUNDLE_LOCATION}" COMPONENT runtime)
 

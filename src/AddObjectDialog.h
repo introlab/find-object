@@ -28,7 +28,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef ADDOBJECTDIALOG_H_
 #define ADDOBJECTDIALOG_H_
 
-#include <QtGui/QDialog>
+#include <QDialog>
 #include <QtCore/QTimer>
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/core/core.hpp>

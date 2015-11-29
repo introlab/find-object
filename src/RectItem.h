@@ -28,8 +28,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef RECTITEM_H_
 #define RECTITEM_H_
 
-#include <QtGui/QGraphicsRectItem>
-#include <QtGui/QGraphicsTextItem>
+#include <QGraphicsRectItem>
+#include <QGraphicsTextItem>
 #include <QtGui/QPen>
 #include <QtGui/QBrush>
 

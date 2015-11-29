@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 2.8.5)
 
 # Detect if it is called by catkin
 SET(CATKIN_BUILD ${CATKIN_TOPLEVEL})
@@ -10,6 +10,14 @@ ELSE()
    #ROS catkin build
    PROJECT( find_object_2d )
 ENDIF()
+
+# Catkin doesn't support multiarch library path, 
+# fix to "lib" if not set by user.
+IF(NOT DEFINED CMAKE_INSTALL_LIBDIR)
+   set(CMAKE_INSTALL_LIBDIR "lib")
+ENDIF(NOT DEFINED CMAKE_INSTALL_LIBDIR)
+
+INCLUDE(GNUInstallDirs)
 
 #######################
 # VERSION
@@ -28,7 +36,13 @@ ADD_DEFINITIONS(-DPROJECT_NAME="${PROJECT_NAME}")
 
 ####### DEPENDENCIES #######
 FIND_PACKAGE(OpenCV REQUIRED) # tested on 2.3.1
-FIND_PACKAGE(Qt4 COMPONENTS QtCore QtGui QtNetwork REQUIRED)
+
+SET(FINDOBJECT_QT_VERSION 4 CACHE STRING "Which QT version to use")
+IF("${FINDOBJECT_QT_VERSION}" STREQUAL "4")
+   FIND_PACKAGE(Qt4 COMPONENTS QtCore QtGui QtNetwork REQUIRED)
+ELSE()
+   FIND_PACKAGE(Qt5 COMPONENTS Widgets Core Gui Network REQUIRED)
+ENDIF()
 ADD_DEFINITIONS(-DQT_NO_KEYWORDS) # To avoid conflicts with boost signals used in ROS
 
 SET(NONFREE 0)
@@ -60,24 +74,6 @@ IF(NOT CATKIN_BUILD)
    ####### Build libraries as shared or static #######
    OPTION( BUILD_SHARED_LIBS "Set to OFF to build static libraries" ON )
 
-   ####### SET RPATH #########
-   # When RPATH is activated (supported on most UNIX systems), 
-   # the user doesn't need to change LD_LIBRARY_PATH
-
-   # use, i.e. don't skip the full RPATH for the build tree
-   SET(CMAKE_SKIP_BUILD_RPATH  FALSE)
-
-   # when building, don't use the install RPATH already
-   # (but later on when installing)
-   SET(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE) 
-
-   # the RPATH to be used when installing
-   SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib/${PROJECT_PREFIX}-${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}")
-
-   # add the automatically determined parts of the RPATH
-   # which point to directories outside the build tree to the install RPATH
-   SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-
    ####### OUTPUT DIR #######
    SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
    SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
@@ -85,14 +81,12 @@ IF(NOT CATKIN_BUILD)
 
    ####### INSTALL DIR #######
    # Offer the user the choice of overriding the installation directories
-   set(INSTALL_LIB_DIR lib/${PROJECT_PREFIX}-${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR} CACHE PATH "Installation directory for libraries")
-   set(INSTALL_BIN_DIR bin CACHE PATH "Installation directory for executables")
    set(INSTALL_INCLUDE_DIR include/${PROJECT_PREFIX}-${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR} CACHE PATH
      "Installation directory for header files")
    if(WIN32 AND NOT CYGWIN)
      set(DEF_INSTALL_CMAKE_DIR CMake)
    else()
-     set(DEF_INSTALL_CMAKE_DIR lib/${PROJECT_PREFIX}-${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR})
+     set(DEF_INSTALL_CMAKE_DIR ${CMAKE_INSTALL_LIBDIR}/${PROJECT_PREFIX}-${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR})
    endif()
    set(INSTALL_CMAKE_DIR ${DEF_INSTALL_CMAKE_DIR} CACHE PATH
      "Installation directory for CMake files")
@@ -139,7 +133,7 @@ IF(NOT CATKIN_BUILD)
    #######################
    # Create the FindObjectConfig.cmake and FindObjectConfigVersion files
    file(RELATIVE_PATH REL_INCLUDE_DIR "${CMAKE_INSTALL_PREFIX}/${INSTALL_CMAKE_DIR}" "${CMAKE_INSTALL_PREFIX}/${INSTALL_INCLUDE_DIR}")
-   file(RELATIVE_PATH REL_LIB_DIR "${CMAKE_INSTALL_PREFIX}/${INSTALL_CMAKE_DIR}" "${CMAKE_INSTALL_PREFIX}/${INSTALL_LIB_DIR}")
+   file(RELATIVE_PATH REL_LIB_DIR "${CMAKE_INSTALL_PREFIX}/${INSTALL_CMAKE_DIR}" "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
       
    # ... for the build tree
    set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/include")
@@ -246,6 +240,14 @@ IF(NOT CATKIN_BUILD)
      ELSE()
        MESSAGE(STATUS "  With OpenCV 3 xfeatures2d module (SIFT/SURF/BRIEF/FREAK) = NO (not found)")
      ENDIF()
+   ENDIF()
+
+   IF(QT4_FOUND)
+      MESSAGE(STATUS "  With Qt = YES (version 4, \"-DFINDOBJECT_QT_VERSION=4\")")
+   ELSEIF(Qt5_FOUND)
+      MESSAGE(STATUS "  With Qt = YES (version 5, \"-DFINDOBJECT_QT_VERSION=5\")")
+   ELSE()
+      MESSAGE(STATUS "  With Qt = NO (Qt not found, to use Qt5 you should set -DFINDOBJECT_QT_VERSION=5)")
    ENDIF()
 
    IF(APPLE)

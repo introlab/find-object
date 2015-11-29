@@ -39,7 +39,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QtCore/QStringList>
 #include <QtCore/QTime>
 #include <QtCore/QDir>
-#include <QtGui/QGraphicsRectItem>
+#include <QGraphicsRectItem>
 #include <stdio.h>
 
 namespace find_object {
@@ -374,7 +374,7 @@ std::vector<cv::KeyPoint> limitKeypoints(const std::vector<cv::KeyPoint> & keypo
 
 void limitKeypoints(std::vector<cv::KeyPoint> & keypoints, cv::Mat & descriptors, int maxKeypoints)
 {
-	UASSERT(keypoints.size() == descriptors.rows);
+	UASSERT((int)keypoints.size() == descriptors.rows);
 	std::vector<cv::KeyPoint> kptsKept;
 	cv::Mat descriptorsKept;
 	if(maxKeypoints > 0 && (int)keypoints.size() > maxKeypoints)

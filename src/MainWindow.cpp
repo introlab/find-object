@@ -62,17 +62,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QtCore/QThread>
 #include <QtCore/QLineF>
 
-#include <QtGui/QFileDialog>
-#include <QtGui/QMessageBox>
-#include <QtGui/QGraphicsScene>
-#include <QtGui/QGraphicsRectItem>
-#include <QtGui/QSpinBox>
-#include <QtGui/QStatusBar>
-#include <QtGui/QProgressDialog>
-#include <QtGui/QCloseEvent>
-#include <QtGui/QCheckBox>
-#include <QtGui/QScrollBar>
-#include <QtGui/QInputDialog>
+#include <QFileDialog>
+#include <QMessageBox>
+#include <QGraphicsScene>
+#include <QGraphicsRectItem>
+#include <QSpinBox>
+#include <QStatusBar>
+#include <QProgressDialog>
+#include <QCloseEvent>
+#include <QCheckBox>
+#include <QScrollBar>
+#include <QInputDialog>
 
 #include "utilite/UDirectory.h"
 
@@ -382,7 +382,7 @@ void MainWindow::loadSession()
 					this->showObject(obj);
 
 					//update object labels
-					QLabel * title = qFindChild<QLabel*>(this, QString("%1title").arg(iter.value()->id()));
+					QLabel * title = this->findChild<QLabel*>(QString("%1title").arg(iter.value()->id()));
 					title->setText(QString("%1 (%2)").arg(iter.value()->id()).arg(QString::number(iter.value()->keypoints().size())));
 				}
 
@@ -973,11 +973,11 @@ void MainWindow::setupCameraFromTcpIp()
 	else
 	{
 		bool ok;
-		int port = QInputDialog::getInteger(this, tr("Server port..."), "Port: ", Settings::getCamera_8port(), 1, USHRT_MAX, 1, &ok);
+		int port = QInputDialog::getInt(this, tr("Server port..."), "Port: ", Settings::getCamera_8port(), 1, USHRT_MAX, 1, &ok);
 
 		if(ok)
 		{
-			int queue = QInputDialog::getInteger(this, tr("Queue size..."), "Images buffer size (0 means infinite): ", Settings::getCamera_9queueSize(), 0, 2147483647, 1, &ok);
+			int queue = QInputDialog::getInt(this, tr("Queue size..."), "Images buffer size (0 means infinite): ", Settings::getCamera_9queueSize(), 0, 2147483647, 1, &ok);
 			if(ok)
 			{
 				Settings::setCamera_6useTcpCamera(true);
@@ -1073,7 +1073,7 @@ void MainWindow::updateObjects(const QList<int> & ids)
 				objWidgets_.value(signatures[i]->id())->updateData(signatures[i]->keypoints());
 
 				//update object labels
-				QLabel * title = qFindChild<QLabel*>(this, QString("%1title").arg(signatures[i]->id()));
+				QLabel * title = this->findChild<QLabel*>(QString("%1title").arg(signatures[i]->id()));
 				title->setText(QString("%1 (%2)").arg(signatures[i]->id()).arg(QString::number(signatures[i]->keypoints().size())));
 			}
 		}

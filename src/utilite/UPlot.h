@@ -24,15 +24,15 @@
 
 //#include "utilite/UtiLiteExp.h" // DLL export/import defines
 
-#include <QtGui/QFrame>
+#include <QFrame>
 #include <QtCore/QList>
 #include <QtCore/QMap>
 #include <QtGui/QPen>
 #include <QtGui/QBrush>
-#include <QtGui/QGraphicsEllipseItem>
+#include <QGraphicsEllipseItem>
 #include <QtCore/QMutex>
-#include <QtGui/QLabel>
-#include <QtGui/QPushButton>
+#include <QLabel>
+#include <QPushButton>
 #include <QtCore/QTime>
 
 class QGraphicsView;

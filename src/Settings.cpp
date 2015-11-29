@@ -125,7 +125,7 @@ void Settings::loadSettings(const QString & fileName)
 						// (assuming that index < 10... one character for index)
 						QChar index = str.at(0);
 						str = getParameter(key).toString();
-						str[0] = index.toAscii();
+						str[0] = index.toLatin1();
 						value = QVariant(str);
 						UINFO("Updated list of parameter \"%s\"", key.toStdString().c_str());
 					}
@@ -169,7 +169,7 @@ void Settings::loadSettings(const QString & fileName)
 						}
 					}
 					str = getParameter(key).toString();
-					str[0] = index.toAscii();
+					str[0] = index.toLatin1();
 					value = QVariant(str);
 #endif
 				}

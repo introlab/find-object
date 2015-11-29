@@ -38,9 +38,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <stdio.h>
 
-#include <QtGui/QGraphicsScene>
-#include <QtGui/QGraphicsPixmapItem>
-#include <QtGui/QMessageBox>
+#include <QGraphicsScene>
+#include <QGraphicsPixmapItem>
+#include <QMessageBox>
 
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>

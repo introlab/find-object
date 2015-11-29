@@ -32,7 +32,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "find_object/DetectionInfo.h"
 
-#include <QtGui/QMainWindow>
+#include <QMainWindow>
 #include <QtCore/QSet>
 #include <QtCore/QTimer>
 #include <QtCore/QTime>
