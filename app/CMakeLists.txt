@@ -1,4 +1,14 @@
 
+SET(headers_ui 
+	TcpServerPool.h
+)
+
+IF("${FINDOBJECT_QT_VERSION}" STREQUAL "4")
+    QT4_WRAP_CPP(moc_srcs ${headers_ui})
+ELSE()
+    QT5_WRAP_CPP(moc_srcs ${headers_ui})
+ENDIF()
+
 SET(INCLUDE_DIRS
 	${CMAKE_CURRENT_SOURCE_DIR}/../include
 	${CMAKE_CURRENT_SOURCE_DIR}
@@ -17,7 +27,7 @@ SET(LIBRARIES
 #include files
 INCLUDE_DIRECTORIES(${INCLUDE_DIRS})
 
-SET(SRC_FILES main.cpp)
+SET(SRC_FILES main.cpp ${moc_srcs} )
 
 # For Apple set the icns file containing icons
 IF(APPLE AND BUILD_AS_BUNDLE)

@@ -1250,10 +1250,6 @@ void FindObject::detect(const cv::Mat & image)
 	time.start();
 	DetectionInfo info;
 	this->detect(image, info);
-	if(info.objDetected_.size() > 0 || Settings::getGeneral_sendNoObjDetectedEvents())
-	{
-		Q_EMIT objectsFound(info);
-	}
 
 	if(info.objDetected_.size() > 1)
 	{
@@ -1275,9 +1271,14 @@ void FindObject::detect(const cv::Mat & image)
 				QTime::currentTime().toString("HH:mm:ss.zzz").toStdString().c_str(),
 				time.elapsed());
 	}
+
+	if(info.objDetected_.size() > 0 || Settings::getGeneral_sendNoObjDetectedEvents())
+	{
+		Q_EMIT objectsFound(info);
+	}
 }
 
-bool FindObject::detect(const cv::Mat & image, find_object::DetectionInfo & info)
+bool FindObject::detect(const cv::Mat & image, find_object::DetectionInfo & info) const
 {
 	QTime totalTime;
 	totalTime.start();
@@ -1348,7 +1349,7 @@ bool FindObject::detect(const cv::Mat & image, find_object::DetectionInfo & info
 				info.sceneWords_ = words;
 			}
 
-			for(QMap<int, ObjSignature*>::iterator iter=objects_.begin(); iter!=objects_.end(); ++iter)
+			for(QMap<int, ObjSignature*>::const_iterator iter=objects_.begin(); iter!=objects_.end(); ++iter)
 			{
 				info.matches_.insert(iter.key(), QMultiMap<int, int>());
 			}
@@ -1434,7 +1435,7 @@ bool FindObject::detect(const cv::Mat & image, find_object::DetectionInfo & info
 						}
 						else
 						{
-							QMap<int, int>::iterator iter = dataRange_.lowerBound(i);
+							QMap<int, int>::const_iterator iter = dataRange_.lowerBound(i);
 							int objectId = iter.value();
 							int fisrtObjectDescriptorIndex = (iter == dataRange_.begin())?0:(--iter).key()+1;
 							int objectDescriptorIndex = i - fisrtObjectDescriptorIndex;

@@ -45,8 +45,9 @@ class FINDOBJECT_EXP TcpServer : public QTcpServer
 
 public:
 	enum Service {
-		kAddObject,   // id fileName imageSize image
-		kRemoveObject // id
+		kAddObject,    // id fileName imageSize image
+		kRemoveObject, // id
+		kDetectObject  // image
 	};
 
 public:
@@ -67,6 +68,7 @@ private Q_SLOTS:
 Q_SIGNALS:
 	void addObject(const cv::Mat &, int, const QString &);
 	void removeObject(int);
+	void detectObject(const cv::Mat &);
 
 private:
 	QMap<int, quint64> blockSizes_;

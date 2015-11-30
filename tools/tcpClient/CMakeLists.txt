@@ -4,9 +4,7 @@ SET(headers_ui
 )
 
 IF("${FINDOBJECT_QT_VERSION}" STREQUAL "4")
-    #This will generate moc_* for Qt
     QT4_WRAP_CPP(moc_srcs ${headers_ui})
-    ### Qt Gui stuff  end###
 ELSE()
     QT5_WRAP_CPP(moc_srcs ${headers_ui})
 ENDIF()

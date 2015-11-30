@@ -37,6 +37,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "find_object/TcpServer.h"
 #include "find_object/JsonWriter.h"
 #include "find_object/utilite/ULogger.h"
+#include "TcpServerPool.h"
 
 bool running = true;
 
@@ -112,8 +113,13 @@ void showUsage()
 			"                           and \"General/vocabularyFixed\" will be also enabled. Ignored if \"--session\" is set.\n"
 			"  --images_not_saved     Don't keep images in RAM after the features are extracted (only\n"
 			"                           in console mode). Images won't be saved if an output session is set.\n"
+			"  --tcp_threads #        Number of TCP threads (default 1, only in --console mode). \"--General/port\" parameter should not be 0.\n"
+			"                           Port numbers start from \"General/port\" value. \"Detect\" TCP service can be\n"
+			"                           executed at the same time by multiple threads. \"Add/Remove\" TCP services\n"
+			"                           cannot be called by multiple threads, so calling these services on a port\n "
+			"                          will block all other threads on the other ports.\n"
 			"  --debug                Show debug log.\n"
-			"  --debug-time           Show debug log with time.\n"
+			"  --log-time             Show log with time.\n"
 			"  --params               Show all parameters.\n"
 			"  --defaults             Use default parameters (--config is ignored).\n"
 			"  --My/Parameter \"value\" Set find-Object's parameter (look --params for parameters' name).\n"
@@ -146,6 +152,7 @@ int main(int argc, char* argv[])
 	QString jsonPath;
 	find_object::ParametersMap customParameters;
 	bool imagesSaved = true;
+	int tcpThreads = 1;
 
 	for(int i=1; i<argc; ++i)
 	{
@@ -322,11 +329,10 @@ int main(int argc, char* argv[])
 			ULogger::setLevel(ULogger::kDebug);
 			continue;
 		}
-		if(strcmp(argv[i], "-debug-time") == 0 ||
-		   strcmp(argv[i], "--debug-time") == 0)
+		if(strcmp(argv[i], "-log-time") == 0 ||
+		   strcmp(argv[i], "--log-time") == 0)
 		{
 			ULogger::setPrintWhere(true);
-			ULogger::setLevel(ULogger::kDebug);
 			ULogger::setPrintTime(true);
 			continue;
 		}
@@ -345,6 +351,25 @@ int main(int argc, char* argv[])
 				if(jsonPath.contains('~'))
 				{
 					jsonPath.replace('~', QDir::homePath());
+				}
+			}
+			else
+			{
+				showUsage();
+			}
+			continue;
+		}
+		if(strcmp(argv[i], "-tcp_threads") == 0 ||
+		   strcmp(argv[i], "--tcp_threads") == 0)
+		{
+			++i;
+			if(i < argc)
+			{
+				tcpThreads = atoi(argv[i]);
+				if(tcpThreads < 1)
+				{
+					printf("tcp_threads should be >= 1!\n");
+					showUsage();
 				}
 			}
 			else
@@ -578,31 +603,28 @@ int main(int argc, char* argv[])
 		}
 		else
 		{
-			find_object::Camera camera;
-			find_object::TcpServer tcpServer(find_object::Settings::getGeneral_port());
-			UINFO("Detection sent on port: %d (IP=%s)", tcpServer.getPort(), tcpServer.getHostAddress().toString().toStdString().c_str());
+			TcpServerPool tcpServerPool(findObject, tcpThreads, find_object::Settings::getGeneral_port());
 
-			// connect stuff:
-			// [FindObject] ---ObjectsDetected---> [TcpServer]
-			QObject::connect(findObject, SIGNAL(objectsFound(find_object::DetectionInfo)), &tcpServer, SLOT(publishDetectionInfo(find_object::DetectionInfo)));
-
-			// [Camera] ---Image---> [FindObject]
-			QObject::connect(&camera, SIGNAL(imageReceived(const cv::Mat &)), findObject, SLOT(detect(const cv::Mat &)));
-			QObject::connect(&camera, SIGNAL(finished()), &app, SLOT(quit()));
-
-			//connect services
-			QObject::connect(&tcpServer, SIGNAL(addObject(const cv::Mat &, int, const QString &)), findObject, SLOT(addObjectAndUpdate(const cv::Mat &, int, const QString &)));
-			QObject::connect(&tcpServer, SIGNAL(removeObject(int)), findObject, SLOT(removeObjectAndUpdate(int)));
-
-			//use camera in settings
 			setupQuitSignal();
 
-			// start processing!
-			while(running && !camera.start())
+			//If TCP camera is used
+			find_object::Camera * camera = 0;
+			if(find_object::Settings::getCamera_6useTcpCamera())
 			{
-				UERROR("Camera initialization failed!");
-				running = false;
+				camera = new find_object::Camera();
+
+				// [Camera] ---Image---> [FindObject]
+				QObject::connect(camera, SIGNAL(imageReceived(const cv::Mat &)), findObject, SLOT(detect(const cv::Mat &)));
+				QObject::connect(camera, SIGNAL(finished()), &app, SLOT(quit()));
+
+				if(!camera->start())
+				{
+					UERROR("Camera initialization failed!");
+					running = false;
+				}
 			}
+
+			// start processing!
 			if(running)
 			{
 				app.exec();
@@ -626,8 +648,11 @@ int main(int argc, char* argv[])
 			}
 
 			// cleanup
-			camera.stop();
-			tcpServer.close();
+			if(camera)
+			{
+				camera->stop();
+				delete camera;
+			}
 		}
 
 		delete findObject;

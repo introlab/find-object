@@ -155,7 +155,6 @@ int main(int argc, char * argv[])
 
 	QObject::connect(&request, SIGNAL(disconnected()), &app, SLOT(quit()));
 	QObject::connect(&request, SIGNAL(error(QAbstractSocket::SocketError)), &app, SLOT(quit()));
-	QObject::connect(&request, SIGNAL(bytesWritten(quint64)), &app, SLOT(quit()));
 
 	printf("Connecting to \"%s:%d\"...\n", ipAddress.toStdString().c_str(), port);
 	request.connectToHost(ipAddress, port);
@@ -201,6 +200,7 @@ int main(int argc, char * argv[])
 
 	qint64 bytes = request.write(block);
 	printf("Service published (%d bytes)!\n", (int)bytes);
+	request.waitForBytesWritten();
 	request.waitForReadyRead();
 
 	return 0;

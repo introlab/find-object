@@ -80,6 +80,7 @@ void TcpServer::publishDetectionInfo(const DetectionInfo & info)
 	QList<QTcpSocket*> clients = this->findChildren<QTcpSocket*>();
 	if(clients.size())
 	{
+		UINFO("TCP server: Publish detected objects");
 		QByteArray block;
 		QDataStream out(&block, QIODevice::WriteOnly);
 		out.setVersion(QDataStream::Qt_4_0);
@@ -155,6 +156,15 @@ void TcpServer::readReceivedData()
 
 		UINFO("TCP service: Remove %d", id);
 		Q_EMIT removeObject(id);
+	}
+	else if(serviceType == kDetectObject)
+	{
+		std::vector<unsigned char> buf(blockSizes_[client->socketDescriptor()]);
+		in.readRawData((char*)buf.data(), blockSizes_[client->socketDescriptor()]-sizeof(quint32));
+		cv::Mat image = cv::imdecode(buf, cv::IMREAD_UNCHANGED);
+
+		UINFO("TCP service: Detect object");
+		Q_EMIT detectObject(image);
 	}
 	else
 	{

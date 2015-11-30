@@ -78,7 +78,7 @@ public:
 	void removeObject(int id);
 	void removeAllObjects();
 
-	bool detect(const cv::Mat & image, find_object::DetectionInfo & info);
+	bool detect(const cv::Mat & image, find_object::DetectionInfo & info) const;
 
 	void updateDetectorExtractor();
 	void updateObjects(const QList<int> & ids = QList<int>());
