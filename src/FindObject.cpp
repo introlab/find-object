@@ -630,6 +630,9 @@ public:
 		timeSubPix_(0)
 	{
 		UASSERT(detector && extractor);
+		UASSERT_MSG(!image.empty() && image.type() == CV_8UC1,
+				uFormat("Image of object %d is null or not type CV_8UC1!?!? (cols=%d, rows=%d, type=%d)",
+						objectId, image.cols, image.rows, image.type()).c_str());
 	}
 	int objectId() const {return objectId_;}
 	const cv::Mat & image() const {return image_;}
