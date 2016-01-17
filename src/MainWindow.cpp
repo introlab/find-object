@@ -1075,6 +1075,9 @@ void MainWindow::updateObjects(const QList<int> & ids)
 				//update object labels
 				QLabel * title = this->findChild<QLabel*>(QString("%1title").arg(signatures[i]->id()));
 				title->setText(QString("%1 (%2)").arg(signatures[i]->id()).arg(QString::number(signatures[i]->keypoints().size())));
+
+				QLabel * label = this->findChild<QLabel*>(QString("%1detection").arg(signatures[i]->id()));
+				label->clear();
 			}
 		}
 
