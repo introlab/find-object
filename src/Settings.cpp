@@ -1425,6 +1425,11 @@ int Settings::getHomographyMethod()
 			{
 				switch(method)
 				{
+#if CV_MAJOR_VERSION >= 3
+				case 2:
+					method = cv::RHO;
+					break;
+#endif
 				case 0:
 					method = cv::LMEDS;
 					break;

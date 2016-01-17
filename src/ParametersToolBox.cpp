@@ -394,6 +394,13 @@ void ParametersToolBox::addParameter(QVBoxLayout * layout,
 			widget->setItemData(4, 0, Qt::UserRole - 1);
 #endif
 		}
+		if(key.compare(Settings::kHomography_method()) == 0)
+		{
+#if CV_MAJOR_VERSION < 3
+			// disable RHO approach
+			widget->setItemData(2, 0, Qt::UserRole - 1);
+#endif
+		}
 
 		widget->setCurrentIndex(splitted.first().toInt());
 		connect(widget, SIGNAL(currentIndexChanged(int)), this, SLOT(changeParameter(int)));
