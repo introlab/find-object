@@ -20,8 +20,7 @@
  */
 
 #include "PdfPlot.h"
-
-#define ULOGGER_DEBUG(A, ...)
+#include "find_object/utilite/ULogger.h"
 
 namespace rtabmap {
 
@@ -145,15 +144,14 @@ void PdfPlotCurve::setData(const QMap<int, int> & dataMap, const QMap<int, int> 
 
 		// update values
 		QList<QGraphicsItem*>::iterator iter = _items.begin();
-		QMap<int, int>::const_iterator j=weightsMap.begin();
-		for(QMap<int, int>::const_iterator i=dataMap.begin(); i!=dataMap.end(); ++i, ++j)
+		for(QMap<int, int>::const_iterator i=dataMap.begin(); i!=dataMap.end(); ++i)
 		{
-			((PdfPlotItem*)*iter)->setLikelihood(i.key(),  i.value(), j!=weightsMap.end()?j.value():-1);
+			UASSERT(iter!= _items.end());
+			((PdfPlotItem*)*iter)->setLikelihood(i.key(),  i.value(), weightsMap.value(i.key(),-1));
 			//2 times...
 			++iter;
 			++iter;
 		}
-
 		//reset minMax, this will force the plot to update the axes
 		this->updateMinMax();
 		Q_EMIT dataChanged(this);

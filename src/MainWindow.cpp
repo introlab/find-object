@@ -1425,6 +1425,7 @@ void MainWindow::update(const cv::Mat & image)
 
 
 		//update likelihood plot
+		UDEBUG("Set likelihood score curve values (%d)", scores.size());
 		likelihoodCurve_->setData(scores, QMap<int, int>());
 		QMap<int, int> inlierScores;
 		for(QMap<int, int>::iterator iter=scores.begin(); iter!=scores.end(); ++iter)
@@ -1444,6 +1445,7 @@ void MainWindow::update(const cv::Mat & image)
 			}
 			inlierScores.insert(iter.key(), maxValue);
 		}
+		UDEBUG("Set inliers score curve values (%d)", inlierScores.size());
 		inliersCurve_->setData(inlierScores, QMap<int, int>());
 		if(ui_->likelihoodPlot->isVisible())
 		{
