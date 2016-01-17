@@ -1607,7 +1607,10 @@ void MainWindow::notifyParametersChanged(const QStringList & paramChanged)
 		this->statusBar()->showMessage(tr("A parameter has changed... \"Update objects\" may be required."));
 	}
 
-	if(parameterChanged && !camera_->isRunning() && !sceneImage_.empty())
+	if(parameterChanged &&
+		!camera_->isRunning() &&
+		!sceneImage_.empty() &&
+		!(Settings::getGeneral_autoUpdateObjects() && detectorDescriptorParamsChanged)) // already done in updateObjects() above
 	{
 		this->update(sceneImage_);
 		ui_->label_timeRefreshRate->setVisible(false);
