@@ -30,10 +30,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // Qt stuff
 #include <QtCore/QTime>
 #include <QtCore/QTimer>
-#include <QtGui/QApplication>
-#include <QtGui/QGraphicsRectItem>
-#include <QtGui/QPen>
-#include <QtGui/QColor>
+#include <QApplication>
+#include <QGraphicsRectItem>
+#include <QPen>
+#include <QColor>
 
 // OpenCV stuff
 #include <opencv2/core/core.hpp>
