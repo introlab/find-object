@@ -558,6 +558,7 @@ void ParametersToolBox::changeParameter(const int & value)
 		QCheckBox * checkBox = qobject_cast<QCheckBox*>(sender());
 		if(comboBox)
 		{
+			bool descriptorChanged = false;
 			if(comboBox->objectName().compare(Settings::kFeature2D_1Detector()) == 0)
 			{
 				QComboBox * descriptorBox = (QComboBox*)this->getParameterWidget(Settings::kFeature2D_2Descriptor());
@@ -584,6 +585,7 @@ void ParametersToolBox::changeParameter(const int & value)
 							this->updateParameter(Settings::kFeature2D_2Descriptor());
 							descriptorBox->blockSignals(false);
 							paramChanged.append(Settings::kFeature2D_2Descriptor());
+							descriptorChanged = true;
 						}
 						else
 						{
@@ -596,7 +598,8 @@ void ParametersToolBox::changeParameter(const int & value)
 			bool nnStrategyChanged = false;
 			//verify binary issue with nearest neighbor strategy
 			if(comboBox->objectName().compare(Settings::kFeature2D_2Descriptor()) == 0 ||
-			   comboBox->objectName().compare(Settings::kNearestNeighbor_1Strategy()) == 0)
+			   comboBox->objectName().compare(Settings::kNearestNeighbor_1Strategy()) == 0 ||
+			   descriptorChanged)
 			{
 				QComboBox * descriptorBox = (QComboBox*)this->getParameterWidget(Settings::kFeature2D_2Descriptor());
 				QComboBox * nnBox = (QComboBox*)this->getParameterWidget(Settings::kNearestNeighbor_1Strategy());
