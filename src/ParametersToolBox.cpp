@@ -580,7 +580,10 @@ void ParametersToolBox::changeParameter(const int & value)
 							UASSERT(tmp.size() == 2);
 							QString newTmp = QString('0'+index)+":"+tmp.back();
 							Settings::setFeature2D_2Descriptor(newTmp);
+							descriptorBox->blockSignals(true);
 							this->updateParameter(Settings::kFeature2D_2Descriptor());
+							descriptorBox->blockSignals(false);
+							paramChanged.append(Settings::kFeature2D_2Descriptor());
 						}
 						else
 						{
