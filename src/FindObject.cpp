@@ -1145,6 +1145,7 @@ protected:
 		indexesA_.resize(matches_->size());
 		indexesB_.resize(matches_->size());
 
+		UDEBUG("Fill matches...");
 		int j=0;
 		for(QMultiMap<int, int>::const_iterator iter = matches_->begin(); iter!=matches_->end(); ++iter)
 		{
@@ -1171,6 +1172,7 @@ protected:
 				}
 				if(imageA.size() == imageB.size())
 				{
+					UDEBUG("Optical flow...");
 					//refine matches
 					std::vector<unsigned char> status;
 					std::vector<float> err;
@@ -1192,15 +1194,18 @@ protected:
 				}
 			}
 
+			UDEBUG("Find homography... begin");
 			h_ = findHomography(mpts_1,
 					mpts_2,
 					Settings::getHomographyMethod(),
 					Settings::getHomography_ransacReprojThr(),
 					outlierMask_);
+			UDEBUG("Find homography... end");
 
+			UASSERT(outlierMask_.size() == 0 || outlierMask_.size() == mpts_1.size());
 			for(unsigned int k=0; k<mpts_1.size();++k)
 			{
-				if(outlierMask_.at(k))
+				if(outlierMask_.size() && outlierMask_.at(k))
 				{
 					inliers_.insert(indexesA_[k], indexesB_[k]);
 				}
@@ -1505,11 +1510,15 @@ bool FindObject::detect(const cv::Mat & image, find_object::DetectionInfo & info
 				QList<QMultiMap<int, int> > matchesList = info.matches_.values();
 				for(int i=0; i<matchesList.size(); i+=threadCounts)
 				{
+					UDEBUG("Processing matches %d/%d", i+1, matchesList.size());
+
 					QVector<HomographyThread*> threads;
 
+					UDEBUG("Creating/Starting homography threads (%d)...", threadCounts);
 					for(int k=i; k<i+threadCounts && k<matchesList.size(); ++k)
 					{
 						int objectId = matchesId[k];
+						UASSERT(objects_.contains(objectId));
 						threads.push_back(new HomographyThread(
 								&matchesList[k],
 								objectId,
@@ -1519,10 +1528,12 @@ bool FindObject::detect(const cv::Mat & image, find_object::DetectionInfo & info
 								grayscaleImg));
 						threads.back()->start();
 					}
+					UDEBUG("Started homography threads");
 
 					for(int j=0; j<threads.size(); ++j)
 					{
 						threads[j]->wait();
+						UDEBUG("Processing results of homography thread %d", j);
 
 						int id = threads[j]->getObjectId();
 						QTransform hTransform;
@@ -1539,6 +1550,7 @@ bool FindObject::detect(const cv::Mat & image, find_object::DetectionInfo & info
 						if(code == DetectionInfo::kRejectedUndef)
 						{
 							const cv::Mat & H = threads[j]->getHomography();
+							UASSERT(H.cols == 3 && H.rows == 3 && H.type()==CV_64FC1);
 							hTransform = QTransform(
 								H.at<double>(0,0), H.at<double>(1,0), H.at<double>(2,0),
 								H.at<double>(0,1), H.at<double>(1,1), H.at<double>(2,1),
@@ -1548,6 +1560,7 @@ bool FindObject::detect(const cv::Mat & image, find_object::DetectionInfo & info
 							// Here we use mapToScene() from QGraphicsItem instead
 							// of QTransform::map() because if the homography is not valid,
 							// huge errors are set by the QGraphicsItem and not by QTransform::map();
+							UASSERT(objects_.contains(id));
 							QRectF objectRect = objects_.value(id)->rect();
 							QGraphicsRectItem item(objectRect);
 							item.setTransform(hTransform);
@@ -1650,6 +1663,7 @@ bool FindObject::detect(const cv::Mat & image, find_object::DetectionInfo & info
 							info.rejectedCodes_.insert(id, code);
 						}
 					}
+					UDEBUG("Processed matches %d", i+1);
 				}
 				info.timeStamps_.insert(DetectionInfo::kTimeHomography, time.restart());
 			}

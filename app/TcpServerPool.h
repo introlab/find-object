@@ -76,7 +76,6 @@ class TcpServerPool : public QObject
 	Q_OBJECT;
 public:
 	TcpServerPool(find_object::FindObject * sharedFindObject, int threads, int port) :
-		sharedFindObject_(sharedFindObject),
 		sharedSemaphore_(threads)
 	{
 		UASSERT(sharedFindObject != 0);
@@ -120,7 +119,6 @@ public:
 	}
 
 private:
-	find_object::FindObject * sharedFindObject_;
 	QVector<QThread*> threadPool_;
 	QSemaphore sharedSemaphore_;
 };
