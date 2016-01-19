@@ -189,6 +189,7 @@ class FINDOBJECT_EXP Settings
 	PARAMETER(Feature2D, SIFT_contrastThreshold, double, 0.04, "The contrast threshold used to filter out weak features in semi-uniform (low-contrast) regions. The larger the threshold, the less features are produced by the detector.");
 	PARAMETER(Feature2D, SIFT_edgeThreshold, double, 10, "The threshold used to filter out edge-like features. Note that the its meaning is different from the contrastThreshold, i.e. the larger the edgeThreshold, the less features are filtered out (more features are retained).");
 	PARAMETER(Feature2D, SIFT_sigma, double, 1.6, "The sigma of the Gaussian applied to the input image at the octave #0. If your image is captured with a weak camera with soft lenses, you might want to reduce the number.");
+	PARAMETER(Feature2D, SIFT_rootSIFT, bool, false, "RootSIFT descriptors.");
 
 	PARAMETER(Feature2D, SURF_hessianThreshold, double, 600.0, "Threshold for hessian keypoint detector used in SURF.");
 	PARAMETER(Feature2D, SURF_nOctaves, int, 4, "Number of pyramid octaves the keypoint detector will use.");

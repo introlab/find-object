@@ -460,6 +460,26 @@ void computeFeatures(
 		}
 		timeExtraction+=timeStep.restart();
 	}
+
+	if( Settings::getFeature2D_SIFT_rootSIFT() &&
+		Settings::currentDescriptorType() == "SIFT" &&
+		!descriptors.empty())
+	{
+		UINFO("Performing RootSIFT...");
+		// see http://www.pyimagesearch.com/2015/04/13/implementing-rootsift-in-python-and-opencv/
+		// apply the Hellinger kernel by first L1-normalizing and taking the
+		// square-root
+		for(int i=0; i<descriptors.rows; ++i)
+		{
+			descriptors.row(i) = descriptors.row(i) / cv::sum(descriptors.row(i))[0];
+			cv::sqrt(descriptors.row(i), descriptors.row(i));
+
+			// By taking the L1 norm, followed by the square-root, we have
+			// already L2 normalized the feature vector and further normalization
+			// is not needed.
+			//descs /= (np.linalg.norm(descs, axis=1, ord=2) + eps);
+		}
+	}
 }
 
 
