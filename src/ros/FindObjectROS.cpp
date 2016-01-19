@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 using namespace find_object;
 
 FindObjectROS::FindObjectROS(const std::string & objFramePrefix, QObject * parent) :
-	FindObject(parent),
+	FindObject(true, parent),
 	objFramePrefix_("object")
 {
 	ros::NodeHandle pnh("~"); // public

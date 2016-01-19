@@ -287,6 +287,10 @@ void ObjWidget::updateData(const std::vector<cv::KeyPoint> & keypoints, const QM
 	{
 		this->setupGraphicsView();
 	}
+	else
+	{
+		this->update();
+	}
 }
 
 void ObjWidget::updateWords(const QMultiMap<int,int> & words)

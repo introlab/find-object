@@ -802,8 +802,24 @@ void FindObject::updateObjects(const QList<int> & ids)
 				QVector<ExtractFeaturesThread*> threads;
 				for(int k=i; k<i+threadCounts && k<objectsList.size(); ++k)
 				{
-					threads.push_back(new ExtractFeaturesThread(detector_, extractor_, objectsList.at(k)->id(), objectsList.at(k)->image()));
-					threads.back()->start();
+					if(!objectsList.at(k)->image().empty())
+					{
+						threads.push_back(new ExtractFeaturesThread(detector_, extractor_, objectsList.at(k)->id(), objectsList.at(k)->image()));
+						threads.back()->start();
+					}
+					else
+					{
+						objects_.value(objectsList.at(k)->id())->setData(std::vector<cv::KeyPoint>(), cv::Mat());
+						if(keepImagesInRAM_)
+						{
+							UERROR("Empty image detected for object %d!? No features can be detected.", objectsList.at(k)->id());
+
+						}
+						else
+						{
+							UWARN("Empty image detected for object %d! No features can be detected. Note that images are in not kept in RAM.", objectsList.at(k)->id());
+						}
+					}
 				}
 
 				for(int j=0; j<threads.size(); ++j)
