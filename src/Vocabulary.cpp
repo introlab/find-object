@@ -144,12 +144,22 @@ bool Vocabulary::load(const QString & filename)
 	return false;
 }
 
-QMultiMap<int, int> Vocabulary::addWords(const cv::Mat & descriptors, int objectId)
+QMultiMap<int, int> Vocabulary::addWords(const cv::Mat & descriptorsIn, int objectId)
 {
 	QMultiMap<int, int> words;
-	if (descriptors.empty())
+	if (descriptorsIn.empty())
 	{
 		return words;
+	}
+
+	cv::Mat descriptors;
+	if(descriptorsIn.type() == CV_8U && Settings::getNearestNeighbor_7ConvertBinToFloat())
+	{
+		descriptorsIn.convertTo(descriptors, CV_32F);
+	}
+	else
+	{
+		descriptors = descriptorsIn;
 	}
 
 	if(Settings::getGeneral_vocabularyIncremental() || Settings::getGeneral_vocabularyFixed())
@@ -350,10 +360,20 @@ void Vocabulary::update()
 	}
 }
 
-void Vocabulary::search(const cv::Mat & descriptors, cv::Mat & results, cv::Mat & dists, int k)
+void Vocabulary::search(const cv::Mat & descriptorsIn, cv::Mat & results, cv::Mat & dists, int k)
 {
 	if(!indexedDescriptors_.empty())
 	{
+		cv::Mat descriptors;
+		if(descriptorsIn.type() == CV_8U && Settings::getNearestNeighbor_7ConvertBinToFloat())
+		{
+			descriptorsIn.convertTo(descriptors, CV_32F);
+		}
+		else
+		{
+			descriptors = descriptorsIn;
+		}
+
 		UASSERT(descriptors.type() == indexedDescriptors_.type() && descriptors.cols == indexedDescriptors_.cols);
 
 		if(Settings::isBruteForceNearestNeighbor())

@@ -234,6 +234,8 @@ class FINDOBJECT_EXP Settings
 	PARAMETER(NearestNeighbor, 4nndrRatio, float, 0.8f, "Nearest neighbor distance ratio.");
 	PARAMETER(NearestNeighbor, 5minDistanceUsed, bool, false, "Minimum distance with the nearest descriptor to accept a match.");
 	PARAMETER(NearestNeighbor, 6minDistance, float, 1.6f, "Minimum distance. You can look at top of this panel where minimum and maximum distances are shown to properly set this parameter depending of the descriptor used.");
+	PARAMETER(NearestNeighbor, 7ConvertBinToFloat, bool, false, "Convert binary descriptor to float before quantization, so you can use FLANN strategies with them.");
+
 
 	PARAMETER(NearestNeighbor, BruteForce_gpu, bool, false, "Brute force GPU");
 

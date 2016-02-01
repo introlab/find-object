@@ -55,13 +55,16 @@ private:
 	void addParameter(QVBoxLayout * layout, const QString & key, const bool & value);
 	void addParameter(QVBoxLayout * layout, const QString & name, QWidget * widget);
 
+	void changeParameter(QObject * sender, int value);
+
 Q_SIGNALS:
 	void parametersChanged(const QStringList & name);
 
 private Q_SLOTS:
 	void changeParameter();
 	void changeParameter(const QString & value);
-	void changeParameter(const int & value);
+	void changeParameter(bool value);
+	void changeParameter(int value);
 	void resetCurrentPage();
 	void resetAllPages();
 

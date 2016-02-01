@@ -482,7 +482,7 @@ void ParametersToolBox::addParameter(QVBoxLayout * layout,
 	QCheckBox * widget = new QCheckBox(this);
 	widget->setChecked(value);
 	widget->setObjectName(key);
-	connect(widget, SIGNAL(stateChanged(int)), this, SLOT(changeParameter(int)));
+	connect(widget, SIGNAL(toggled(bool)), this, SLOT(changeParameter(bool)));
 	addParameter(layout, key, widget);
 }
 
@@ -549,98 +549,149 @@ void ParametersToolBox::changeParameter()
 	}
 }
 
-void ParametersToolBox::changeParameter(const int & value)
+void ParametersToolBox::changeParameter(bool value)
 {
 	if(sender())
 	{
+		// Workaround as stateChanged(int) is not always emitted, using toggled(bool) instead
+		changeParameter(sender(), value?Qt::Checked:Qt::Unchecked);
+	}
+}
+
+void ParametersToolBox::changeParameter(int value)
+{
+	if(sender())
+	{
+		changeParameter(sender(), value);
+	}
+}
+
+void ParametersToolBox::changeParameter(QObject * sender, int value)
+{
+	if(sender)
+	{
 		QStringList paramChanged;
-		QComboBox * comboBox = qobject_cast<QComboBox*>(sender());
-		QCheckBox * checkBox = qobject_cast<QCheckBox*>(sender());
-		if(comboBox)
+		QComboBox * comboBox = qobject_cast<QComboBox*>(sender);
+		QCheckBox * checkBox = qobject_cast<QCheckBox*>(sender);
+
+		bool descriptorChanged = false;
+		if(comboBox && comboBox->objectName().compare(Settings::kFeature2D_1Detector()) == 0)
 		{
-			bool descriptorChanged = false;
-			if(comboBox->objectName().compare(Settings::kFeature2D_1Detector()) == 0)
+			QComboBox * descriptorBox = (QComboBox*)this->getParameterWidget(Settings::kFeature2D_2Descriptor());
+			if(comboBox->objectName().compare(Settings::kFeature2D_1Detector()) == 0 &&
+			   comboBox->currentText() != descriptorBox->currentText() &&
+			   Settings::getFeature2D_2Descriptor().contains(comboBox->currentText()))
 			{
-				QComboBox * descriptorBox = (QComboBox*)this->getParameterWidget(Settings::kFeature2D_2Descriptor());
-				if(comboBox->objectName().compare(Settings::kFeature2D_1Detector()) == 0 &&
-				   comboBox->currentText() != descriptorBox->currentText() &&
-				   Settings::getFeature2D_2Descriptor().contains(comboBox->currentText()))
+				QMessageBox::StandardButton b = QMessageBox::question(this,
+						tr("Use corresponding descriptor type?"),
+						tr("Current selected detector type (\"%1\") has its own corresponding descriptor type.\n"
+						   "Do you want to use its corresponding descriptor?")
+						   .arg(comboBox->currentText()),
+						   QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
+				if(b == QMessageBox::Yes)
 				{
-					QMessageBox::StandardButton b = QMessageBox::question(this,
-							tr("Use corresponding descriptor type?"),
-							tr("Current selected detector type (\"%1\") has its own corresponding descriptor type.\n"
-							   "Do you want to use its corresponding descriptor?")
-							   .arg(comboBox->currentText()),
-							   QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
-					if(b == QMessageBox::Yes)
+					int index = descriptorBox->findText(comboBox->currentText());
+					if(index >= 0)
 					{
-						int index = descriptorBox->findText(comboBox->currentText());
-						if(index >= 0)
-						{
-							QStringList tmp = Settings::getFeature2D_2Descriptor().split(':');
-							UASSERT(tmp.size() == 2);
-							QString newTmp = QString('0'+index)+":"+tmp.back();
-							Settings::setFeature2D_2Descriptor(newTmp);
-							descriptorBox->blockSignals(true);
-							this->updateParameter(Settings::kFeature2D_2Descriptor());
-							descriptorBox->blockSignals(false);
-							paramChanged.append(Settings::kFeature2D_2Descriptor());
-							descriptorChanged = true;
-						}
-						else
-						{
-							UERROR("Combo box detector type not found \"%s\"?!", comboBox->currentText().toStdString().c_str());
-						}
+						QStringList tmp = Settings::getFeature2D_2Descriptor().split(':');
+						UASSERT(tmp.size() == 2);
+						QString newTmp = QString('0'+index)+":"+tmp.back();
+						Settings::setFeature2D_2Descriptor(newTmp);
+						descriptorBox->blockSignals(true);
+						this->updateParameter(Settings::kFeature2D_2Descriptor());
+						descriptorBox->blockSignals(false);
+						paramChanged.append(Settings::kFeature2D_2Descriptor());
+						descriptorChanged = true;
+					}
+					else
+					{
+						UERROR("Combo box detector type not found \"%s\"?!", comboBox->currentText().toStdString().c_str());
 					}
 				}
 			}
+		}
 
-			bool nnStrategyChanged = false;
-			//verify binary issue with nearest neighbor strategy
-			if(comboBox->objectName().compare(Settings::kFeature2D_2Descriptor()) == 0 ||
-			   comboBox->objectName().compare(Settings::kNearestNeighbor_1Strategy()) == 0 ||
-			   descriptorChanged)
+		bool nnStrategyChanged = false;
+		//verify binary issue with nearest neighbor strategy
+		if((comboBox && (comboBox->objectName().compare(Settings::kFeature2D_2Descriptor()) == 0 ||
+						 comboBox->objectName().compare(Settings::kNearestNeighbor_1Strategy()) == 0)) ||
+		   descriptorChanged ||
+		   (checkBox && checkBox->objectName().compare(Settings::kNearestNeighbor_7ConvertBinToFloat()) == 0))
+		{
+			QComboBox * descriptorBox = (QComboBox*)this->getParameterWidget(Settings::kFeature2D_2Descriptor());
+			QComboBox * nnBox = (QComboBox*)this->getParameterWidget(Settings::kNearestNeighbor_1Strategy());
+			QComboBox * distBox = (QComboBox*)this->getParameterWidget(Settings::kNearestNeighbor_2Distance_type());
+			QCheckBox * binToFloatCheckbox = (QCheckBox*)this->getParameterWidget(Settings::kNearestNeighbor_7ConvertBinToFloat());
+			bool isBinaryDescriptor = descriptorBox->currentText().compare("ORB") == 0 ||
+									  descriptorBox->currentText().compare("Brief") == 0 ||
+									  descriptorBox->currentText().compare("BRISK") == 0 ||
+									  descriptorBox->currentText().compare("FREAK") == 0 ||
+									  descriptorBox->currentText().compare("AKAZE") == 0 ||
+									  descriptorBox->currentText().compare("LATCH") == 0 ||
+									  descriptorBox->currentText().compare("LUCID") == 0;
+			bool binToFloat = binToFloatCheckbox->isChecked();
+			if(isBinaryDescriptor && !binToFloat && nnBox->currentText().compare("Lsh") != 0 && nnBox->currentText().compare("BruteForce") != 0)
 			{
-				QComboBox * descriptorBox = (QComboBox*)this->getParameterWidget(Settings::kFeature2D_2Descriptor());
-				QComboBox * nnBox = (QComboBox*)this->getParameterWidget(Settings::kNearestNeighbor_1Strategy());
-				QComboBox * distBox = (QComboBox*)this->getParameterWidget(Settings::kNearestNeighbor_2Distance_type());
-				bool isBinaryDescriptor = descriptorBox->currentText().compare("ORB") == 0 ||
-										  descriptorBox->currentText().compare("Brief") == 0 ||
-										  descriptorBox->currentText().compare("BRISK") == 0 ||
-										  descriptorBox->currentText().compare("FREAK") == 0 ||
-										  descriptorBox->currentText().compare("AKAZE") == 0 ||
-										  descriptorBox->currentText().compare("LATCH") == 0 ||
-										  descriptorBox->currentText().compare("LUCID") == 0;
-				if(isBinaryDescriptor && nnBox->currentText().compare("Lsh") != 0 && nnBox->currentText().compare("BruteForce") != 0)
+				QMessageBox::warning(this,
+						tr("Warning"),
+						tr("Current selected descriptor type (\"%1\") is binary while nearest neighbor strategy is not (\"%2\").\n"
+						   "Falling back to \"BruteForce\" nearest neighbor strategy with Hamming distance (by default).")
+						   .arg(descriptorBox->currentText())
+						   .arg(nnBox->currentText()));
+				QString tmp = Settings::getNearestNeighbor_1Strategy();
+				*tmp.begin() = '6'; // set BruteForce
+				Settings::setNearestNeighbor_1Strategy(tmp);
+				tmp = Settings::getNearestNeighbor_2Distance_type();
+				*tmp.begin() = '8'; // set HAMMING
+				Settings::setNearestNeighbor_2Distance_type(tmp);
+				nnBox->blockSignals(true);
+				distBox->blockSignals(true);
+				this->updateParameter(Settings::kNearestNeighbor_1Strategy());
+				this->updateParameter(Settings::kNearestNeighbor_2Distance_type());
+				nnBox->blockSignals(false);
+				distBox->blockSignals(false);
+				if(sender == nnBox)
+				{
+					this->updateParametersVisibility();
+					return;
+				}
+				nnStrategyChanged = true;
+				paramChanged.append(Settings::kNearestNeighbor_1Strategy());
+				paramChanged.append(Settings::kNearestNeighbor_2Distance_type());
+			}
+			else if((!isBinaryDescriptor || binToFloat) && nnBox->currentText().compare("Lsh") == 0)
+			{
+				if(binToFloat)
 				{
 					QMessageBox::warning(this,
 							tr("Warning"),
-							tr("Current selected descriptor type (\"%1\") is binary while nearest neighbor strategy is not (\"%2\").\n"
-							   "Falling back to \"BruteForce\" nearest neighbor strategy with Hamming distance (by default).")
+							tr("Current selected descriptor type (\"%1\") is binary, but binary to float descriptors conversion is activated while nearest neighbor strategy is (\"%2\").\n"
+							   "Disabling binary to float descriptors conversion and use Hamming distance (by default).")
 							   .arg(descriptorBox->currentText())
 							   .arg(nnBox->currentText()));
-					QString tmp = Settings::getNearestNeighbor_1Strategy();
-					*tmp.begin() = '6'; // set BruteForce
-					Settings::setNearestNeighbor_1Strategy(tmp);
-					tmp = Settings::getNearestNeighbor_2Distance_type();
+
+					binToFloatCheckbox->blockSignals(true);
+					if(checkBox && checkBox->objectName().compare(Settings::kNearestNeighbor_7ConvertBinToFloat()) == 0)
+					{
+						Settings::setParameter(checkBox->objectName(), false);
+						value = 0;
+					}
+					else
+					{
+						paramChanged.append(Settings::kNearestNeighbor_7ConvertBinToFloat());
+					}
+					this->updateParameter(Settings::kNearestNeighbor_7ConvertBinToFloat());
+					binToFloatCheckbox->blockSignals(false);
+
+					QString tmp = Settings::getNearestNeighbor_2Distance_type();
 					*tmp.begin() = '8'; // set HAMMING
 					Settings::setNearestNeighbor_2Distance_type(tmp);
-					nnBox->blockSignals(true);
 					distBox->blockSignals(true);
-					this->updateParameter(Settings::kNearestNeighbor_1Strategy());
 					this->updateParameter(Settings::kNearestNeighbor_2Distance_type());
-					nnBox->blockSignals(false);
 					distBox->blockSignals(false);
-					if(sender() == nnBox)
-					{
-						this->updateParametersVisibility();
-						return;
-					}
-					nnStrategyChanged = true;
-					paramChanged.append(Settings::kNearestNeighbor_1Strategy());
 					paramChanged.append(Settings::kNearestNeighbor_2Distance_type());
 				}
-				else if(!isBinaryDescriptor && nnBox->currentText().compare("Lsh") == 0)
+				else
 				{
 					QMessageBox::warning(this,
 							tr("Warning"),
@@ -648,6 +699,7 @@ void ParametersToolBox::changeParameter(const int & value)
 							   "Falling back to \"KDTree\" nearest neighbor strategy with Euclidean_L2 distance (by default).")
 							   .arg(descriptorBox->currentText())
 							   .arg(nnBox->currentText()));
+
 					QString tmp = Settings::getNearestNeighbor_1Strategy();
 					*tmp.begin() = '1'; // set KDTree
 					Settings::setNearestNeighbor_1Strategy(tmp);
@@ -660,7 +712,7 @@ void ParametersToolBox::changeParameter(const int & value)
 					this->updateParameter(Settings::kNearestNeighbor_2Distance_type());
 					nnBox->blockSignals(false);
 					distBox->blockSignals(false);
-					if(sender() == nnBox)
+					if(sender == nnBox)
 					{
 						this->updateParametersVisibility();
 						return;
@@ -670,53 +722,57 @@ void ParametersToolBox::changeParameter(const int & value)
 					paramChanged.append(Settings::kNearestNeighbor_2Distance_type());
 				}
 			}
+		}
 
-			// Distance issue when using nearest neighbor strategy using CV_32F type, though Lsh support all type (doesn't crash at least)
-			if(nnStrategyChanged ||
-			   comboBox->objectName().compare(Settings::kNearestNeighbor_1Strategy()) == 0 ||
-			   comboBox->objectName().compare(Settings::kNearestNeighbor_2Distance_type()) == 0)
+		// Distance issue when using nearest neighbor strategy using CV_32F type, though Lsh support all type (doesn't crash at least)
+		if(nnStrategyChanged ||
+		   (comboBox && (comboBox->objectName().compare(Settings::kNearestNeighbor_1Strategy()) == 0 ||
+						 comboBox->objectName().compare(Settings::kNearestNeighbor_2Distance_type()) == 0)))
+		{
+			QComboBox * nnBox = (QComboBox*)this->getParameterWidget(Settings::kNearestNeighbor_1Strategy());
+			QComboBox * distBox = (QComboBox*)this->getParameterWidget(Settings::kNearestNeighbor_2Distance_type());
+			if(nnBox->currentText().compare("BruteForce") != 0 && nnBox->currentText().compare("Lsh") != 0 && distBox->currentIndex() > 1)
 			{
-				QComboBox * nnBox = (QComboBox*)this->getParameterWidget(Settings::kNearestNeighbor_1Strategy());
-				QComboBox * distBox = (QComboBox*)this->getParameterWidget(Settings::kNearestNeighbor_2Distance_type());
-				if(nnBox->currentText().compare("BruteForce") != 0 && nnBox->currentText().compare("Lsh") != 0 && distBox->currentIndex() > 1)
+				QMessageBox::warning(this,
+									tr("Warning"),
+									tr("Current selected nearest neighbor strategy type (\"%1\") cannot handle distance strategy (\"%2\").\n"
+									   "Falling back to \"EUCLIDEAN_L2\" distance strategy (by default).")
+									   .arg(nnBox->currentText())
+									   .arg(distBox->currentText()));
+				QString tmp = Settings::getNearestNeighbor_2Distance_type();
+				*tmp.begin() = '0'; // set index
+				Settings::setNearestNeighbor_2Distance_type(tmp);
+				distBox->blockSignals(true);
+				this->updateParameter(Settings::kNearestNeighbor_2Distance_type());
+				distBox->blockSignals(false);
+				if(sender == distBox)
 				{
-					QMessageBox::warning(this,
-										tr("Warning"),
-										tr("Current selected nearest neighbor strategy type (\"%1\") cannot handle distance strategy (\"%2\").\n"
-										   "Falling back to \"EUCLIDEAN_L2\" distance strategy (by default).")
-										   .arg(nnBox->currentText())
-										   .arg(distBox->currentText()));
-					QString tmp = Settings::getNearestNeighbor_2Distance_type();
-					*tmp.begin() = '0'; // set index
-					Settings::setNearestNeighbor_2Distance_type(tmp);
-					distBox->blockSignals(true);
-					this->updateParameter(Settings::kNearestNeighbor_2Distance_type());
-					distBox->blockSignals(false);
-					if(sender() == distBox)
-					{
-						this->updateParametersVisibility();
-						return;
-					}
-					paramChanged.append(Settings::kNearestNeighbor_2Distance_type());
+					this->updateParametersVisibility();
+					return;
 				}
+				paramChanged.append(Settings::kNearestNeighbor_2Distance_type());
 			}
+		}
 
+		if(comboBox)
+		{
 			QStringList items;
 			for(int i=0; i<comboBox->count(); ++i)
 			{
 				items.append(comboBox->itemText(i));
 			}
 			QString merged = QString::number(value) + QString(":") + items.join(";");
-			Settings::setParameter(sender()->objectName(), merged);
-
-			this->updateParametersVisibility();
+			Settings::setParameter(sender->objectName(), merged);
 		}
-		else if(checkBox)
+
+		if(checkBox)
 		{
-			Settings::setParameter(sender()->objectName(), value==Qt::Checked?true:false);
+			Settings::setParameter(sender->objectName(), value==Qt::Checked?true:false);
 		}
 
-		paramChanged.append(sender()->objectName());
+		this->updateParametersVisibility();
+
+		paramChanged.append(sender->objectName());
 		Q_EMIT parametersChanged(paramChanged);
 	}
 }

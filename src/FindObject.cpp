@@ -1368,7 +1368,8 @@ bool FindObject::detect(const cv::Mat & image, find_object::DetectionInfo & info
 								vocabulary_->size() &&
 								!vocabulary_->indexedDescriptors().empty() &&
 								vocabulary_->indexedDescriptors().cols == info.sceneDescriptors_.cols &&
-								vocabulary_->indexedDescriptors().type() == info.sceneDescriptors_.type();
+								(vocabulary_->indexedDescriptors().type() == info.sceneDescriptors_.type() ||
+										(Settings::getNearestNeighbor_7ConvertBinToFloat() && vocabulary_->indexedDescriptors().type() == CV_32FC1));
 
 		// COMPARE
 		UDEBUG("COMPARE");
