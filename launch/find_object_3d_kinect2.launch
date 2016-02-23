@@ -2,7 +2,7 @@
 	<!-- Example finding 3D poses of the objects detected -->
 	<!-- $ roslaunch kinect2_bridge kinect2_bridge.launch publish_tf:=true -->
 
-	<!-- Which image resolution to process in rtabmap: sd, qhd, hd -->
+	<!-- Which image resolution: sd, qhd, hd -->
 	<arg name="resolution" default="qhd" />
 	
 	<node name="find_object_3d" pkg="find_object_2d" type="find_object_2d" output="screen">
