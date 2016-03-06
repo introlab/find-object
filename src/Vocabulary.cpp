@@ -242,7 +242,11 @@ QMultiMap<int, int> Vocabulary::addWords(const cv::Mat & descriptorsIn, int obje
 				else
 				{
 					cv::flann::Index tmpIndex;
+#if CV_MAJOR_VERSION == 2 and CV_MINOR_VERSION == 4 and CV_SUBMINOR_VERSION == 12
+					tmpIndex.build(notIndexedDescriptors_, cv::Mat(), cv::flann::LinearIndexParams(), Settings::getFlannDistanceType());
+#else
 					tmpIndex.build(notIndexedDescriptors_, cv::flann::LinearIndexParams(), Settings::getFlannDistanceType());
+#endif
 					tmpIndex.knnSearch(descriptors.row(i), tmpResults, tmpDists, notIndexedDescriptors_.rows>1?k:1, Settings::getFlannSearchParams());
 				}
 
@@ -355,7 +359,11 @@ void Vocabulary::update()
 	if(!indexedDescriptors_.empty() && !Settings::isBruteForceNearestNeighbor())
 	{
 		cv::flann::IndexParams * params = Settings::createFlannIndexParams();
+#if CV_MAJOR_VERSION == 2 and CV_MINOR_VERSION == 4 and CV_SUBMINOR_VERSION == 12
+		flannIndex_.build(indexedDescriptors_, cv::Mat(), *params, Settings::getFlannDistanceType());
+#else
 		flannIndex_.build(indexedDescriptors_, *params, Settings::getFlannDistanceType());
+#endif
 		delete params;
 	}
 }
