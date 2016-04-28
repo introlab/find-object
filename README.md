@@ -1,4 +1,4 @@
-## find-object (standalone)
+## find-object (standalone) [![Build Status](https://travis-ci.org/introlab/find-object.svg?branch=master)](https://travis-ci.org/introlab/find-object)
 Find-Object project, visit the [home page](http://introlab.github.io/find-object/) for more information.
 
 ## find_object_2d (ROS package)
