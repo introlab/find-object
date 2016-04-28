@@ -1,0 +1,10 @@
+udo: false
+language: cpp
+compiler:
+  - gcc
+  - clang
+addons:
+  apt:
+    packages:
+      - cmake
+      - libopencv-dev
