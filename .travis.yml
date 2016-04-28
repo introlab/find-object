@@ -1,10 +1,19 @@
-udo: false
+sudo: false
 language: cpp
+
 compiler:
   - gcc
   - clang
+
 addons:
   apt:
     packages:
       - cmake
       - libopencv-dev
+
+before_script:
+  - mkdir build
+  - cd build
+  - cmake ..
+
+script: make
