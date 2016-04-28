@@ -17,3 +17,6 @@ script:
     - mkdir -p build && cd build
     - cmake .. 
     - make
+
+notifications:
+  email: false
