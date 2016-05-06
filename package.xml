@@ -5,7 +5,7 @@
   <description>The find_object_2d package</description>
 
   <maintainer email="matlabbe@gmail.com">Mathieu Labbe</maintainer>
-  <license>LGPLv3</license>
+  <license>BSD</license>
   <url type="website">http://find-object.googlecode.com</url>
   <author email="matlabbe@gmail.com">Mathieu Labbe</author>
 

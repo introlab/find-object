@@ -3,7 +3,7 @@ SET(headers_ui
 	TcpServerPool.h
 )
 
-IF("${FINDOBJECT_QT_VERSION}" STREQUAL "4")
+IF(QT4_FOUND)
     QT4_WRAP_CPP(moc_srcs ${headers_ui})
 ELSE()
     QT5_WRAP_CPP(moc_srcs ${headers_ui})
@@ -15,9 +15,9 @@ SET(INCLUDE_DIRS
 	${OpenCV_INCLUDE_DIRS}
 )
 
-IF("${FINDOBJECT_QT_VERSION}" STREQUAL "4")
+IF(QT4_FOUND)
     INCLUDE(${QT_USE_FILE})
-ENDIF()
+ENDIF(QT4_FOUND)
 
 SET(LIBRARIES
     ${QT_LIBRARIES} 
@@ -62,9 +62,9 @@ ELSE()
 ENDIF()
 # Linking with Qt libraries
 TARGET_LINK_LIBRARIES(find_object_app find_object ${LIBRARIES})
-IF("${FINDOBJECT_QT_VERSION}" STREQUAL "5")
+IF(Qt5_FOUND)
     QT5_USE_MODULES(find_object_app Widgets Core Gui Network PrintSupport)
-ENDIF()
+ENDIF(Qt5_FOUND)
 
 IF(APPLE AND BUILD_AS_BUNDLE)
   SET_TARGET_PROPERTIES(find_object_app PROPERTIES

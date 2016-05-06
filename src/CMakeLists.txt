@@ -34,7 +34,7 @@ SET(qrc
    ./resources.qrc
 )
 
-IF("${FINDOBJECT_QT_VERSION}" STREQUAL "4")
+IF(QT4_FOUND)
     # generate rules for building source files from the resources
     QT4_ADD_RESOURCES(srcs_qrc ${qrc})
 
@@ -101,9 +101,9 @@ IF(CATKIN_BUILD)
    )
 ENDIF(CATKIN_BUILD)
 
-IF("${FINDOBJECT_QT_VERSION}" STREQUAL "4")
+IF(QT4_FOUND)
     INCLUDE(${QT_USE_FILE})
-ENDIF()
+ENDIF(QT4_FOUND)
 
 SET(LIBRARIES
    ${QT_LIBRARIES} 
@@ -123,9 +123,9 @@ INCLUDE_DIRECTORIES(${INCLUDE_DIRS})
 ADD_LIBRARY(find_object ${SRC_FILES})
 # Linking with Qt libraries
 TARGET_LINK_LIBRARIES(find_object ${LIBRARIES})
-IF("${FINDOBJECT_QT_VERSION}" STREQUAL "5")
+IF(Qt5_FOUND)
     QT5_USE_MODULES(find_object Widgets Core Gui Network PrintSupport)
-ENDIF()
+ENDIF(Qt5_FOUND)
 IF(CATKIN_BUILD)
    set_target_properties(find_object PROPERTIES  OUTPUT_NAME find_object_2d)
 ENDIF(CATKIN_BUILD)
@@ -149,6 +149,12 @@ ELSE()
    add_executable(tf_example ros/tf_example_node.cpp)
    target_link_libraries(tf_example ${LIBRARIES})
    add_dependencies(tf_example ${${PROJECT_NAME}_EXPORTED_TARGETS})
+   
+   IF(Qt5_FOUND)
+      QT5_USE_MODULES(find_object_2d Widgets Core Gui Network PrintSupport)
+      QT5_USE_MODULES(print_objects_detected Widgets Core Gui Network PrintSupport)
+      QT5_USE_MODULES(tf_example Widgets Core Gui Network PrintSupport)
+   ENDIF(Qt5_FOUND)
 
    ## Mark executables and/or libraries for installation
    install(TARGETS 

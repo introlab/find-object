@@ -37,12 +37,11 @@ ADD_DEFINITIONS(-DPROJECT_NAME="${PROJECT_NAME}")
 ####### DEPENDENCIES #######
 FIND_PACKAGE(OpenCV REQUIRED) # tested on 2.3.1
 
-SET(FINDOBJECT_QT_VERSION 4 CACHE STRING "Which QT version to use")
-IF("${FINDOBJECT_QT_VERSION}" STREQUAL "4")
+# look for Qt5 before Qt4
+FIND_PACKAGE(Qt5 COMPONENTS Widgets Core Gui Network QUIET)
+IF(NOT Qt5_FOUND)
    FIND_PACKAGE(Qt4 COMPONENTS QtCore QtGui QtNetwork REQUIRED)
-ELSE()
-   FIND_PACKAGE(Qt5 COMPONENTS Widgets Core Gui Network REQUIRED)
-ENDIF()
+ENDIF(NOT Qt5_FOUND)
 ADD_DEFINITIONS(-DQT_NO_KEYWORDS) # To avoid conflicts with boost signals used in ROS
 
 SET(NONFREE 0)
@@ -243,11 +242,11 @@ IF(NOT CATKIN_BUILD)
    ENDIF()
 
    IF(QT4_FOUND)
-      MESSAGE(STATUS "  With Qt = YES (version 4, \"-DFINDOBJECT_QT_VERSION=4\")")
+      MESSAGE(STATUS "  With Qt4 = YES")
    ELSEIF(Qt5_FOUND)
-      MESSAGE(STATUS "  With Qt = YES (version 5, \"-DFINDOBJECT_QT_VERSION=5\")")
+      MESSAGE(STATUS "  With Qt5 = YES")
    ELSE()
-      MESSAGE(STATUS "  With Qt = NO (Qt not found, to use Qt5 you should set -DFINDOBJECT_QT_VERSION=5)")
+      MESSAGE(STATUS "  With Qt = NO (Qt not found)")
    ENDIF()
 
    IF(APPLE)

@@ -30,6 +30,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "find_object/utilite/ULogger.h"
 #include "Vocabulary.h"
 #include <QtCore/QVector>
+#include <QDataStream>
 #include <stdio.h>
 #if CV_MAJOR_VERSION < 3
 #include <opencv2/gpu/gpu.hpp>

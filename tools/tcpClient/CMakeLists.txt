@@ -3,7 +3,7 @@ SET(headers_ui
 	TcpClient.h
 )
 
-IF("${FINDOBJECT_QT_VERSION}" STREQUAL "4")
+IF(QT4_FOUND)
     QT4_WRAP_CPP(moc_srcs ${headers_ui})
 ELSE()
     QT5_WRAP_CPP(moc_srcs ${headers_ui})
@@ -21,9 +21,9 @@ SET(INCLUDE_DIRS
     ${OpenCV_INCLUDE_DIRS}
 )
 
-IF("${FINDOBJECT_QT_VERSION}" STREQUAL "4")
+IF(QT4_FOUND)
     INCLUDE(${QT_USE_FILE})
-ENDIF()
+ENDIF(QT4_FOUND)
 
 SET(LIBRARIES
 	${OpenCV_LIBS} 
@@ -37,9 +37,9 @@ INCLUDE_DIRECTORIES(${INCLUDE_DIRS})
 # The extension is automatically found.
 ADD_EXECUTABLE(tcpClient ${SRC_FILES})
 TARGET_LINK_LIBRARIES(tcpClient ${LIBRARIES})
-IF("${FINDOBJECT_QT_VERSION}" STREQUAL "5")
+IF(Qt5_FOUND)
     QT5_USE_MODULES(tcpClient Widgets Core Gui Network PrintSupport)
-ENDIF()
+ENDIF(Qt5_FOUND)
 
 SET_TARGET_PROPERTIES( tcpClient 
   PROPERTIES OUTPUT_NAME ${PROJECT_PREFIX}-tcpClient)
