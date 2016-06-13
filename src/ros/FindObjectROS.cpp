@@ -34,12 +34,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 using namespace find_object;
 
-FindObjectROS::FindObjectROS(const std::string & objFramePrefix, QObject * parent) :
+FindObjectROS::FindObjectROS(QObject * parent) :
 	FindObject(true, parent),
 	objFramePrefix_("object")
 {
 	ros::NodeHandle pnh("~"); // public
 	pnh.param("object_prefix", objFramePrefix_, objFramePrefix_);
+	ROS_INFO("object_prefix = %s", objFramePrefix_.c_str());
 
 	ros::NodeHandle nh; // public
 

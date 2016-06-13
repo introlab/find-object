@@ -74,7 +74,6 @@ int main(int argc, char** argv)
 	std::string sessionPath;
 	settingsPath = QDir::homePath().append("/.ros/find_object_2d.ini").toStdString();
 	bool subscribeDepth = false;
-	std::string objFramePrefix = "object";
 
 	ros::NodeHandle nh("~");
 
@@ -83,14 +82,12 @@ int main(int argc, char** argv)
 	nh.param("session_path", sessionPath, sessionPath);
 	nh.param("settings_path", settingsPath, settingsPath);
 	nh.param("subscribe_depth", subscribeDepth, subscribeDepth);
-	nh.param("obj_frame_prefix", objFramePrefix, objFramePrefix);
 
 	ROS_INFO("gui=%d", (int)gui);
 	ROS_INFO("objects_path=%s", objectsPath.c_str());
 	ROS_INFO("session_path=%s", sessionPath.c_str());
 	ROS_INFO("settings_path=%s", settingsPath.c_str());
 	ROS_INFO("subscribe_depth = %s", subscribeDepth?"true":"false");
-	ROS_INFO("obj_frame_prefix = %s", objFramePrefix.c_str());
 
 	if(settingsPath.empty())
 	{
@@ -114,7 +111,7 @@ int main(int argc, char** argv)
 	// Load settings, should be loaded before creating other objects
 	Settings::init(settingsPath.c_str());
 
-	FindObjectROS * findObjectROS = new FindObjectROS(objFramePrefix);
+	FindObjectROS * findObjectROS = new FindObjectROS();
 	if(!sessionPath.empty())
 	{
 		if(!objectsPath.empty())

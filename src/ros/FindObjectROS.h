@@ -44,7 +44,7 @@ class FindObjectROS : public find_object::FindObject
 	Q_OBJECT;
 
 public:
-	FindObjectROS(const std::string & objPrefix, QObject * parent = 0);
+	FindObjectROS(QObject * parent = 0);
 	virtual ~FindObjectROS() {}
 
 public Q_SLOTS:
