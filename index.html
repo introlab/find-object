@@ -177,7 +177,7 @@ August 2014</li>
 <li>
 <p>I posted a video on my another project <a href="http://introlab.github.io/rtabmap">RTAB-Map</a> where Find-Object runs in parallel during the mapping (you can <a href="http://wiki.ros.org/rtabmap_ros#Robot_mapping_with_Find-Object">try the demo here</a>). There are five books which can be detected, take a look:</p>
 
-<p><a href="http://www.youtube.com/watch?v=o1GSQanY-Do" target="_blank"><img src="https://raw.githubusercontent.com/wiki/introlab/rtabmap/doc/video_screenshots/findobject.jpeg" alt="video" title="video"></a></p>
+<p><a href="http://www.youtube.com/watch?v=o1GSQanY-Do"><img src="https://raw.githubusercontent.com/wiki/introlab/rtabmap/doc/video_screenshots/findobject.jpeg" alt="video" title="video"></a></p>
 </li>
 </ul>
 
@@ -275,8 +275,15 @@ August 2014</li>
 </ul>
 
 <div class="highlight highlight-source-shell"><pre> $ <span class="pl-c1">cd</span> find_object/build
+
+ (CMake 3)
+ $ cmake -G<span class="pl-s"><span class="pl-pds">"</span>Visual Studio 10 2010 Win64<span class="pl-pds">"</span></span> ..
+ $ cmake --build <span class="pl-c1">.</span> --config Release
+
+ (CMake 2)
  $ cmake -G<span class="pl-s"><span class="pl-pds">"</span>NMake Makefiles<span class="pl-pds">"</span></span> -DCMAKE_BUILD_TYPE=Release ..
  $ nmake
+
  $ <span class="pl-c1">cd</span> ../bin
  $ Find-Object.exe</pre></div>
 
