@@ -244,11 +244,11 @@ QMultiMap<int, int> Vocabulary::addWords(const cv::Mat & descriptorsIn, int obje
 				{
 					cv::flann::Index tmpIndex;
 #if CV_MAJOR_VERSION == 2 and CV_MINOR_VERSION == 4 and CV_SUBMINOR_VERSION >= 12
-					tmpIndex.build(notIndexedDescriptors_, cv::Mat(), cv::flann::LinearIndexParams(), Settings::getFlannDistanceType());
+					tmpIndex.build(notIndexedDescriptors_, cv::Mat(), cv::flann::LinearIndexParams(), cvflann::FLANN_DIST_L2);
 #else
-					tmpIndex.build(notIndexedDescriptors_, cv::flann::LinearIndexParams(), Settings::getFlannDistanceType());
+					tmpIndex.build(notIndexedDescriptors_, cv::flann::LinearIndexParams(), cvflann::FLANN_DIST_L2);
 #endif
-					tmpIndex.knnSearch(descriptors.row(i), tmpResults, tmpDists, notIndexedDescriptors_.rows>1?k:1, Settings::getFlannSearchParams());
+					tmpIndex.knnSearch(descriptors.row(i), tmpResults, tmpDists, notIndexedDescriptors_.rows>1?k:1, cvflann::FLANN_DIST_L2);
 				}
 
 				if( tmpDists.type() == CV_32S )
@@ -336,7 +336,6 @@ QMultiMap<int, int> Vocabulary::addWords(const cv::Mat & descriptorsIn, int obje
 		//just concatenate descriptors
 		notIndexedDescriptors_.push_back(descriptors);
 	}
-
 	return words;
 }
 
