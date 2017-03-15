@@ -1362,7 +1362,7 @@ void MainWindow::update(const cv::Mat & image)
 			}
 		}
 
-		if(camera_->isRunning() && Settings::getGeneral_autoPauseOnDetection() && info.objDetected_.size())
+		if(info.objDetected_.size() && camera_->isRunning() && Settings::getGeneral_autoPauseOnDetection())
 		{
 			this->pauseProcessing();
 		}
@@ -1426,6 +1426,30 @@ void MainWindow::update(const cv::Mat & image)
 			}
 		}
 
+		// save screenshot of the detection
+		if(info.objDetected_.size() && !Settings::getGeneral_autoScreenshotPath().isEmpty())
+		{
+			QDir dir(Settings::getGeneral_autoScreenshotPath());
+			if(!dir.exists())
+			{
+				QMessageBox::warning(this, tr("Screenshot on detection"), tr("Directory \"%1\" doesn't "
+						"exist, screenshot of the detection cannot be taken. Parameter \"%2\" is cleared.").arg(Settings::getGeneral_autoScreenshotPath()).arg(Settings::kGeneral_autoScreenshotPath()));
+				Settings::setGeneral_autoScreenshotPath("");
+				ui_->toolBox->updateParameter(Settings::kGeneral_autoScreenshotPath());
+			}
+			else
+			{
+				QString path = Settings::getGeneral_autoScreenshotPath() + QDir::separator() + (QDateTime::currentDateTime().toString("yyMMddhhmmsszzz") + ".jpg");
+				if(!ui_->imageView_source->getSceneAsPixmap().save(path))
+				{
+					UDEBUG("Failed to save screenshot \"%s\"! (%s is set)", path.toStdString().c_str(), Settings::kGeneral_autoScreenshotPath().toStdString().c_str());
+				}
+				else
+				{
+					UINFO("Save screenshot \"%s\"! (%s is set)", path.toStdString().c_str(), Settings::kGeneral_autoScreenshotPath().toStdString().c_str());
+				}
+			}
+		}
 
 		//update likelihood plot
 		UDEBUG("Set likelihood score curve values (%d)", scores.size());
