@@ -7,6 +7,8 @@ Find-Object project, visit the [home page](http://introlab.github.io/find-object
 
 Binaries:
 ```bash
+# ROS Kinetic:
+ $ sudo apt-get install ros-jade-find-object-2d
 # ROS Jade:
  $ sudo apt-get install ros-jade-find-object-2d
 # ROS Indigo:
