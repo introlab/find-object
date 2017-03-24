@@ -19,7 +19,7 @@ Binaries:
 
 Source:
 ```bash
-# Install ROS Groovy/Hydro/Indigo/Jade (catkin build):
+# Install ROS Groovy/Hydro/Indigo/Jade/Kinetic (catkin build):
  $ cd ~/catkin_ws
  $ git clone https://github.com/introlab/find-object.git src/find_object_2d
  $ catkin_make
