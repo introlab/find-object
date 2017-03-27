@@ -54,6 +54,17 @@ FindObject::FindObject(bool keepImagesInRAM, QObject * parent) :
 {
 	qRegisterMetaType<find_object::DetectionInfo>("find_object::DetectionInfo");
 	UASSERT(detector_ != 0 && extractor_ != 0);
+
+	if(Settings::getGeneral_debug())
+	{
+		ULogger::setPrintWhere(true);
+		ULogger::setLevel(ULogger::kDebug);
+	}
+	else
+	{
+		ULogger::setPrintWhere(false);
+		ULogger::setLevel(ULogger::kInfo);
+	}
 }
 
 FindObject::~FindObject() {

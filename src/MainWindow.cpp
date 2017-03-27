@@ -1647,6 +1647,17 @@ void MainWindow::notifyParametersChanged(const QStringList & paramChanged)
 	ui_->actionCamera_from_video_file->setChecked(!Settings::getCamera_5mediaPath().isEmpty() && !UDirectory::exists(Settings::getCamera_5mediaPath().toStdString()) && !Settings::getCamera_6useTcpCamera());
 	ui_->actionCamera_from_directory_of_images->setChecked(!Settings::getCamera_5mediaPath().isEmpty() && UDirectory::exists(Settings::getCamera_5mediaPath().toStdString()) && !Settings::getCamera_6useTcpCamera());
 	ui_->actionCamera_from_TCP_IP->setChecked(Settings::getCamera_6useTcpCamera());
+
+	if(Settings::getGeneral_debug())
+	{
+		ULogger::setPrintWhere(true);
+		ULogger::setLevel(ULogger::kDebug);
+	}
+	else
+	{
+		ULogger::setPrintWhere(false);
+		ULogger::setLevel(ULogger::kInfo);
+	}
 }
 
 } // namespace find_object

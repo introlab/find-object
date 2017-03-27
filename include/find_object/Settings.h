@@ -284,6 +284,7 @@ class FINDOBJECT_EXP Settings
 	PARAMETER(General, sendNoObjDetectedEvents, bool, true, "When there are no objects detected, send an empty object detection event.");
 	PARAMETER(General, autoPauseOnDetection, bool, false, "Auto pause the camera when an object is detected.");
 	PARAMETER(General, autoScreenshotPath, QString, "", "Path to a directory to save screenshot of the current camera view when there is a detection.");
+	PARAMETER(General, debug, bool, false, "Show debug logs on terminal.");
 
 	PARAMETER(Homography, homographyComputed, bool, true, "Compute homography? On ROS, this is required to publish objects detected.");
 	PARAMETER(Homography, method, QString, "1:LMEDS;RANSAC;RHO", "Type of the robust estimation algorithm: least-median algorithm or RANSAC algorithm.");

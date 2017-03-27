@@ -325,8 +325,7 @@ int main(int argc, char* argv[])
 		if(strcmp(argv[i], "-debug") == 0 ||
 		   strcmp(argv[i], "--debug") == 0)
 		{
-			ULogger::setPrintWhere(true);
-			ULogger::setLevel(ULogger::kDebug);
+			customParameters.insert(find_object::Settings::kGeneral_debug(), true);
 			continue;
 		}
 		if(strcmp(argv[i], "-log-time") == 0 ||
