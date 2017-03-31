@@ -390,7 +390,7 @@ void limitKeypoints(std::vector<cv::KeyPoint> & keypoints, cv::Mat & descriptors
 	cv::Mat descriptorsKept;
 	if(maxKeypoints > 0 && (int)keypoints.size() > maxKeypoints)
 	{
-		descriptorsKept = cv::Mat(1, descriptors.cols, descriptors.type());
+		descriptorsKept = cv::Mat(0, descriptors.cols, descriptors.type());
 
 		// Sort words by response
 		std::multimap<float, int> reponseMap; // <response,id>
@@ -412,6 +412,7 @@ void limitKeypoints(std::vector<cv::KeyPoint> & keypoints, cv::Mat & descriptors
 	}
 	keypoints = kptsKept;
 	descriptors = descriptorsKept;
+	UASSERT_MSG((int)keypoints.size() == descriptors.rows, uFormat("%d vs %d", (int)keypoints.size(), descriptors.rows).c_str());
 }
 
 void computeFeatures(
@@ -433,6 +434,7 @@ void computeFeatures(
 	if(Settings::currentDetectorType() == Settings::currentDescriptorType())
 	{
 		detector->detectAndCompute(image, keypoints, descriptors, mask);
+		UASSERT_MSG((int)keypoints.size() == descriptors.rows, uFormat("%d vs %d", (int)keypoints.size(), descriptors.rows).c_str());
 		if(maxFeatures > 0 && (int)keypoints.size() > maxFeatures)
 		{
 			limitKeypoints(keypoints, descriptors, maxFeatures);
@@ -453,6 +455,7 @@ void computeFeatures(
 		try
 		{
 			extractor->compute(image, keypoints, descriptors);
+			UASSERT_MSG((int)keypoints.size() == descriptors.rows, uFormat("%d vs %d", (int)keypoints.size(), descriptors.rows).c_str());
 		}
 		catch(cv::Exception & e)
 		{
@@ -1021,6 +1024,7 @@ void FindObject::updateVocabulary(const QList<int> & ids)
 			int addedWords = 0;
 			for(int i=0; i<objectsList.size(); ++i)
 			{
+				UASSERT(objectsList[i]->descriptors().rows == (int)objectsList[i]->keypoints().size());
 				QMultiMap<int, int> words = vocabulary_->addWords(objectsList[i]->descriptors(), objectsList.at(i)->id());
 				objectsList[i]->setWords(words);
 				addedWords += words.uniqueKeys().size();
@@ -1199,6 +1203,8 @@ protected:
 		int j=0;
 		for(QMultiMap<int, int>::const_iterator iter = matches_->begin(); iter!=matches_->end(); ++iter)
 		{
+			UASSERT_MSG(iter.key() < (int)kptsA_->size(), uFormat("key=%d size=%d", iter.key(),(int)kptsA_->size()).c_str());
+			UASSERT_MSG(iter.value() < (int)kptsB_->size(), uFormat("key=%d size=%d", iter.value(),(int)kptsB_->size()).c_str());
 			mpts_1[j] = kptsA_->at(iter.key()).pt;
 			indexesA_[j] = iter.key();
 			mpts_2[j] = kptsB_->at(iter.value()).pt;
@@ -1362,6 +1368,7 @@ bool FindObject::detect(const cv::Mat & image, find_object::DetectionInfo & info
 		extractThread.wait();
 		info.sceneKeypoints_ = extractThread.keypoints();
 		info.sceneDescriptors_ = extractThread.descriptors();
+		UASSERT_MSG((int)extractThread.keypoints().size() == extractThread.descriptors().rows, uFormat("%d vs %d", (int)extractThread.keypoints().size(), extractThread.descriptors().rows).c_str());
 		info.timeStamps_.insert(DetectionInfo::kTimeKeypointDetection, extractThread.timeDetection());
 		info.timeStamps_.insert(DetectionInfo::kTimeDescriptorExtraction, extractThread.timeExtraction());
 		info.timeStamps_.insert(DetectionInfo::kTimeSubPixelRefining, extractThread.timeSubPix());
