@@ -288,7 +288,11 @@ class FINDOBJECT_EXP Settings
 
 	PARAMETER(Homography, homographyComputed, bool, true, "Compute homography? On ROS, this is required to publish objects detected.");
 	PARAMETER(Homography, method, QString, "1:LMEDS;RANSAC;RHO", "Type of the robust estimation algorithm: least-median algorithm or RANSAC algorithm.");
-	PARAMETER(Homography, ransacReprojThr, double, 5.0, "Maximum allowed reprojection error to treat a point pair as an inlier (used in the RANSAC method only). It usually makes sense to set this parameter somewhere in the range of 1 to 10.");
+	PARAMETER(Homography, ransacReprojThr, double, 3.0, "Maximum allowed reprojection error to treat a point pair as an inlier (used in the RANSAC method only). It usually makes sense to set this parameter somewhere in the range of 1 to 10.");
+#if CV_MAJOR_VERSION >= 3
+	PARAMETER(Homography, maxIterations, int, 2000, "The maximum number of RANSAC iterations, 2000 is the maximum it can be.");
+	PARAMETER(Homography, confidence, double, 0.995, "Confidence level, between 0 and 1.");
+#endif
 	PARAMETER(Homography, minimumInliers, int, 10, "Minimum inliers to accept the homography. Value must be >= 4.");
 	PARAMETER(Homography, ignoreWhenAllInliers, bool, false, "Ignore homography when all features are inliers (sometimes when the homography doesn't converge, it returns the best homography with all features as inliers).");
 	PARAMETER(Homography, rectBorderWidth, int, 4, "Homography rectangle border width.");

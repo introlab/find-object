@@ -1251,11 +1251,21 @@ protected:
 			}
 
 			UDEBUG("Find homography... begin");
+#if CV_MAJOR_VERSION < 3
 			h_ = findHomography(mpts_1,
 					mpts_2,
 					Settings::getHomographyMethod(),
 					Settings::getHomography_ransacReprojThr(),
 					outlierMask_);
+#else
+			h_ = findHomography(mpts_1,
+					mpts_2,
+					Settings::getHomographyMethod(),
+					Settings::getHomography_ransacReprojThr(),
+					outlierMask_,
+					Settings::getHomography_maxIterations(),
+					Settings::getHomography_confidence());
+#endif
 			UDEBUG("Find homography... end");
 
 			UASSERT(outlierMask_.size() == 0 || outlierMask_.size() == mpts_1.size());

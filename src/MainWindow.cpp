@@ -272,6 +272,8 @@ MainWindow::MainWindow(FindObject * findObject, Camera * camera, QWidget * paren
 	//Setup drag and drop images
 	connect(ui_->imageDrop_objects, SIGNAL(imagesReceived(const QStringList &)), this, SLOT(addObjectsFromFiles(const QStringList &)));
 	connect(ui_->imageDrop_scene, SIGNAL(imagesReceived(const QStringList &)), this, SLOT(loadSceneFromFile(const QStringList &)));
+
+	ui_->imageView_source->setFocus();
 }
 
 MainWindow::~MainWindow()
@@ -313,6 +315,22 @@ void MainWindow::closeEvent(QCloseEvent * event)
 	else
 	{
 		event->ignore();
+	}
+}
+
+void MainWindow::keyPressEvent(QKeyEvent *event)
+{
+	//catch ctrl-s to save settings
+	if(event->key() == Qt::Key_Space)
+	{
+		if(ui_->actionStart_camera->isEnabled())
+		{
+			startProcessing();
+		}
+		else if(ui_->actionPause_camera->isEnabled())
+		{
+			pauseProcessing();
+		}
 	}
 }
 

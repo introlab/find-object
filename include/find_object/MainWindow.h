@@ -73,6 +73,7 @@ public:
 
 protected:
 	virtual void closeEvent(QCloseEvent * event);
+	virtual void keyPressEvent(QKeyEvent *event);
 
 public Q_SLOTS:
 	void startProcessing();

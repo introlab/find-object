@@ -420,14 +420,47 @@ void ParametersToolBox::addParameter(QVBoxLayout * layout,
 		const double & value)
 {
 	QDoubleSpinBox * widget = new QDoubleSpinBox(this);
+	int decimals = 0;
+	int decimalValue = 0;
+
+	QString str = QString::number(Settings::getDefaultParameters().value(key).toDouble());
+	str.remove( QRegExp("0+$") );
+
+	if(!str.isEmpty())
+	{
+		str.replace(',', '.');
+		QStringList items = str.split('.');
+		if(items.size() == 2)
+		{
+			decimals = items.back().length();
+			decimalValue = items.back().toInt();
+		}
+	}
+
 	double def = Settings::getDefaultParameters().value(key).toDouble();
-	if(def<0.01)
+	if(def<0.001 || (decimals >= 4 && decimalValue>0))
+	{
+		widget->setDecimals(5);
+		widget->setSingleStep(0.0001);
+	}
+	else if(def<0.01 || (decimals >= 3 && decimalValue>0))
 	{
 		widget->setDecimals(4);
+		widget->setSingleStep(0.001);
 	}
-	else if(def<0.1)
+	else if(def<0.1 || (decimals >= 2 && decimalValue>0))
 	{
 		widget->setDecimals(3);
+		widget->setSingleStep(0.01);
+	}
+	else if(def<1.0 || (decimals >= 1 && decimalValue>0))
+	{
+		widget->setDecimals(2);
+		widget->setSingleStep(0.1);
+	}
+	else
+	{
+		widget->setDecimals(1);
 	}
 
 	if(def>0.0)
