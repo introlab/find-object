@@ -261,6 +261,7 @@ IF(NOT CATKIN_BUILD)
 ELSE()
    #ROS Catkin build
 
+   SET(ROS_LANG_DISABLE "genjava")
    ## Find catkin macros and libraries
    ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
    ## is used, also find other catkin packages
