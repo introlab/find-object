@@ -13,6 +13,7 @@ IF(NOT CATKIN_BUILD)
 ELSE()
    #ROS catkin build
    PROJECT( find_object_2d )
+   SET(ENV{ROS_LANG_DISABLE} "genjava")
 ENDIF()
 
 # Catkin doesn't support multiarch library path, 

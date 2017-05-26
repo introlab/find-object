@@ -122,6 +122,13 @@ void CameraROS::imgReceivedCallback(const sensor_msgs::ImageConstPtr & msg)
 			Q_EMIT rosDataReceived(msg->header.frame_id, msg->header.stamp, cv::Mat(), 0.0f);
 			Q_EMIT imageReceived(bgr);
 		}
+		else if(msg->encoding.compare(sensor_msgs::image_encodings::RGBA8) == 0)
+		{
+			cv::Mat bgr;
+			cv::cvtColor(ptr->image, bgr, cv::COLOR_RGBA2BGR);
+			Q_EMIT rosDataReceived(msg->header.frame_id, msg->header.stamp, cv::Mat(), 0.0f);
+			Q_EMIT imageReceived(bgr);
+		}
 		else
 		{
 			ROS_ERROR("find_object_ros: Encoding \"%s\" detected. Supported image encodings are bgr8 and rgb8...", msg->encoding.c_str());
@@ -136,6 +143,7 @@ void CameraROS::imgDepthReceivedCallback(
 {
 	if(!(rgbMsg->encoding.compare(sensor_msgs::image_encodings::MONO8) ==0 ||
 		 rgbMsg->encoding.compare(sensor_msgs::image_encodings::BGR8) == 0 ||
+		 rgbMsg->encoding.compare(sensor_msgs::image_encodings::RGBA8) == 0 ||
 		 rgbMsg->encoding.compare(sensor_msgs::image_encodings::RGB8) == 0) &&
 		(depthMsg->encoding.compare(sensor_msgs::image_encodings::TYPE_16UC1)!=0 ||
 		 depthMsg->encoding.compare(sensor_msgs::image_encodings::TYPE_32FC1)!=0))
@@ -162,7 +170,12 @@ void CameraROS::imgDepthReceivedCallback(
 			Q_EMIT rosDataReceived(rgbMsg->header.frame_id, rgbMsg->header.stamp, ptrDepth->image, depthConstant);
 			Q_EMIT imageReceived(bgr);
 		}
+		else if(rgbMsg->encoding.compare(sensor_msgs::image_encodings::RGBA8) == 0)
+		{
+			cv::Mat bgr;
+			cv::cvtColor(ptr->image, bgr, cv::COLOR_RGBA2BGR);
+			Q_EMIT rosDataReceived(rgbMsg->header.frame_id, rgbMsg->header.stamp, ptrDepth->image, depthConstant);
+			Q_EMIT imageReceived(bgr);
+		}
 	}
-
-
 }
