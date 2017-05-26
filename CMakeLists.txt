@@ -13,6 +13,7 @@ IF(NOT CATKIN_BUILD)
 ELSE()
    #ROS catkin build
    PROJECT( find_object_2d )
+   SET(ROS_LANG_DISABLE "genjava")
 ENDIF()
 
 # Catkin doesn't support multiarch library path, 
@@ -261,7 +262,6 @@ IF(NOT CATKIN_BUILD)
 ELSE()
    #ROS Catkin build
 
-   SET(ROS_LANG_DISABLE "genjava")
    ## Find catkin macros and libraries
    ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
    ## is used, also find other catkin packages
