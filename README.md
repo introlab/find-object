@@ -18,6 +18,13 @@ Binaries:
 ```
 
 Source:
+
+ * If you want SURF/SIFT on Indigo/Jade/Kinetic (Hydro has already SIFT/SURF), you have to build [OpenCV]([OpenCV](http://opencv.org/)) from source to have access to *nonfree* module. Install it in `/usr/local` (default) and the Find-Object should link with it instead of the one installed in ROS. 
+
+     * On Indigo/Jade, I recommend to use latest 2.4 version ([2.4.11](https://github.com/Itseez/opencv/archive/2.4.11.zip)) and build it from source following these [instructions](http://docs.opencv.org/doc/tutorials/introduction/linux_install/linux_install.html#building-opencv-from-source-using-cmake-using-the-command-line). Find-Object can build with OpenCV3+[xfeatures2d](https://github.com/Itseez/opencv_contrib/tree/master/modules/xfeatures2d) module, but find_object_2d package will have libraries conflict as cv-bridge is depending on OpenCV2. If you want OpenCV3, you should build ros [vision-opencv](https://github.com/ros-perception/vision_opencv) package yourself (and all ros packages depending on it) so it can link on OpenCV3.
+
+     * On Kinetic, I recommend to use OpenCV3+[xfeatures2d](https://github.com/Itseez/opencv_contrib/tree/master/modules/xfeatures2d) module (*to confirm* OpenCV3 installed with ROS already includes SIFT/SURF, so no need to rebuild OpenCV). You can also install OpenCV2, but find_object_2d package will have libraries conflict as cv-bridge is depending on OpenCV3. Thus if you want OpenCV2 on Kinetic, you should build ros [vision-opencv](https://github.com/ros-perception/vision_opencv) package yourself (and all ros packages depending on it) so it can link on OpenCV2.
+
 ```bash
 # Install ROS Groovy/Hydro/Indigo/Jade/Kinetic (catkin build):
  $ cd ~/catkin_ws
