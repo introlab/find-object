@@ -413,8 +413,10 @@ void Vocabulary::search(const cv::Mat & descriptorsIn, cv::Mat & results, cv::Ma
 				else
 				{
 					gpuMatcher = cv::cuda::DescriptorMatcher::createBFMatcher(cv::NORM_L2);
-					gpuMatcher.knnMatch(newDescriptorsGpu, lastDescriptorsGpu, matches, k);
+					gpuMatcher->knnMatch(newDescriptorsGpu, lastDescriptorsGpu, matches, k);
 				}
+#else
+				UERROR("OpenCV3 is not built with CUDAFEATURES2D module, cannot do brute force matching on GPU!");
 #endif
 #endif
 			}
