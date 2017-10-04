@@ -1401,14 +1401,6 @@ cvflann::flann_distance_t Settings::getFlannDistanceType()
 	return distance;
 }
 
-cv::flann::SearchParams Settings::getFlannSearchParams()
-{
-	return cv::flann::SearchParams(
-			getNearestNeighbor_search_checks(),
-			getNearestNeighbor_search_eps(),
-			getNearestNeighbor_search_sorted());
-}
-
 int Settings::getHomographyMethod()
 {
 	int method = cv::RANSAC;

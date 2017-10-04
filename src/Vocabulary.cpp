@@ -440,7 +440,11 @@ void Vocabulary::search(const cv::Mat & descriptorsIn, cv::Mat & results, cv::Ma
 		}
 		else
 		{
-			flannIndex_.knnSearch(descriptors, results, dists, k, Settings::getFlannSearchParams());
+			flannIndex_.knnSearch(descriptors, results, dists, k,
+					cv::flann::SearchParams(
+						Settings::getNearestNeighbor_search_checks(),
+						Settings::getNearestNeighbor_search_eps(),
+						Settings::getNearestNeighbor_search_sorted()));
 		}
 
 		if( dists.type() == CV_32S )

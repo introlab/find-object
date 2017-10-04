@@ -337,7 +337,6 @@ public:
 	static bool isBruteForceNearestNeighbor();
 	static cv::flann::IndexParams * createFlannIndexParams();
 	static cvflann::flann_distance_t getFlannDistanceType();
-	static cv::flann::SearchParams getFlannSearchParams();
 
 	static int getHomographyMethod();
 
