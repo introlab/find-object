@@ -26,31 +26,41 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include <ros/ros.h>
-#include <std_msgs/Float32MultiArray.h>
+#include <find_object_2d/ObjectsStamped.h>
+#include <message_filters/subscriber.h>
+#include <message_filters/time_synchronizer.h>
+#include <image_transport/image_transport.h>
+#include <image_transport/subscriber_filter.h>
+#include <cv_bridge/cv_bridge.h>
 #include <opencv2/opencv.hpp>
 #include <QTransform>
+#include <QColor>
+
+image_transport::Publisher imagePub;
 
 /**
  * IMPORTANT :
  *      Parameter General/MirrorView must be false
  *      Parameter Homography/homographyComputed must be true
  */
-void objectsDetectedCallback(const std_msgs::Float32MultiArray & msg)
+void objectsDetectedCallback(
+		const std_msgs::Float32MultiArrayConstPtr & msg)
 {
-    printf("---\n");
-    if(msg.data.size())
-    {
-		for(unsigned int i=0; i<msg.data.size(); i+=12)
+	printf("---\n");
+	const std::vector<float> & data = msg->data;
+	if(data.size())
+	{
+		for(unsigned int i=0; i<data.size(); i+=12)
 		{
 			// get data
-			int id = (int)msg.data[i];
-			float objectWidth = msg.data[i+1];
-			float objectHeight = msg.data[i+2];
+			int id = (int)data[i];
+			float objectWidth = data[i+1];
+			float objectHeight = data[i+2];
 
 			// Find corners Qt
-			QTransform qtHomography(msg.data[i+3], msg.data[i+4], msg.data[i+5],
-									msg.data[i+6], msg.data[i+7], msg.data[i+8],
-									msg.data[i+9], msg.data[i+10], msg.data[i+11]);
+			QTransform qtHomography(data[i+3], data[i+4], data[i+5],
+									data[i+6], data[i+7], data[i+8],
+									data[i+9], data[i+10], data[i+11]);
 
 			QPointF qtTopLeft = qtHomography.map(QPointF(0,0));
 			QPointF qtTopRight = qtHomography.map(QPointF(objectWidth,0));
@@ -63,51 +73,91 @@ void objectsDetectedCallback(const std_msgs::Float32MultiArray & msg)
 					qtTopRight.x(), qtTopRight.y(),
 					qtBottomLeft.x(), qtBottomLeft.y(),
 					qtBottomRight.x(), qtBottomRight.y());
-
-			// Example with OpenCV
-			if(0)
+		}
+	}
+	else
+	{
+		printf("No objects detected.\n");
+	}
+}
+void imageObjectsDetectedCallback(
+		const sensor_msgs::ImageConstPtr & imageMsg,
+		const find_object_2d::ObjectsStampedConstPtr & objectsMsg)
+{
+	if(imagePub.getNumSubscribers() > 0)
+	{
+		const std::vector<float> & data = objectsMsg->objects.data;
+		if(data.size())
+		{
+			for(unsigned int i=0; i<data.size(); i+=12)
 			{
+				// get data
+				int id = (int)data[i];
+				float objectWidth = data[i+1];
+				float objectHeight = data[i+2];
+
 				// Find corners OpenCV
 				cv::Mat cvHomography(3, 3, CV_32F);
-				cvHomography.at<float>(0,0) = msg.data[i+3];
-				cvHomography.at<float>(1,0) = msg.data[i+4];
-				cvHomography.at<float>(2,0) = msg.data[i+5];
-				cvHomography.at<float>(0,1) = msg.data[i+6];
-				cvHomography.at<float>(1,1) = msg.data[i+7];
-				cvHomography.at<float>(2,1) = msg.data[i+8];
-				cvHomography.at<float>(0,2) = msg.data[i+9];
-				cvHomography.at<float>(1,2) = msg.data[i+10];
-				cvHomography.at<float>(2,2) = msg.data[i+11];
+				cvHomography.at<float>(0,0) = data[i+3];
+				cvHomography.at<float>(1,0) = data[i+4];
+				cvHomography.at<float>(2,0) = data[i+5];
+				cvHomography.at<float>(0,1) = data[i+6];
+				cvHomography.at<float>(1,1) = data[i+7];
+				cvHomography.at<float>(2,1) = data[i+8];
+				cvHomography.at<float>(0,2) = data[i+9];
+				cvHomography.at<float>(1,2) = data[i+10];
+				cvHomography.at<float>(2,2) = data[i+11];
 				std::vector<cv::Point2f> inPts, outPts;
 				inPts.push_back(cv::Point2f(0,0));
 				inPts.push_back(cv::Point2f(objectWidth,0));
-				inPts.push_back(cv::Point2f(0,objectHeight));
 				inPts.push_back(cv::Point2f(objectWidth,objectHeight));
+				inPts.push_back(cv::Point2f(0,objectHeight));
+				inPts.push_back(cv::Point2f(objectWidth/2,objectHeight/2));
 				cv::perspectiveTransform(inPts, outPts, cvHomography);
 
-				printf("Object %d detected, CV corners at (%f,%f) (%f,%f) (%f,%f) (%f,%f)\n",
-						id,
-						outPts.at(0).x, outPts.at(0).y,
-						outPts.at(1).x, outPts.at(1).y,
-						outPts.at(2).x, outPts.at(2).y,
-						outPts.at(3).x, outPts.at(3).y);
+				cv_bridge::CvImageConstPtr imageDepthPtr = cv_bridge::toCvShare(imageMsg);
+
+				cv_bridge::CvImage img;
+				img = *imageDepthPtr;
+				std::vector<cv::Point2i> outPtsInt;
+				outPtsInt.push_back(outPts[0]);
+				outPtsInt.push_back(outPts[1]);
+				outPtsInt.push_back(outPts[2]);
+				outPtsInt.push_back(outPts[3]);
+				QColor color(QColor((Qt::GlobalColor)((id % 10 + 7)==Qt::yellow?Qt::darkYellow:(id % 10 + 7))));
+				cv::Scalar cvColor(color.red(), color.green(), color.blue());
+				cv::polylines(img.image, outPtsInt, true, cvColor, 3);
+				cv::Point2i center = outPts[4];
+				cv::putText(img.image, QString("(%1, %2)").arg(center.x).arg(center.y).toStdString(), center, cv::FONT_HERSHEY_SIMPLEX, 0.6, cvColor, 2);
+				cv::circle(img.image, center, 1, cvColor, 3);
+				imagePub.publish(img.toImageMsg());
 			}
 		}
-    }
-    else
-    {
-    	printf("No objects detected.\n");
-    }
+	}
 }
 
+typedef message_filters::sync_policies::ExactTime<sensor_msgs::Image, find_object_2d::ObjectsStamped> MyExactSyncPolicy;
 
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "objects_detected");
 
     ros::NodeHandle nh;
-    ros::Subscriber subs;
-    subs = nh.subscribe("objects", 1, objectsDetectedCallback);
+    image_transport::ImageTransport it(nh);
+
+    // Simple subscriber
+    ros::Subscriber sub;
+    sub = nh.subscribe("objects", 1, objectsDetectedCallback);
+
+    // Synchronized image + objects example
+    image_transport::SubscriberFilter imageSub;
+	imageSub.subscribe(it, nh.resolveName("image"), 1);
+	message_filters::Subscriber<find_object_2d::ObjectsStamped> objectsSub;
+	objectsSub.subscribe(nh, "objectsStamped", 1);
+    message_filters::Synchronizer<MyExactSyncPolicy> exactSync(MyExactSyncPolicy(10), imageSub, objectsSub);
+    exactSync.registerCallback(boost::bind(&imageObjectsDetectedCallback, _1, _2));
+
+    imagePub = it.advertise("image_with_objects", 1);
 
     ros::spin();
 
