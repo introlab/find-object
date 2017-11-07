@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package>
   <name>find_object_2d</name>
-  <version>0.6.1</version>
+  <version>0.6.2</version>
   <description>The find_object_2d package</description>
 
   <maintainer email="matlabbe@gmail.com">Mathieu Labbe</maintainer>

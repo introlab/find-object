@@ -26,7 +26,7 @@ INCLUDE(GNUInstallDirs)
 #######################
 # VERSION
 #######################
-SET(PROJECT_VERSION "0.6.1")
+SET(PROJECT_VERSION "0.6.2")
 SET(PROJECT_PREFIX find_object)
 
 STRING(REGEX MATCHALL "[0-9]" PROJECT_VERSION_PARTS "${PROJECT_VERSION}")
