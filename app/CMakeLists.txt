@@ -105,11 +105,25 @@ IF((APPLE AND BUILD_AS_BUNDLE) OR WIN32)
   # Install needed Qt plugins by copying directories from the qt installation
   # One can cull what gets copied by using 'REGEX "..." EXCLUDE'
   # Exclude debug libraries
-  INSTALL(DIRECTORY "${QT_PLUGINS_DIR}/imageformats" 
+  IF(QT_PLUGINS_DIR)
+    INSTALL(DIRECTORY "${QT_PLUGINS_DIR}/imageformats"
           DESTINATION ${plugin_dest_dir}/plugins 
           COMPONENT runtime 
           REGEX ".*d4.dll" EXCLUDE
           REGEX ".*d4.a" EXCLUDE)
+  ELSE()
+	#Qt5
+	foreach(plugin ${Qt5Gui_PLUGINS})
+		get_target_property(plugin_loc ${plugin} LOCATION)
+		get_filename_component(plugin_dir ${plugin_loc} DIRECTORY)
+		string(REPLACE "plugins" ";" loc_list ${plugin_dir})
+		list(GET loc_list 1 plugin_type)
+	    #MESSAGE(STATUS "Qt5 plugin \"${plugin_loc}\" installed in \"${plugin_dest_dir}/plugins${plugin_type}\"")
+		INSTALL(FILES ${plugin_loc}
+          DESTINATION ${plugin_dest_dir}/plugins${plugin_type}
+          COMPONENT runtime)
+	endforeach()
+  ENDIF()
   
   # install a qt.conf file
   # this inserts some cmake code into the install script to write the file
