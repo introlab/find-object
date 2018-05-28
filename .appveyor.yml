@@ -1,0 +1,49 @@
+
+branches:
+  only:
+    - master
+    - devel
+
+os: Visual Studio 2015
+
+clone_folder: c:\projects\find-object
+
+platform: x64
+configuration: Release
+
+init:
+  - cmake --version
+  - call "C:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" /x64
+  - call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" x86_amd64
+
+install:
+  # Qt
+  - set QTDIR=C:\Qt\5.10.1\msvc2015_64
+  # make sure Qt bin path is before cmake bin path to avoid copying qt5 dlls from cmake before qt installation
+  - set PATH=%QTDIR%\bin;%PATH%
+  # OpenCV
+  - ps: wget 'http://kent.dl.sourceforge.net/project/opencvlibrary/opencv-win/3.4.1/opencv-3.4.1-vc14_vc15.exe' -outfile opencv-3.4.1-vc14_vc15.exe
+  - cmd: opencv-3.4.1-vc14_vc15.exe -o"C:\Program Files" -y
+  - ECHO "Installed OpenCV:"
+  - ps: "ls \"C:/Program Files/opencv/build\""
+  - set PATH=%PATH%;C:\Program Files\opencv\build\x64\vc14\bin
+  
+before_build:
+  - cd c:\projects\rtabmap\build
+  - ECHO %PROGRAMFILES%
+  - ECHO %PATH%
+  - cmake -G "Visual Studio 14 2015 Win64" -DOpenCV_DIR="C:\Program Files\opencv\build" ..
+  
+after_build :
+  - cmake --build . --config Release --target package
+
+artifacts:
+  - path: build\FindObject-*
+  
+notifications:
+  - provider: Email
+    to:
+      - matlabbe@email.com
+    on_build_success: false
+    on_build_failure: false
+    on_build_status_changed: true
