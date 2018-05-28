@@ -29,7 +29,7 @@ install:
   - set PATH=%PATH%;C:\Program Files\opencv\build\x64\vc14\bin
   
 before_build:
-  - cd c:\projects\rtabmap\build
+  - cd c:\projects\find-object\build
   - ECHO %PROGRAMFILES%
   - ECHO %PATH%
   - cmake -G "Visual Studio 14 2015 Win64" -DOpenCV_DIR="C:\Program Files\opencv\build" ..
