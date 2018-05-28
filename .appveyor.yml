@@ -38,7 +38,7 @@ after_build :
   - cmake --build . --config Release --target package
 
 artifacts:
-  - path: build\FindObject-*
+  - path: build\Find-Object-*
   
 notifications:
   - provider: Email
