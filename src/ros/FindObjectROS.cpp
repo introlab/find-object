@@ -56,6 +56,8 @@ void FindObjectROS::publish(const find_object::DetectionInfo & info)
 	if(info.objDetected_.size() && !depth_.empty() && depthConstant_ != 0.0f)
 	{
 		std::vector<tf::StampedTransform> transforms;
+		char multiSubId = 'b';
+		int previousId = -1;
 		QMultiMap<int, QSize>::const_iterator iterSizes=info.objDetectedSizes_.constBegin();
 		for(QMultiMap<int, QTransform>::const_iterator iter=info.objDetected_.constBegin();
 			iter!=info.objDetected_.constEnd();
@@ -65,6 +67,17 @@ void FindObjectROS::publish(const find_object::DetectionInfo & info)
 			int id = iter.key();
 			float objectWidth = iterSizes->width();
 			float objectHeight = iterSizes->height();
+
+			QString multiSuffix;
+			if(id == previousId)
+			{
+				multiSuffix = QString("_") + multiSubId++;
+			}
+			else
+			{
+				multiSubId = 'b';
+			}
+			previousId = id;
 
 			// Find center of the object
 			QPointF center = iter->map(QPointF(objectWidth/2, objectHeight/2));
@@ -92,7 +105,7 @@ void FindObjectROS::publish(const find_object::DetectionInfo & info)
 			{
 				tf::StampedTransform transform;
 				transform.setIdentity();
-				transform.child_frame_id_ = QString("%1_%2").arg(objFramePrefix_.c_str()).arg(id).toStdString();
+				transform.child_frame_id_ = QString("%1_%2%3").arg(objFramePrefix_.c_str()).arg(id).arg(multiSuffix).toStdString();
 				transform.frame_id_ = frameId_;
 				transform.stamp_ = stamp_;
 				transform.setOrigin(tf::Vector3(center3D.val[0], center3D.val[1], center3D.val[2]));
