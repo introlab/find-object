@@ -668,6 +668,7 @@ public:
 				uFormat("Image of object %d is null or not type CV_8UC1!?!? (cols=%d, rows=%d, type=%d)",
 						objectId, image.cols, image.rows, image.type()).c_str());
 	}
+	virtual ~ExtractFeaturesThread() {}
 	int objectId() const {return objectId_;}
 	const cv::Mat & image() const {return image_;}
 	const std::vector<cv::KeyPoint> & keypoints() const {return keypoints_;}
@@ -774,6 +775,8 @@ protected:
 					timeDetection_ += threads[k]->timeDetection();
 					timeExtraction_ += threads[k]->timeExtraction();
 					timeSubPix_ += threads[k]->timeSubPix();
+
+					delete threads[k];
 				}
 			}
 		}
@@ -868,6 +871,7 @@ void FindObject::updateObjects(const QList<int> & ids)
 					{
 						objects_.value(id)->removeImage();
 					}
+					delete threads[j];
 				}
 			}
 			UINFO("Features extraction from %d objects... done! (%d ms)", objectsList.size(), time.elapsed());
@@ -1730,6 +1734,7 @@ bool FindObject::detect(const cv::Mat & image, find_object::DetectionInfo & info
 							info.rejectedOutliers_.insert(id, threads[j]->getOutliers());
 							info.rejectedCodes_.insert(id, code);
 						}
+						delete threads[j];
 					}
 					UDEBUG("Processed matches %d", i+1);
 				}
