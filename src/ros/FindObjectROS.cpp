@@ -110,12 +110,13 @@ void FindObjectROS::publish(const find_object::DetectionInfo & info)
 				transform.stamp_ = stamp_;
 				transform.setOrigin(tf::Vector3(center3D.val[0], center3D.val[1], center3D.val[2]));
 
-				//set rotation (y inverted)
+				//set rotation
 				tf::Vector3 xAxis(axisEndX.val[0] - center3D.val[0], axisEndX.val[1] - center3D.val[1], axisEndX.val[2] - center3D.val[2]);
 				xAxis.normalize();
 				tf::Vector3 yAxis(axisEndY.val[0] - center3D.val[0], axisEndY.val[1] - center3D.val[1], axisEndY.val[2] - center3D.val[2]);
 				yAxis.normalize();
-				tf::Vector3 zAxis = xAxis*yAxis;
+				tf::Vector3 zAxis = xAxis.cross(yAxis);
+				zAxis.normalize();
 				tf::Matrix3x3 rotationMatrix(
 							xAxis.x(), yAxis.x() ,zAxis.x(),
 							xAxis.y(), yAxis.y(), zAxis.y(),
