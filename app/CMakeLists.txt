@@ -24,6 +24,14 @@ SET(LIBRARIES
     ${OpenCV_LIBS} 
 )
 
+if(Tcmalloc_FOUND)
+    SET(LIBRARIES
+        ${LIBARIES} 
+        ${Tcmalloc_LIBRARIES}
+    )
+endif(Tcmalloc_FOUND)
+
+
 #include files
 INCLUDE_DIRECTORIES(${INCLUDE_DIRS})
 

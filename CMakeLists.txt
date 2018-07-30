@@ -23,6 +23,13 @@ ENDIF(NOT DEFINED CMAKE_INSTALL_LIBDIR)
 
 INCLUDE(GNUInstallDirs)
 
+####### local cmake modules #######
+SET(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake_modules")
+
+if(POLICY CMP0043)
+    cmake_policy(SET CMP0043 OLD)
+endif()
+
 #######################
 # VERSION
 #######################
@@ -47,6 +54,8 @@ IF(NOT Qt5_FOUND)
    FIND_PACKAGE(Qt4 COMPONENTS QtCore QtGui QtNetwork REQUIRED)
 ENDIF(NOT Qt5_FOUND)
 ADD_DEFINITIONS(-DQT_NO_KEYWORDS) # To avoid conflicts with boost signals used in ROS
+
+FIND_PACKAGE(Tcmalloc QUIET)
 
 SET(NONFREE 0)
 IF(OPENCV_NONFREE_FOUND OR OPENCV_XFEATURES2D_FOUND)
@@ -253,8 +262,14 @@ IF(NOT CATKIN_BUILD)
       MESSAGE(STATUS "  With Qt = NO (Qt not found)")
    ENDIF()
 
+   IF(Tcmalloc_FOUND)
+      MESSAGE(STATUS "  With tcmalloc = YES")
+   ELSE()
+      MESSAGE(STATUS "  With tcmalloc = NO (tcmalloc not found)")
+   ENDIF(Tcmalloc_FOUND)
+
    IF(APPLE)
-   MESSAGE(STATUS "  BUILD_AS_BUNDLE = ${BUILD_AS_BUNDLE}")
+      MESSAGE(STATUS "  BUILD_AS_BUNDLE = ${BUILD_AS_BUNDLE}")
    ENDIF(APPLE)
    MESSAGE(STATUS "--------------------------------------------")
 
