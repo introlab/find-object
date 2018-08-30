@@ -49,8 +49,8 @@ public:
 	const QMultiMap<int, int> & wordToObjects() const {return wordToObjects_;}
 	const cv::Mat & indexedDescriptors() const {return indexedDescriptors_;}
 
-	void save(QDataStream & streamSessionPtr) const;
-	void load(QDataStream & streamSessionPtr);
+	void save(QDataStream & streamSessionPtr, bool saveVocabularyOnly = false) const;
+	void load(QDataStream & streamSessionPtr, bool loadVocabularyOnly = false);
 	bool save(const QString & filename) const;
 	bool load(const QString & filename);
 

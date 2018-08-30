@@ -627,7 +627,7 @@ void MainWindow::loadVocabulary()
 	if(Settings::getGeneral_vocabularyFixed() &&
 	   Settings::getGeneral_invertedSearch())
 	{
-		QString path = QFileDialog::getOpenFileName(this, tr("Load vocabulary..."), Settings::workingDirectory(), "Data (*.yaml *.xml)");
+		QString path = QFileDialog::getOpenFileName(this, tr("Load vocabulary..."), Settings::workingDirectory(), "Data (*.yaml *.xml *.bin)");
 		if(!path.isEmpty())
 		{
 			if(findObject_->loadVocabulary(path))
@@ -651,10 +651,12 @@ void MainWindow::saveVocabulary()
 		QMessageBox::warning(this, tr("Saving vocabulary..."), tr("Vocabulary is empty!"));
 		return;
 	}
-	QString path = QFileDialog::getSaveFileName(this, tr("Save vocabulary..."), Settings::workingDirectory(), "Data (*.yaml *.xml)");
+	QString path = QFileDialog::getSaveFileName(this, tr("Save vocabulary..."), Settings::workingDirectory(), "Data (*.yaml *.xml *.bin)");
 	if(!path.isEmpty())
 	{
-		if(QFileInfo(path).suffix().compare("yaml") != 0 && QFileInfo(path).suffix().compare("xml") != 0)
+		if( QFileInfo(path).suffix().compare("yaml") != 0 &&
+			QFileInfo(path).suffix().compare("xml") != 0 &&
+			QFileInfo(path).suffix().compare("bin") != 0)
 		{
 			path.append(".yaml");
 		}

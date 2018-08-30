@@ -70,10 +70,18 @@ void Vocabulary::clear()
 	indexedDescriptors_ = cv::Mat();
 }
 
-void Vocabulary::save(QDataStream & streamSessionPtr) const
+void Vocabulary::save(QDataStream & streamSessionPtr, bool saveVocabularyOnly) const
 {
 	// save index
-	streamSessionPtr << wordToObjects_;
+	if(saveVocabularyOnly)
+	{
+		QMultiMap<int, int> dummy;
+		streamSessionPtr << dummy;
+	}
+	else
+	{
+		streamSessionPtr << wordToObjects_;
+	}
 
 	// save words
 	qint64 dataSize = indexedDescriptors_.elemSize()*indexedDescriptors_.cols*indexedDescriptors_.rows;
@@ -84,10 +92,20 @@ void Vocabulary::save(QDataStream & streamSessionPtr) const
 	streamSessionPtr << QByteArray((char*)indexedDescriptors_.data, dataSize);
 }
 
-void Vocabulary::load(QDataStream & streamSessionPtr)
+void Vocabulary::load(QDataStream & streamSessionPtr, bool loadVocabularyOnly)
 {
 	// load index
-	streamSessionPtr >> wordToObjects_;
+	if(loadVocabularyOnly)
+	{
+		QMultiMap<int, int> dummy;
+		streamSessionPtr >> dummy;
+		// clear index
+		wordToObjects_.clear();
+	}
+	else
+	{
+		streamSessionPtr >> wordToObjects_;
+	}
 
 	// load words
 	int rows,cols,type;

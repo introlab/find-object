@@ -91,7 +91,7 @@ bool FindObject::loadSession(const QString & path)
 			Settings::setParameter(iter.key(), iter.value());
 		}
 
-		// save vocabulary
+		// load vocabulary
 		vocabulary_->load(in);
 
 		// load objects
@@ -156,7 +156,26 @@ bool FindObject::saveSession(const QString & path)
 
 bool FindObject::saveVocabulary(const QString & filePath) const
 {
-	return vocabulary_->save(filePath);
+	if(!filePath.isEmpty() && QFileInfo(filePath).suffix().compare("bin") == 0)
+	{
+		QFile file(filePath);
+		file.open(QIODevice::WriteOnly);
+		QDataStream out(&file);
+
+		// ignore parameters
+		out << ParametersMap();
+
+		// save vocabulary
+		vocabulary_->save(out, true);
+
+		file.close();
+		return true;
+	}
+	else
+	{
+		return vocabulary_->save(filePath);
+	}
+	return false;
 }
 
 bool FindObject::loadVocabulary(const QString & filePath)
@@ -166,13 +185,35 @@ bool FindObject::loadVocabulary(const QString & filePath)
 		UWARN("Doesn't make sense to load a vocabulary if \"General/vocabularyFixed\" and \"General/invertedSearch\" are not enabled! It will "
 			  "be cleared at the time the objects are updated.");
 	}
-	if(vocabulary_->load(filePath))
+
+	if(QFile::exists(filePath) && !filePath.isEmpty() && QFileInfo(filePath).suffix().compare("bin") == 0)
 	{
-		if(objects_.size())
-		{
-			updateVocabulary();
-		}
+		//binary format (from session format)
+		QFile file(filePath);
+		file.open(QIODevice::ReadOnly);
+		QDataStream in(&file);
+
+		ParametersMap parameters;
+		// ignore parameters
+		in >> parameters;
+
+		// load vocabulary
+		vocabulary_->load(in, true);
+		file.close();
+
 		return true;
+	}
+	else
+	{
+		//yaml/xml format
+		if(vocabulary_->load(filePath))
+		{
+			if(objects_.size())
+			{
+				updateVocabulary();
+			}
+			return true;
+		}
 	}
 	return false;
 }
