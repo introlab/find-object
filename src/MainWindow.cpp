@@ -406,7 +406,7 @@ void MainWindow::loadSession()
 
 			}
 
-			QMessageBox::information(this, tr("Session loaded!"), tr("Session \"%1\" successfully loaded (%2 objects)!").arg(path).arg(objWidgets_.size()));
+			QMessageBox::information(this, tr("Session loaded!"), tr("Session \"%1\" successfully loaded (%2 objects, %3 vocabulary words)!").arg(path).arg(objWidgets_.size()).arg(findObject_->vocabulary()->size()));
 
 			if(!camera_->isRunning() && !sceneImage_.empty())
 			{
@@ -417,20 +417,17 @@ void MainWindow::loadSession()
 }
 void MainWindow::saveSession()
 {
-	if(objWidgets_.size())
+	QString path = QFileDialog::getSaveFileName(this, tr("Save session..."), Settings::workingDirectory(), "*.bin");
+	if(!path.isEmpty())
 	{
-		QString path = QFileDialog::getSaveFileName(this, tr("Save session..."), Settings::workingDirectory(), "*.bin");
-		if(!path.isEmpty())
+		if(QFileInfo(path).suffix().compare("bin") != 0)
 		{
-			if(QFileInfo(path).suffix().compare("bin") != 0)
-			{
-				path.append(".bin");
-			}
+			path.append(".bin");
+		}
 
-			if(findObject_->saveSession(path))
-			{
-				QMessageBox::information(this, tr("Session saved!"), tr("Session \"%1\" successfully saved (%2 objects)!").arg(path).arg(objWidgets_.size()));
-			}
+		if(findObject_->saveSession(path))
+		{
+			QMessageBox::information(this, tr("Session saved!"), tr("Session \"%1\" successfully saved (%2 objects, %3 vocabulary words)!").arg(path).arg(objWidgets_.size()).arg(findObject_->vocabulary()->size()));
 		}
 	}
 }
