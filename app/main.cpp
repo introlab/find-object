@@ -429,6 +429,10 @@ int main(int argc, char* argv[])
 		if(sessionNew)
 		{
 			UINFO("   Session path: \"%s\" [NEW]", sessionPath.toStdString().c_str());
+			if(configPath.isEmpty() && guiMode)
+			{
+				configPath = find_object::Settings::iniDefaultPath();
+			}
 		}
 		else
 		{
@@ -450,6 +454,10 @@ int main(int argc, char* argv[])
 						configPath.toStdString().c_str());
 			}
 		}
+	}
+	else if(configPath.isEmpty() && guiMode)
+	{
+		configPath = find_object::Settings::iniDefaultPath();
 	}
 	if(!objectsPath.isEmpty())
 	{
