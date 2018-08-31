@@ -79,7 +79,6 @@ public:
 		sharedSemaphore_(threads)
 	{
 		UASSERT(sharedFindObject != 0);
-		UASSERT(port!=0);
 		UASSERT(threads>=1);
 
 		qRegisterMetaType<cv::Mat>("cv::Mat");
@@ -87,7 +86,7 @@ public:
 		threadPool_.resize(threads);
 		for(int i=0; i<threads; ++i)
 		{
-			find_object::TcpServer * tcpServer =  new find_object::TcpServer(port++);
+			find_object::TcpServer * tcpServer =  new find_object::TcpServer(port!=0?port++:0);
 			UINFO("TcpServer set on port: %d (IP=%s)",
 					tcpServer->getPort(),
 					tcpServer->getHostAddress().toString().toStdString().c_str());

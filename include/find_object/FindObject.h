@@ -31,6 +31,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "find_object/FindObjectExp.h" // DLL export/import defines
 
 #include "find_object/DetectionInfo.h"
+#include "find_object/Settings.h"
 
 #include <QtCore/QObject>
 #include <QtCore/QString>
@@ -64,7 +65,7 @@ public:
 	FindObject(bool keepImagesInRAM_ = true, QObject * parent = 0);
 	virtual ~FindObject();
 
-	bool loadSession(const QString & path);
+	bool loadSession(const QString & path, const ParametersMap & customParameters = ParametersMap());
 	bool saveSession(const QString & path);
 	bool isSessionModified() const {return sessionModified_;}
 

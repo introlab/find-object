@@ -147,7 +147,7 @@ int main(int argc, char* argv[])
 	QString objectsPath = "";
 	QString objectPath = "";
 	QString scenePath = "";
-	QString configPath = find_object::Settings::iniDefaultPath();
+	QString configPath = "";
 	QString vocabularyPath = "";
 	QString jsonPath;
 	find_object::ParametersMap customParameters;
@@ -433,9 +433,25 @@ int main(int argc, char* argv[])
 		else
 		{
 			UINFO("   Session path: \"%s\"", sessionPath.toStdString().c_str());
+			if(!vocabularyPath.isEmpty())
+			{
+				UWARN("Vocabulary \"%s\" is not loaded as a session \"%s\" is already "
+						"loaded, ignoring vocabulary file...",
+						vocabularyPath.toStdString().c_str(),
+						sessionPath.toStdString().c_str());
+				vocabularyPath.clear();
+			}
+			if(!configPath.isEmpty())
+			{
+				UWARN("A session \"%s\" is loaded and a config file is also used, "
+						"the parameters of the session will be overwritten by "
+						"those in the config file \"%s\".",
+						sessionPath.toStdString().c_str(),
+						configPath.toStdString().c_str());
+			}
 		}
 	}
-	else if(!objectsPath.isEmpty())
+	if(!objectsPath.isEmpty())
 	{
 		UINFO("   Objects path: \"%s\"", objectsPath.toStdString().c_str());
 	}
@@ -475,13 +491,19 @@ int main(int argc, char* argv[])
 	//////////////////////////
 
 	// Load settings, should be loaded before creating other objects
-	find_object::Settings::init(configPath);
+	find_object::ParametersMap parameters;
+	if(!configPath.isEmpty())
+	{
+		parameters = find_object::Settings::init(configPath);
+	}
 
 	// Override custom parameters:
 	for(find_object::ParametersMap::iterator iter= customParameters.begin(); iter!=customParameters.end(); ++iter)
 	{
 		find_object::Settings::setParameter(iter.key(), iter.value());
+		parameters.insert(iter.key(), iter.value());
 	}
+
 
 	// Create FindObject
 	find_object::FindObject * findObject = new find_object::FindObject(guiMode || imagesSaved);
@@ -490,13 +512,7 @@ int main(int argc, char* argv[])
 	int objectsLoaded = 0;
 	if(!sessionPath.isEmpty() && !sessionNew)
 	{
-		if(!vocabularyPath.isEmpty() && !findObject->loadVocabulary(vocabularyPath))
-		{
-			UWARN("Vocabulary \"%s\" is not loaded as a session \"%s\" is already loaded",
-					vocabularyPath.toStdString().c_str(),
-					sessionPath.toStdString().c_str());
-		}
-		if(!findObject->loadSession(sessionPath))
+		if(!findObject->loadSession(sessionPath, parameters))
 		{
 			UERROR("Could not load session \"%s\"", sessionPath.toStdString().c_str());
 		}
@@ -505,7 +521,12 @@ int main(int argc, char* argv[])
 			objectsLoaded = findObject->objects().size();
 		}
 	}
-	else if(!objectsPath.isEmpty())
+	else if(!vocabularyPath.isEmpty() && !findObject->loadVocabulary(vocabularyPath))
+	{
+		UERROR("Failed to load vocabulary \"%s\"", vocabularyPath.toStdString().c_str());
+	}
+
+	if(!objectsPath.isEmpty())
 	{
 		if(!vocabularyPath.isEmpty() && !findObject->loadVocabulary(vocabularyPath))
 		{
@@ -535,10 +556,6 @@ int main(int argc, char* argv[])
 		{
 			UWARN("No object loaded from \"%s\"", objectsPath.toStdString().c_str());
 		}
-	}
-	else if(!vocabularyPath.isEmpty() && !findObject->loadVocabulary(vocabularyPath))
-	{
-		UERROR("Failed to load vocabulary \"%s\"", vocabularyPath.toStdString().c_str());
 	}
 
 	cv::Mat scene;

@@ -312,9 +312,9 @@ public:
 	static QString iniDefaultFileName() {return "config.ini";}
 	static QString iniPath();
 
-	static void init(const QString & fileName);
+	static ParametersMap init(const QString & fileName);
 
-	static void loadSettings(const QString & fileName = QString());
+	static ParametersMap loadSettings(const QString & fileName = QString());
 	static void loadWindowSettings(QByteArray & windowGeometry, QByteArray & windowState, const QString & fileName = QString());
 	static void saveSettings(const QString & fileName = QString());
 	static void saveWindowSettings(const QByteArray & windowGeometry, const QByteArray & windowState, const QString & fileName = QString());

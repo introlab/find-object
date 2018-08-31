@@ -94,14 +94,15 @@ QString Settings::iniPath()
 	return iniDefaultPath();
 }
 
-void Settings::init(const QString & fileName)
+ParametersMap Settings::init(const QString & fileName)
 {
 	iniPath_ = fileName;
-	loadSettings(iniPath_);
+	return loadSettings(iniPath_);
 }
 
-void Settings::loadSettings(const QString & fileName)
+ParametersMap Settings::loadSettings(const QString & fileName)
 {
+	ParametersMap loadedParameters;
 	QString path = fileName;
 	if(fileName.isEmpty())
 	{
@@ -173,6 +174,7 @@ void Settings::loadSettings(const QString & fileName)
 					value = QVariant(str);
 #endif
 				}
+				loadedParameters.insert(key, value);
 				setParameter(key, value);
 			}
 		}
@@ -193,6 +195,7 @@ void Settings::loadSettings(const QString & fileName)
 		Settings::setFeature2D_ORB_gpu(false);
 		Settings::setNearestNeighbor_BruteForce_gpu(false);
 	}
+	return loadedParameters;
 }
 
 void Settings::loadWindowSettings(QByteArray & windowGeometry, QByteArray & windowState, const QString & fileName)

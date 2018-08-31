@@ -74,7 +74,7 @@ FindObject::~FindObject() {
 	objectsDescriptors_.clear();
 }
 
-bool FindObject::loadSession(const QString & path)
+bool FindObject::loadSession(const QString & path, const ParametersMap & customParameters)
 {
 	if(QFile::exists(path) && !path.isEmpty() && QFileInfo(path).suffix().compare("bin") == 0)
 	{
@@ -88,7 +88,15 @@ bool FindObject::loadSession(const QString & path)
 		in >> parameters;
 		for(QMap<QString, QVariant>::iterator iter=parameters.begin(); iter!=parameters.end(); ++iter)
 		{
-			Settings::setParameter(iter.key(), iter.value());
+			QMap<QString, QVariant>::const_iterator cter = customParameters.find(iter.key());
+			if(cter != customParameters.constEnd())
+			{
+				Settings::setParameter(cter.key(), cter.value());
+			}
+			else
+			{
+				Settings::setParameter(iter.key(), iter.value());
+			}
 		}
 
 		// load vocabulary
