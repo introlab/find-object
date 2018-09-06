@@ -99,6 +99,8 @@ bool FindObject::loadSession(const QString & path, const ParametersMap & customP
 			}
 		}
 
+		updateDetectorExtractor();
+
 		// load vocabulary
 		vocabulary_->load(in);
 
