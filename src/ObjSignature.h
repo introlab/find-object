@@ -34,6 +34,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QtCore/QRect>
 #include <QtCore/QDataStream>
 #include <QtCore/QByteArray>
+#include <QtCore/QFileInfo>
+#include <Compression.h>
 
 namespace find_object {
 
@@ -84,18 +86,46 @@ public:
 								keypoints_.at(j).size;
 		}
 
-		qint64 dataSize = descriptors_.elemSize()*descriptors_.cols*descriptors_.rows;
-		streamPtr << descriptors_.rows <<
-						descriptors_.cols <<
-						descriptors_.type() <<
-						dataSize;
-		streamPtr << QByteArray((char*)descriptors_.data, dataSize);
+		std::vector<unsigned char> bytes  = compressData(descriptors_);
+
+		qint64 dataSize = bytes.size();
+		int old = 0;
+		if(dataSize <= std::numeric_limits<int>::max())
+		{
+			// old: rows, cols, type
+			streamPtr << old << old << old << dataSize;
+			streamPtr << QByteArray::fromRawData((const char*)bytes.data(), dataSize);
+		}
+		else
+		{
+			UERROR("Descriptors (compressed) are too large (%d MB) to be saved! Limit is 2 GB (based on max QByteArray size).",
+					dataSize/(1024*1024));
+			// old: rows, cols, type, dataSize
+			streamPtr << old << old << old << old;
+			streamPtr << QByteArray(); // empty
+		}
 
 		streamPtr << words_;
 
-		std::vector<unsigned char> bytes;
-		cv::imencode(".png", image_, bytes);
-		streamPtr << QByteArray((char*)bytes.data(), (int)bytes.size());
+		if(!image_.empty())
+		{
+			std::vector<unsigned char> bytes;
+			QString ext = QFileInfo(filePath_).suffix();
+			if(ext.isEmpty())
+			{
+				// default png
+				cv::imencode(".png", image_, bytes);
+			}
+			else
+			{
+				cv::imencode(std::string(".")+ext.toStdString(), image_, bytes);
+			}
+			streamPtr << QByteArray::fromRawData((const char*)bytes.data(), (int)bytes.size());
+		}
+		else
+		{
+			streamPtr << QByteArray();
+		}
 
 		streamPtr << rect_;
 	}
@@ -120,15 +150,34 @@ public:
 		int rows,cols,type;
 		qint64 dataSize;
 		streamPtr >> rows >> cols >> type >> dataSize;
-		QByteArray data;
-		streamPtr >> data;
-		descriptors_ = cv::Mat(rows, cols, type, data.data()).clone();
+		if(rows == 0 && cols == 0 && type == 0)
+		{
+			// compressed descriptors
+			UASSERT(dataSize <= std::numeric_limits<int>::max());
+			QByteArray data;
+			streamPtr >> data;
+			descriptors_ = uncompressData((unsigned const char*)data.data(), dataSize);
+		}
+		else
+		{
+			// old raw format
+			QByteArray data;
+			streamPtr >> data;
+			if(data.size())
+			{
+				descriptors_ = cv::Mat(rows, cols, type, data.data()).clone();
+			}
+			else if(dataSize)
+			{
+				UERROR("Error reading descriptor data for object=%d", id_);
+			}
+		}
 
 		streamPtr >> words_;
 
 		QByteArray image;
 		streamPtr >> image;
-		if(!ignoreImage)
+		if(!ignoreImage && image.size())
 		{
 			std::vector<unsigned char> bytes(image.size());
 			memcpy(bytes.data(), image.data(), image.size());

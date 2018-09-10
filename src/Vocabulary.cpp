@@ -28,9 +28,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "find_object/Settings.h"
 
 #include "find_object/utilite/ULogger.h"
+#include "Compression.h"
 #include "Vocabulary.h"
 #include <QtCore/QVector>
 #include <QDataStream>
+#include <QTime>
 #include <stdio.h>
 #if CV_MAJOR_VERSION < 3
 #include <opencv2/gpu/gpu.hpp>
@@ -80,16 +82,31 @@ void Vocabulary::save(QDataStream & streamSessionPtr, bool saveVocabularyOnly) c
 	}
 	else
 	{
+		UINFO("Saving %d object references...", wordToObjects_.size());
 		streamSessionPtr << wordToObjects_;
 	}
 
 	// save words
-	qint64 dataSize = indexedDescriptors_.elemSize()*indexedDescriptors_.cols*indexedDescriptors_.rows;
-	streamSessionPtr << indexedDescriptors_.rows <<
-			indexedDescriptors_.cols <<
-			indexedDescriptors_.type() <<
-			dataSize;
-	streamSessionPtr << QByteArray((char*)indexedDescriptors_.data, dataSize);
+	qint64 rawDataSize = indexedDescriptors_.rows * indexedDescriptors_.cols * indexedDescriptors_.elemSize();
+	UINFO("Compressing words... (%dx%d, %d MB)", indexedDescriptors_.rows, indexedDescriptors_.cols, rawDataSize/(1024*1024));
+	std::vector<unsigned char> bytes  = compressData(indexedDescriptors_);
+	qint64 dataSize = bytes.size();
+	UINFO("Compressed = %d MB", dataSize/(1024*1024));
+	int old = 0;
+	if(dataSize <= std::numeric_limits<int>::max())
+	{
+		// old: rows, cols, type
+		streamSessionPtr << old << old << old << dataSize;
+		streamSessionPtr << QByteArray::fromRawData((const char*)bytes.data(), dataSize);
+	}
+	else
+	{
+		UERROR("Vocabulary (compressed) is too large (%d MB) to be saved! Limit is 2 GB (based on max QByteArray size).",
+				dataSize/(1024*1024));
+		// old: rows, cols, type, dataSize
+		streamSessionPtr << old << old << old << old;
+		streamSessionPtr << QByteArray(); // empty
+	}
 }
 
 void Vocabulary::load(QDataStream & streamSessionPtr, bool loadVocabularyOnly)
@@ -104,17 +121,45 @@ void Vocabulary::load(QDataStream & streamSessionPtr, bool loadVocabularyOnly)
 	}
 	else
 	{
+		UINFO("Loading words to objects references...");
 		streamSessionPtr >> wordToObjects_;
+		UINFO("Loaded %d object references...", wordToObjects_.size());
 	}
 
 	// load words
 	int rows,cols,type;
 	qint64 dataSize;
 	streamSessionPtr >> rows >> cols >> type >> dataSize;
-	QByteArray data;
-	streamSessionPtr >> data;
-	indexedDescriptors_ = cv::Mat(rows, cols, type, data.data()).clone();
+	if(rows == 0 && cols == 0 && type == 0)
+	{
+		// compressed vocabulary
+		UINFO("Loading words... (compressed format: %d MB)", dataSize/(1024*1024));
+		UASSERT(dataSize <= std::numeric_limits<int>::max());
+		QByteArray data;
+		streamSessionPtr >> data;
+		UINFO("Uncompress vocabulary...");
+		indexedDescriptors_ = uncompressData((unsigned const char*)data.data(), dataSize);
+		UINFO("Words: %dx%d (%d MB)", indexedDescriptors_.rows, indexedDescriptors_.cols,
+				(indexedDescriptors_.rows * indexedDescriptors_.cols * indexedDescriptors_.elemSize()) / (1024*1024));
+	}
+	else
+	{
+		// old raw format
+		UINFO("Loading words... (old format: %dx%d (%d MB))", rows, cols, dataSize/(1024*1024));
+		QByteArray data;
+		streamSessionPtr >> data;
+		UINFO("Allocate memory...");
+		if(data.size())
+		{
+			indexedDescriptors_ = cv::Mat(rows, cols, type, data.data()).clone();
+		}
+		else if(dataSize)
+		{
+			UERROR("Error reading vocabulary data...");
+		}
+	}
 
+	UINFO("Update vocabulary index...");
 	update();
 }
 

@@ -244,15 +244,23 @@ MainWindow::MainWindow(FindObject * findObject, Camera * camera, QWidget * paren
 
 	if(findObject_->objects().size())
 	{
+		UINFO("Creating %d object widgets...", findObject_->objects().size());
 		// show objects already loaded in FindObject
+		int i=0;
 		for(QMap<int, ObjSignature *>::const_iterator iter = findObject_->objects().constBegin();
 			iter!=findObject_->objects().constEnd();
 			++iter)
 		{
-			ObjWidget * obj = new ObjWidget(iter.key(), iter.value()->keypoints(), iter.value()->words(), cvtCvMat2QImage(iter.value()->image()));
+			ObjWidget * obj = new ObjWidget(iter.key(), iter.value()->keypoints(), iter.value()->words(), iter.value()->image().empty()?QImage():cvtCvMat2QImage(iter.value()->image()));
 			objWidgets_.insert(obj->id(), obj);
 			this->showObject(obj);
+			++i;
+			if(i % 100 == 0)
+			{
+				UINFO("Created %d/%d widgets...", i, findObject_->objects().size());
+			}
 		}
+		UINFO("Creating %d object widgets... done!", findObject_->objects().size());
 		ui_->actionSave_objects->setEnabled(true);
 		ui_->actionSave_session->setEnabled(true);
 	}
@@ -1045,9 +1053,12 @@ void MainWindow::showObject(ObjWidget * obj)
 		ui_->verticalLayout_objects->insertLayout(ui_->verticalLayout_objects->count()-1, vLayout);
 
 		QByteArray ba;
-		QBuffer buffer(&ba);
-		buffer.open(QIODevice::WriteOnly);
-		obj->pixmap().scaledToWidth(128).save(&buffer, "JPEG"); // writes image into JPEG format
+		if(obj->pixmap().width() > 0)
+		{
+			QBuffer buffer(&ba);
+			buffer.open(QIODevice::WriteOnly);
+			obj->pixmap().scaledToWidth(128).save(&buffer, "JPEG"); // writes image into JPEG format
+		}
 		imagesMap_.insert(obj->id(), ba);
 
 		// update objects size slider
@@ -1411,6 +1422,14 @@ void MainWindow::update(const cv::Mat & image)
 			// add rectangle
 			QPen rectPen(obj->color());
 			rectPen.setWidth(Settings::getHomography_rectBorderWidth());
+			if(rect.isNull())
+			{
+				QMap<int, ObjSignature*>::const_iterator iter = findObject_->objects().constFind(id);
+				if(iter!=findObject_->objects().end())
+				{
+					rect = iter.value()->rect();
+				}
+			}
 			RectItem * rectItemScene = new RectItem(id, rect);
 			connect(rectItemScene, SIGNAL(hovered(int)), this, SLOT(rectHovered(int)));
 			rectItemScene->setPen(rectPen);

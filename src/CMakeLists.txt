@@ -74,6 +74,7 @@ SET(SRC_FILES
    ./utilite/UConversion.cpp
    ./rtabmap/PdfPlot.cpp
    ./json/jsoncpp.cpp
+   ./Compression.cpp
    ${moc_srcs} 
    ${moc_uis} 
    ${srcs_qrc}
@@ -93,6 +94,7 @@ SET(INCLUDE_DIRS
    ${CMAKE_CURRENT_SOURCE_DIR}
    ${OpenCV_INCLUDE_DIRS}
    ${CMAKE_CURRENT_BINARY_DIR} # for qt ui generated in binary dir
+   ${ZLIB_INCLUDE_DIRS}
 )
 IF(CATKIN_BUILD)
    SET(INCLUDE_DIRS
@@ -108,6 +110,7 @@ ENDIF(QT4_FOUND)
 SET(LIBRARIES
    ${QT_LIBRARIES} 
    ${OpenCV_LIBS} 
+   ${ZLIB_LIBRARIES} 
 )
 IF(CATKIN_BUILD)
    SET(LIBRARIES

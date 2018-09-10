@@ -266,8 +266,13 @@ void ObjWidget::setTextLabel(const QString & text)
 
 void ObjWidget::updateImage(const QImage & image)
 {
-	pixmap_ = QPixmap::fromImage(image);
-	rect_ = pixmap_.rect();
+	pixmap_ = QPixmap();
+	rect_ = QRect();
+	if(!image.isNull())
+	{
+		pixmap_ = QPixmap::fromImage(image);
+		rect_ = pixmap_.rect();
+	}
 	label_->setVisible(image.isNull());
 }
 void ObjWidget::updateData(const std::vector<cv::KeyPoint> & keypoints, const QMultiMap<int, int> & words)

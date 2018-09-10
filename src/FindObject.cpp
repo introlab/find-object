@@ -735,7 +735,7 @@ protected:
 	{
 		QTime time;
 		time.start();
-		UINFO("Extracting descriptors from object %d...", objectId_);
+		UDEBUG("Extracting descriptors from object %d...", objectId_);
 
 		QTime timeStep;
 		timeStep.start();
@@ -850,6 +850,7 @@ private:
 
 void FindObject::updateObjects(const QList<int> & ids)
 {
+	UINFO("Update %d objects...", ids.size());
 	QList<ObjSignature*> objectsList;
 	if(ids.size())
 	{
@@ -884,7 +885,7 @@ void FindObject::updateObjects(const QList<int> & ids)
 
 		if(objectsList.size())
 		{
-			UINFO("Features extraction from %d objects...", objectsList.size());
+			UINFO("Features extraction from %d objects... (threads=%d)", objectsList.size(), threadCounts);
 			for(int i=0; i<objectsList.size(); i+=threadCounts)
 			{
 				QVector<ExtractFeaturesThread*> threads;
@@ -995,6 +996,8 @@ void FindObject::updateVocabulary(const QList<int> & ids)
 		}
 	}
 
+	UINFO("Updating vocabulary with %d objects and %d descriptors...", ids.size(), count);
+
 	// Copy data
 	if(count)
 	{
@@ -1100,6 +1103,10 @@ void FindObject::updateVocabulary(const QList<int> & ids)
 			}
 			if(addedWords && !Settings::getGeneral_vocabularyFixed())
 			{
+				if(!incremental)
+				{
+					UINFO("Updating vocabulary...");
+				}
 				vocabulary_->update();
 			}
 
