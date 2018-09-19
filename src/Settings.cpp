@@ -424,7 +424,7 @@ public:
     	fast_(imgGpu, maskGpu, keypoints);
 #else
 #ifdef HAVE_OPENCV_CUDAFEATURES2D
-    	CVCUDA::GpuMat keypointsGpu(keypoints);
+    	CVCUDA::GpuMat keypointsGpu;
 		fast_->detectAsync(imgGpu, keypointsGpu, maskGpu);
 		fast_->convert(keypointsGpu, keypoints);
 #endif
