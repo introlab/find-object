@@ -108,23 +108,26 @@ void CameraROS::imgReceivedCallback(const sensor_msgs::ImageConstPtr & msg)
 {
 	if(msg->data.size())
 	{
-		cv_bridge::CvImageConstPtr ptr = cv_bridge::toCvShare(msg);
-		if(msg->encoding.compare(sensor_msgs::image_encodings::BGR8) == 0)
+		cv::Mat image;
+		cv_bridge::CvImageConstPtr imgPtr = cv_bridge::toCvShare(msg);
+		try
 		{
-			cv::Mat cpy = ptr->image.clone();
+			if(msg->encoding.compare(sensor_msgs::image_encodings::MONO8) == 0 ||
+			   msg->encoding.compare(sensor_msgs::image_encodings::MONO16) == 0)
+			{
+				image = cv_bridge::cvtColor(imgPtr, "mono8")->image;
+			}
+			else
+			{
+				image = cv_bridge::cvtColor(imgPtr, "bgr8")->image;
+			}
+
 			Q_EMIT rosDataReceived(msg->header.frame_id, msg->header.stamp, cv::Mat(), 0.0f);
-			Q_EMIT imageReceived(cpy);
+			Q_EMIT imageReceived(image);
 		}
-		else if(msg->encoding.compare(sensor_msgs::image_encodings::RGB8) == 0)
+		catch(const cv_bridge::Exception & e)
 		{
-			cv::Mat bgr;
-			cv::cvtColor(ptr->image, bgr, cv::COLOR_RGB2BGR);
-			Q_EMIT rosDataReceived(msg->header.frame_id, msg->header.stamp, cv::Mat(), 0.0f);
-			Q_EMIT imageReceived(bgr);
-		}
-		else
-		{
-			ROS_ERROR("find_object_ros: Encoding \"%s\" detected. Supported image encodings are bgr8 and rgb8...", msg->encoding.c_str());
+			ROS_ERROR("find_object_ros: Could not convert input image to mono8 or bgr8 format, encoding detected is %s... cv_bridge exception: %s", msg->encoding.c_str(), e.what());
 		}
 	}
 }
