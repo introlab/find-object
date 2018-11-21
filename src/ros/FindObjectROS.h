@@ -65,6 +65,7 @@ private:
 private:
 	ros::Publisher pub_;
 	ros::Publisher pubStamped_;
+	ros::Publisher pubInfo_;
 
 	std::string frameId_;
 	ros::Time stamp_;

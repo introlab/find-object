@@ -29,6 +29,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <std_msgs/Float32MultiArray.h>
 #include "find_object_2d/ObjectsStamped.h"
+#include "find_object_2d/DetectionInfo.h"
 
 #include <cmath>
 
@@ -36,7 +37,8 @@ using namespace find_object;
 
 FindObjectROS::FindObjectROS(QObject * parent) :
 	FindObject(true, parent),
-	objFramePrefix_("object")
+	objFramePrefix_("object"),
+	depthConstant_(0.0f)
 {
 	ros::NodeHandle pnh("~"); // public
 	pnh.param("object_prefix", objFramePrefix_, objFramePrefix_);
@@ -46,6 +48,7 @@ FindObjectROS::FindObjectROS(QObject * parent) :
 
 	pub_ = nh.advertise<std_msgs::Float32MultiArray>("objects", 1);
 	pubStamped_ = nh.advertise<find_object_2d::ObjectsStamped>("objectsStamped", 1);
+	pubInfo_ = nh.advertise<find_object_2d::DetectionInfo>("info", 1);
 
 	this->connect(this, SIGNAL(objectsFound(find_object::DetectionInfo)), this, SLOT(publish(find_object::DetectionInfo)));
 }
@@ -144,30 +147,74 @@ void FindObjectROS::publish(const find_object::DetectionInfo & info)
 		}
 	}
 
-	if(pub_.getNumSubscribers() || pubStamped_.getNumSubscribers())
+	if(pub_.getNumSubscribers() || pubStamped_.getNumSubscribers() || pubInfo_.getNumSubscribers())
 	{
 		std_msgs::Float32MultiArray msg;
 		find_object_2d::ObjectsStamped msgStamped;
+		find_object_2d::DetectionInfo infoMsg;
+		if(pubInfo_.getNumSubscribers())
+		{
+			infoMsg.ids.resize(info.objDetected_.size());
+			infoMsg.widths.resize(info.objDetected_.size());
+			infoMsg.heights.resize(info.objDetected_.size());
+			infoMsg.filePaths.resize(info.objDetected_.size());
+			infoMsg.inliers.resize(info.objDetected_.size());
+			infoMsg.outliers.resize(info.objDetected_.size());
+			infoMsg.homographies.resize(info.objDetected_.size());
+		}
 		msg.data = std::vector<float>(info.objDetected_.size()*12);
 		msgStamped.objects.data = std::vector<float>(info.objDetected_.size()*12);
+
+		ROS_ASSERT(info.objDetected_.size() == info.objDetectedSizes_.size() &&
+				   info.objDetected_.size() == info.objDetectedFilePaths_.size() &&
+				   info.objDetected_.size() == info.objDetectedInliersCount_.size() &&
+				   info.objDetected_.size() == info.objDetectedOutliersCount_.size());
+
+		int infoIndex=0;
 		int i=0;
 		QMultiMap<int, QSize>::const_iterator iterSizes=info.objDetectedSizes_.constBegin();
+		QMultiMap<int, QString>::const_iterator iterFilePaths=info.objDetectedFilePaths_.constBegin();
+		QMultiMap<int, int>::const_iterator iterInliers=info.objDetectedInliersCount_.constBegin();
+		QMultiMap<int, int>::const_iterator iterOutliers=info.objDetectedOutliersCount_.constBegin();
 		for(QMultiMap<int, QTransform>::const_iterator iter=info.objDetected_.constBegin();
 			iter!=info.objDetected_.constEnd();
-			++iter, ++iterSizes)
+			++iter, ++iterSizes, ++iterFilePaths, ++infoIndex, ++iterInliers, ++iterOutliers)
 		{
-			msg.data[i] = msgStamped.objects.data[i] = iter.key(); ++i;
-			msg.data[i] = msgStamped.objects.data[i] = iterSizes->width(); ++i;
-			msg.data[i] = msgStamped.objects.data[i] = iterSizes->height(); ++i;
-			msg.data[i] = msgStamped.objects.data[i] = iter->m11(); ++i;
-			msg.data[i] = msgStamped.objects.data[i] = iter->m12(); ++i;
-			msg.data[i] = msgStamped.objects.data[i] = iter->m13(); ++i;
-			msg.data[i] = msgStamped.objects.data[i] = iter->m21(); ++i;
-			msg.data[i] = msgStamped.objects.data[i] = iter->m22(); ++i;
-			msg.data[i] = msgStamped.objects.data[i] = iter->m23(); ++i;
-			msg.data[i] = msgStamped.objects.data[i] = iter->m31(); ++i;// dx
-			msg.data[i] = msgStamped.objects.data[i] = iter->m32(); ++i;// dy
-			msg.data[i] = msgStamped.objects.data[i] = iter->m33(); ++i;
+			if(pub_.getNumSubscribers() || pubStamped_.getNumSubscribers())
+			{
+				msg.data[i] = msgStamped.objects.data[i] = iter.key(); ++i;
+				msg.data[i] = msgStamped.objects.data[i] = iterSizes->width(); ++i;
+				msg.data[i] = msgStamped.objects.data[i] = iterSizes->height(); ++i;
+				msg.data[i] = msgStamped.objects.data[i] = iter->m11(); ++i;
+				msg.data[i] = msgStamped.objects.data[i] = iter->m12(); ++i;
+				msg.data[i] = msgStamped.objects.data[i] = iter->m13(); ++i;
+				msg.data[i] = msgStamped.objects.data[i] = iter->m21(); ++i;
+				msg.data[i] = msgStamped.objects.data[i] = iter->m22(); ++i;
+				msg.data[i] = msgStamped.objects.data[i] = iter->m23(); ++i;
+				msg.data[i] = msgStamped.objects.data[i] = iter->m31(); ++i;// dx
+				msg.data[i] = msgStamped.objects.data[i] = iter->m32(); ++i;// dy
+				msg.data[i] = msgStamped.objects.data[i] = iter->m33(); ++i;
+			}
+
+			if(pubInfo_.getNumSubscribers())
+			{
+				infoMsg.ids[infoIndex].data = iter.key();
+				infoMsg.widths[infoIndex].data = iterSizes->width();
+				infoMsg.heights[infoIndex].data = iterSizes->height();
+				infoMsg.filePaths[infoIndex].data = iterFilePaths.value().toStdString();
+				infoMsg.inliers[infoIndex].data = iterInliers.value();
+				infoMsg.outliers[infoIndex].data = iterOutliers.value();
+				infoMsg.homographies[infoIndex].data.resize(9);
+				infoMsg.homographies[infoIndex].data[0] = iter->m11();
+				infoMsg.homographies[infoIndex].data[1] = iter->m12();
+				infoMsg.homographies[infoIndex].data[2] = iter->m13();
+				infoMsg.homographies[infoIndex].data[3] = iter->m21();
+				infoMsg.homographies[infoIndex].data[4] = iter->m22();
+				infoMsg.homographies[infoIndex].data[5] = iter->m23();
+				infoMsg.homographies[infoIndex].data[6] = iter->m31();
+				infoMsg.homographies[infoIndex].data[7] = iter->m32();
+				infoMsg.homographies[infoIndex].data[8] = iter->m33();
+			}
 		}
 		if(pub_.getNumSubscribers())
 		{
@@ -179,6 +226,13 @@ void FindObjectROS::publish(const find_object::DetectionInfo & info)
 			msgStamped.header.frame_id = frameId_;
 			msgStamped.header.stamp = stamp_;
 			pubStamped_.publish(msgStamped);
+		}
+		if(pubInfo_.getNumSubscribers())
+		{
+			// use same header as the input image (for synchronization and frame reference)
+			infoMsg.header.frame_id = frameId_;
+			infoMsg.header.stamp = stamp_;
+			pubInfo_.publish(infoMsg);
 		}
 	}
 }
