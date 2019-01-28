@@ -137,13 +137,10 @@ void CameraROS::imgDepthReceivedCallback(
 		const sensor_msgs::ImageConstPtr& depthMsg,
 		const sensor_msgs::CameraInfoConstPtr& cameraInfoMsg)
 {
-	if(!(rgbMsg->encoding.compare(sensor_msgs::image_encodings::MONO8) ==0 ||
-		 rgbMsg->encoding.compare(sensor_msgs::image_encodings::BGR8) == 0 ||
-		 rgbMsg->encoding.compare(sensor_msgs::image_encodings::RGB8) == 0) &&
-		(depthMsg->encoding.compare(sensor_msgs::image_encodings::TYPE_16UC1)!=0 ||
-		 depthMsg->encoding.compare(sensor_msgs::image_encodings::TYPE_32FC1)!=0))
+	if(depthMsg->encoding.compare(sensor_msgs::image_encodings::TYPE_16UC1)!=0 &&
+	   depthMsg->encoding.compare(sensor_msgs::image_encodings::TYPE_32FC1)!=0)
 	{
-			ROS_ERROR("find_object_ros: Input type must be rgb=mono8,rgb8,bgr8 and depth=32FC1,16UC1");
+			ROS_ERROR("find_object_ros: Depth image type must be 32FC1 or 16UC1");
 			return;
 	}
 
@@ -152,18 +149,27 @@ void CameraROS::imgDepthReceivedCallback(
 		cv_bridge::CvImageConstPtr ptr = cv_bridge::toCvShare(rgbMsg);
 		cv_bridge::CvImageConstPtr ptrDepth = cv_bridge::toCvShare(depthMsg);
 		float depthConstant = 1.0f/cameraInfoMsg->K[4];
-		if(rgbMsg->encoding.compare(sensor_msgs::image_encodings::BGR8) == 0)
+
+		cv::Mat image;
+		cv_bridge::CvImageConstPtr imgPtr = cv_bridge::toCvShare(rgbMsg);
+		try
 		{
-			cv::Mat cpy = ptr->image.clone();
+			if(rgbMsg->encoding.compare(sensor_msgs::image_encodings::MONO8) == 0 ||
+			   rgbMsg->encoding.compare(sensor_msgs::image_encodings::MONO16) == 0)
+			{
+				image = cv_bridge::cvtColor(imgPtr, "mono8")->image;
+			}
+			else
+			{
+				image = cv_bridge::cvtColor(imgPtr, "bgr8")->image;
+			}
+
 			Q_EMIT rosDataReceived(rgbMsg->header.frame_id, rgbMsg->header.stamp, ptrDepth->image, depthConstant);
-			Q_EMIT imageReceived(cpy);
+			Q_EMIT imageReceived(image);
 		}
-		else if(rgbMsg->encoding.compare(sensor_msgs::image_encodings::RGB8) == 0)
+		catch(const cv_bridge::Exception & e)
 		{
-			cv::Mat bgr;
-			cv::cvtColor(ptr->image, bgr, cv::COLOR_RGB2BGR);
-			Q_EMIT rosDataReceived(rgbMsg->header.frame_id, rgbMsg->header.stamp, ptrDepth->image, depthConstant);
-			Q_EMIT imageReceived(bgr);
+			ROS_ERROR("find_object_ros: Could not convert input image to mono8 or bgr8 format, encoding detected is %s... cv_bridge exception: %s", rgbMsg->encoding.c_str(), e.what());
 		}
 	}
 
