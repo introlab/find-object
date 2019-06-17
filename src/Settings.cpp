@@ -817,7 +817,11 @@ Feature2D * Settings::createKeypointDetector()
 								getFeature2D_ORB_edgeThreshold(),
 								getFeature2D_ORB_firstLevel(),
 								getFeature2D_ORB_WTA_K(),
+#if CV_MAJOR_VERSION > 3
+								(cv::ORB::ScoreType)getFeature2D_ORB_scoreType(),
+#else
 								getFeature2D_ORB_scoreType(),
+#endif
 								getFeature2D_ORB_patchSize(),
 								getFeature2D_Fast_threshold()));
 #endif
@@ -1061,7 +1065,11 @@ Feature2D * Settings::createDescriptorExtractor()
 								getFeature2D_ORB_edgeThreshold(),
 								getFeature2D_ORB_firstLevel(),
 								getFeature2D_ORB_WTA_K(),
+#if CV_MAJOR_VERSION > 3
+								(cv::ORB::ScoreType)getFeature2D_ORB_scoreType(),
+#else
 								getFeature2D_ORB_scoreType(),
+#endif
 								getFeature2D_ORB_patchSize(),
 								getFeature2D_Fast_threshold()));
 #endif

@@ -42,6 +42,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QGraphicsRectItem>
 #include <stdio.h>
 
+#if CV_MAJOR_VERSION > 3
+#include <opencv2/core/types_c.h>
+#endif
+
 namespace find_object {
 
 FindObject::FindObject(bool keepImagesInRAM, QObject * parent) :

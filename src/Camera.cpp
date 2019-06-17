@@ -32,6 +32,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <stdio.h>
 #include <opencv2/imgproc/imgproc.hpp>
+#if CV_MAJOR_VERSION > 3
+#include <opencv2/videoio/videoio_c.h>
+#endif
 #include <QtCore/QFile>
 #include "utilite/UDirectory.h"
 #include "CameraTcpServer.h"
