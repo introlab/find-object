@@ -35,6 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <message_filters/subscriber.h>
 #include <message_filters/synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
+#include <message_filters/sync_policies/exact_time.h>
 
 #include <image_transport/image_transport.h>
 #include <image_transport/subscriber_filter.h>
@@ -49,18 +50,12 @@ class CameraROS : public find_object::Camera {
 	Q_OBJECT
 public:
 	CameraROS(bool subscribeDepth, QObject * parent = 0);
-	virtual ~CameraROS() {}
+	virtual ~CameraROS();
 
 	virtual bool start();
 	virtual void stop();
 
 	QStringList subscribedTopics() const;
-
-Q_SIGNALS:
-	void rosDataReceived(const std::string & frameId,
-			const ros::Time & stamp,
-			const cv::Mat & depth,
-			float depthConstant);
 
 private Q_SLOTS:
 	virtual void takeImage();
@@ -83,8 +78,14 @@ private:
 	typedef message_filters::sync_policies::ApproximateTime<
 			sensor_msgs::Image,
 			sensor_msgs::Image,
-			sensor_msgs::CameraInfo> MySyncPolicy;
-	message_filters::Synchronizer<MySyncPolicy> * sync_;
+			sensor_msgs::CameraInfo> MyApproxSyncPolicy;
+	message_filters::Synchronizer<MyApproxSyncPolicy> * approxSync_;
+
+	typedef message_filters::sync_policies::ExactTime<
+			sensor_msgs::Image,
+			sensor_msgs::Image,
+			sensor_msgs::CameraInfo> MyExactSyncPolicy;
+	message_filters::Synchronizer<MyExactSyncPolicy> * exactSync_;
 };
 
 #endif /* CAMERAROS_H_ */

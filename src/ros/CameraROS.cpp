@@ -35,7 +35,9 @@ using namespace find_object;
 
 CameraROS::CameraROS(bool subscribeDepth, QObject * parent) :
 	Camera(parent),
-	subscribeDepth_(subscribeDepth)
+	subscribeDepth_(subscribeDepth),
+	approxSync_(0),
+	exactSync_(0)
 {
 	ros::NodeHandle nh; // public
 	ros::NodeHandle pnh("~"); // private
@@ -51,8 +53,11 @@ CameraROS::CameraROS(bool subscribeDepth, QObject * parent) :
 	else
 	{
 		int queueSize = 10;
+		bool approxSync = true;
 		pnh.param("queue_size", queueSize, queueSize);
+		pnh.param("approx_sync", approxSync, approxSync);
 		ROS_INFO("find_object_ros: queue_size = %d", queueSize);
+		ROS_INFO("find_object_ros: approx_sync = %s", approxSync?"true":"false");
 
 		ros::NodeHandle rgb_nh(nh, "rgb");
 		ros::NodeHandle rgb_pnh(pnh, "rgb");
@@ -66,10 +71,22 @@ CameraROS::CameraROS(bool subscribeDepth, QObject * parent) :
 		rgbSub_.subscribe(rgb_it, rgb_nh.resolveName("image_rect_color"), 1, hintsRgb);
 		depthSub_.subscribe(depth_it, depth_nh.resolveName("image_raw"), 1, hintsDepth);
 		cameraInfoSub_.subscribe(depth_nh, "camera_info", 1);
-		sync_ = new message_filters::Synchronizer<MySyncPolicy>(MySyncPolicy(queueSize), rgbSub_, depthSub_, cameraInfoSub_);
-		sync_->registerCallback(boost::bind(&CameraROS::imgDepthReceivedCallback, this, _1, _2, _3));
-
+		if(approxSync)
+		{
+			approxSync_ = new message_filters::Synchronizer<MyApproxSyncPolicy>(MyApproxSyncPolicy(queueSize), rgbSub_, depthSub_, cameraInfoSub_);
+			approxSync_->registerCallback(boost::bind(&CameraROS::imgDepthReceivedCallback, this, _1, _2, _3));
+		}
+		else
+		{
+			exactSync_ = new message_filters::Synchronizer<MyExactSyncPolicy>(MyExactSyncPolicy(queueSize), rgbSub_, depthSub_, cameraInfoSub_);
+			exactSync_->registerCallback(boost::bind(&CameraROS::imgDepthReceivedCallback, this, _1, _2, _3));
+		}
 	}
+}
+CameraROS::~CameraROS()
+{
+	delete approxSync_;
+	delete exactSync_;
 }
 
 QStringList CameraROS::subscribedTopics() const
@@ -122,8 +139,7 @@ void CameraROS::imgReceivedCallback(const sensor_msgs::ImageConstPtr & msg)
 				image = cv_bridge::cvtColor(imgPtr, "bgr8")->image;
 			}
 
-			Q_EMIT rosDataReceived(msg->header.frame_id, msg->header.stamp, cv::Mat(), 0.0f);
-			Q_EMIT imageReceived(image);
+			Q_EMIT imageReceived(image, QString(msg->header.frame_id.c_str()), msg->header.stamp.toSec(), cv::Mat(), 0.0f);
 		}
 		catch(const cv_bridge::Exception & e)
 		{
@@ -164,8 +180,7 @@ void CameraROS::imgDepthReceivedCallback(
 				image = cv_bridge::cvtColor(imgPtr, "bgr8")->image;
 			}
 
-			Q_EMIT rosDataReceived(rgbMsg->header.frame_id, rgbMsg->header.stamp, ptrDepth->image, depthConstant);
-			Q_EMIT imageReceived(image);
+			Q_EMIT imageReceived(image, QString(rgbMsg->header.frame_id.c_str()), rgbMsg->header.stamp.toSec(), ptrDepth->image, depthConstant);
 		}
 		catch(const cv_bridge::Exception & e)
 		{

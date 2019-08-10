@@ -57,6 +57,7 @@ public:
 
 Q_SIGNALS:
 	void imageReceived(const cv::Mat & image);
+	void imageReceived(const cv::Mat & image, const QString & frameId, double stamp, const cv::Mat & depth, float depthConstant);
 	void finished();
 
 public Q_SLOTS:

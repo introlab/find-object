@@ -37,8 +37,7 @@ using namespace find_object;
 
 FindObjectROS::FindObjectROS(QObject * parent) :
 	FindObject(true, parent),
-	objFramePrefix_("object"),
-	depthConstant_(0.0f)
+	objFramePrefix_("object")
 {
 	ros::NodeHandle pnh("~"); // public
 	pnh.param("object_prefix", objFramePrefix_, objFramePrefix_);
@@ -50,13 +49,13 @@ FindObjectROS::FindObjectROS(QObject * parent) :
 	pubStamped_ = nh.advertise<find_object_2d::ObjectsStamped>("objectsStamped", 1);
 	pubInfo_ = nh.advertise<find_object_2d::DetectionInfo>("info", 1);
 
-	this->connect(this, SIGNAL(objectsFound(find_object::DetectionInfo)), this, SLOT(publish(find_object::DetectionInfo)));
+	this->connect(this, SIGNAL(objectsFound(const find_object::DetectionInfo &, const QString &, double, const cv::Mat &, float)), this, SLOT(publish(const find_object::DetectionInfo &, const QString &, double, const cv::Mat &, float)));
 }
 
-void FindObjectROS::publish(const find_object::DetectionInfo & info)
+void FindObjectROS::publish(const find_object::DetectionInfo & info, const QString & frameId, double stamp, const cv::Mat & depth, float depthConstant)
 {
 	// send tf before the message
-	if(info.objDetected_.size() && !depth_.empty() && depthConstant_ != 0.0f)
+	if(info.objDetected_.size() && !depth.empty() && depthConstant != 0.0f)
 	{
 		std::vector<tf::StampedTransform> transforms;
 		char multiSubId = 'b';
@@ -87,20 +86,20 @@ void FindObjectROS::publish(const find_object::DetectionInfo & info)
 			QPointF xAxis = iter->map(QPointF(3*objectWidth/4, objectHeight/2));
 			QPointF yAxis = iter->map(QPointF(objectWidth/2, 3*objectHeight/4));
 
-			cv::Vec3f center3D = this->getDepth(depth_,
+			cv::Vec3f center3D = this->getDepth(depth,
 					center.x()+0.5f, center.y()+0.5f,
-					float(depth_.cols/2)-0.5f, float(depth_.rows/2)-0.5f,
-					1.0f/depthConstant_, 1.0f/depthConstant_);
+					float(depth.cols/2)-0.5f, float(depth.rows/2)-0.5f,
+					1.0f/depthConstant, 1.0f/depthConstant);
 
-			cv::Vec3f axisEndX = this->getDepth(depth_,
+			cv::Vec3f axisEndX = this->getDepth(depth,
 					xAxis.x()+0.5f, xAxis.y()+0.5f,
-					float(depth_.cols/2)-0.5f, float(depth_.rows/2)-0.5f,
-					1.0f/depthConstant_, 1.0f/depthConstant_);
+					float(depth.cols/2)-0.5f, float(depth.rows/2)-0.5f,
+					1.0f/depthConstant, 1.0f/depthConstant);
 
-			cv::Vec3f axisEndY = this->getDepth(depth_,
+			cv::Vec3f axisEndY = this->getDepth(depth,
 					yAxis.x()+0.5f, yAxis.y()+0.5f,
-					float(depth_.cols/2)-0.5f, float(depth_.rows/2)-0.5f,
-					1.0f/depthConstant_, 1.0f/depthConstant_);
+					float(depth.cols/2)-0.5f, float(depth.rows/2)-0.5f,
+					1.0f/depthConstant, 1.0f/depthConstant);
 
 			if(std::isfinite(center3D.val[0]) && std::isfinite(center3D.val[1]) && std::isfinite(center3D.val[2]) &&
 				std::isfinite(axisEndX.val[0]) && std::isfinite(axisEndX.val[1]) && std::isfinite(axisEndX.val[2]) &&
@@ -109,8 +108,8 @@ void FindObjectROS::publish(const find_object::DetectionInfo & info)
 				tf::StampedTransform transform;
 				transform.setIdentity();
 				transform.child_frame_id_ = QString("%1_%2%3").arg(objFramePrefix_.c_str()).arg(id).arg(multiSuffix).toStdString();
-				transform.frame_id_ = frameId_;
-				transform.stamp_ = stamp_;
+				transform.frame_id_ = frameId.toStdString();
+				transform.stamp_.fromSec(stamp);
 				transform.setOrigin(tf::Vector3(center3D.val[0], center3D.val[1], center3D.val[2]));
 
 				//set rotation
@@ -129,6 +128,9 @@ void FindObjectROS::publish(const find_object::DetectionInfo & info)
 				// set x axis going front of the object, with z up and z left
 				q *= tf::createQuaternionFromRPY(CV_PI/2.0, CV_PI/2.0, 0);
 				transform.setRotation(q.normalized());
+
+				ROS_WARN("%f %f %f (%f %f %f %f)", center3D.val[0], center3D.val[1], center3D.val[2],
+						transform.getRotation().x(), transform.getRotation().y(), transform.getRotation().z(), transform.getRotation().w());
 
 				transforms.push_back(transform);
 			}
@@ -223,29 +225,18 @@ void FindObjectROS::publish(const find_object::DetectionInfo & info)
 		if(pubStamped_.getNumSubscribers())
 		{
 			// use same header as the input image (for synchronization and frame reference)
-			msgStamped.header.frame_id = frameId_;
-			msgStamped.header.stamp = stamp_;
+			msgStamped.header.frame_id = frameId.toStdString();
+			msgStamped.header.stamp.fromSec(stamp);
 			pubStamped_.publish(msgStamped);
 		}
 		if(pubInfo_.getNumSubscribers())
 		{
 			// use same header as the input image (for synchronization and frame reference)
-			infoMsg.header.frame_id = frameId_;
-			infoMsg.header.stamp = stamp_;
+			infoMsg.header.frame_id = frameId.toStdString();
+			infoMsg.header.stamp.fromSec(stamp);
 			pubInfo_.publish(infoMsg);
 		}
 	}
-}
-
-void FindObjectROS::setDepthData(const std::string & frameId,
-		const ros::Time & stamp,
-		const cv::Mat & depth,
-		float depthConstant)
-{
-	frameId_ = frameId;
-	stamp_ = stamp;
-	depth_ = depth;
-	depthConstant_ = depthConstant;
 }
 
 cv::Vec3f FindObjectROS::getDepth(const cv::Mat & depthImage,

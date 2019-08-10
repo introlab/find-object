@@ -92,9 +92,10 @@ public Q_SLOTS:
 	void addObjectAndUpdate(const cv::Mat & image, int id=0, const QString & filePath = QString());
 	void removeObjectAndUpdate(int id);
 	void detect(const cv::Mat & image); // emit objectsFound()
+	void detect(const cv::Mat & image, const QString & frameId, double stamp, const cv::Mat & depth, float depthConstant); // emit objectsFound()
 
 Q_SIGNALS:
-	void objectsFound(const find_object::DetectionInfo &);
+	void objectsFound(const find_object::DetectionInfo &, const QString &, double, const cv::Mat &, float);
 
 private:
 	void clearVocabulary();

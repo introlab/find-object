@@ -1383,6 +1383,11 @@ private:
 
 void FindObject::detect(const cv::Mat & image)
 {
+	detect(image, "", 0.0, cv::Mat(), 0.0);
+}
+
+void FindObject::detect(const cv::Mat & image, const QString & frameId, double stamp, const cv::Mat & depth, float depthConstant)
+{
 	QTime time;
 	time.start();
 	DetectionInfo info;
@@ -1411,7 +1416,7 @@ void FindObject::detect(const cv::Mat & image)
 
 	if(info.objDetected_.size() > 0 || Settings::getGeneral_sendNoObjDetectedEvents())
 	{
-		Q_EMIT objectsFound(info);
+		Q_EMIT objectsFound(info, frameId, stamp, depth, depthConstant);
 	}
 }
 

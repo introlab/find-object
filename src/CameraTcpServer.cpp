@@ -100,8 +100,11 @@ quint16 CameraTcpServer::getPort() const
 {
 	return this->serverPort();
 }
-
+#if QT_VERSION >= 0x050000
+void CameraTcpServer::incomingConnection(qintptr socketDescriptor)
+#else
 void CameraTcpServer::incomingConnection(int socketDescriptor)
+#endif
 {
 	QList<QTcpSocket*> clients = this->findChildren<QTcpSocket*>();
 	if(clients.size() >= 1)

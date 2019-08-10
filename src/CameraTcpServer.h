@@ -28,6 +28,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef CAMERATCPCLIENT_H_
 #define CAMERATCPCLIENT_H_
 
+#include <QtGlobal>
 #include <QtNetwork/QTcpServer>
 #include <opencv2/opencv.hpp>
 
@@ -46,7 +47,11 @@ public:
 	quint16 getPort() const;
 
 protected:
+#if QT_VERSION >= 0x050000
+	virtual void incomingConnection ( qintptr socketDescriptor );
+#else
 	virtual void incomingConnection ( int socketDescriptor );
+#endif
 
 private Q_SLOTS:
 	void readReceivedData();

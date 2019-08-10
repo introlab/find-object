@@ -80,6 +80,7 @@ public Q_SLOTS:
 	void stopProcessing();
 	void pauseProcessing();
 	void update(const cv::Mat & image);
+	void update(const cv::Mat & image, const QString & frameId, double stamp, const cv::Mat & depth, float depthConstant);
 
 private Q_SLOTS:
 	void loadSession();
@@ -113,7 +114,7 @@ private Q_SLOTS:
 	void rectHovered(int objId);
 
 Q_SIGNALS:
-	void objectsFound(const find_object::DetectionInfo &);
+	void objectsFound(const find_object::DetectionInfo &, const QString & frameId, double stamp, const cv::Mat & depth, float depthConstant);
 
 private:
 	bool loadSettings(const QString & path);

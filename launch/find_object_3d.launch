@@ -8,6 +8,7 @@
 		<param name="subscribe_depth" value="true" type="bool"/>
 		<param name="objects_path" value="" type="str"/>
 		<param name="object_prefix" value="object" type="str"/>
+		<param name="approx_sync" value="true" type="bool"/>
 		
 		<remap from="rgb/image_rect_color" to="camera/rgb/image_rect_color"/>
 		<remap from="depth_registered/image_raw" to="camera/depth_registered/image_raw"/>

@@ -138,12 +138,6 @@ int main(int argc, char** argv)
 
 	CameraROS * camera = new CameraROS(subscribeDepth);
 
-	QObject::connect(
-			camera,
-			SIGNAL(rosDataReceived(const std::string &, const ros::Time &, const cv::Mat &, float)),
-			findObjectROS,
-			SLOT(setDepthData(const std::string &, const ros::Time &, const cv::Mat &, float)));
-
 	// Catch ctrl-c to close the gui
 	setupQuitSignal(gui);
 
@@ -154,9 +148,9 @@ int main(int argc, char** argv)
 
 		QObject::connect(
 				&mainWindow,
-				SIGNAL(objectsFound(const find_object::DetectionInfo &)),
+				SIGNAL(objectsFound(const find_object::DetectionInfo &, const QString &, double, const cv::Mat &, float)),
 				findObjectROS,
-				SLOT(publish(const find_object::DetectionInfo &)));
+				SLOT(publish(const find_object::DetectionInfo &, const QString &, double, const cv::Mat &, float)));
 
 		QStringList topics = camera->subscribedTopics();
 		if(topics.size() == 1)
