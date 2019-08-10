@@ -3,15 +3,20 @@
 	<!-- $ roslaunch kinect2_bridge kinect2_bridge.launch publish_tf:=true -->
 
 	<!-- Which image resolution: sd, qhd, hd -->
-	<arg name="resolution" default="qhd" />
+	<arg name="resolution"    default="qhd" />
+	<arg name="object_prefix" default="object"/>
+	<arg name="objects_path"  default=""/>
+	<arg name="gui"           default="true"/>
+	<arg name="settings_path" default="~/.ros/find_object_2d.ini"/>
 	
 	<node name="find_object_3d" pkg="find_object_2d" type="find_object_2d" output="screen">
-		<param name="gui" value="true" type="bool"/>
-		<param name="settings_path" value="~/.ros/find_object_2d.ini" type="str"/>
+		<param name="gui" value="$(arg gui)" type="bool"/>
+		<param name="settings_path" value="$(arg settings_path)" type="str"/>
 		<param name="subscribe_depth" value="true" type="bool"/>
-		<param name="objects_path" value="" type="str"/>
-		<param name="object_prefix" value="object" type="str"/>
-		
+		<param name="objects_path" value="$(arg objects_path)" type="str"/>
+		<param name="object_prefix" value="$(arg object_prefix)" type="str"/>
+		<param name="approx_sync" value="false" type="bool"/>
+				
 		<remap from="rgb/image_rect_color" to="/kinect2/$(arg resolution)/image_color_rect"/>
 		<remap from="depth_registered/image_raw" to="/kinect2/$(arg resolution)/image_depth_rect"/>
 		<remap from="depth_registered/camera_info" to="/kinect2/$(arg resolution)/camera_info"/>

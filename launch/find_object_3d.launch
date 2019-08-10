@@ -2,29 +2,34 @@
 	<!-- Example finding 3D poses of the objects detected -->
 	<!-- $roslaunch openni_launch openni.launch depth_registration:=true -->
 	
+	<arg name="object_prefix" default="object"/>
+	<arg name="objects_path"  default=""/>
+	<arg name="gui"           default="true"/>
+	<arg name="approx_sync"   default="true"/>
+	<arg name="pnp"           default="true"/>
+	<arg name="tf_example"    default="true"/>
+	<arg name="settings_path" default="~/.ros/find_object_2d.ini"/>
+	
+	<arg name="rgb_topic"         default="camera/rgb/image_rect_color"/>
+	<arg name="depth_topic"       default="camera/depth_registered/image_raw"/>
+	<arg name="camera_info_topic" default="camera/rgb/camera_info"/>
+	
 	<node name="find_object_3d" pkg="find_object_2d" type="find_object_2d" output="screen">
-		<param name="gui" value="true" type="bool"/>
-		<param name="settings_path" value="~/.ros/find_object_2d.ini" type="str"/>
+		<param name="gui" value="$(arg gui)" type="bool"/>
+		<param name="settings_path" value="$(arg settings_path)" type="str"/>
 		<param name="subscribe_depth" value="true" type="bool"/>
-		<param name="objects_path" value="" type="str"/>
-		<param name="object_prefix" value="object" type="str"/>
-		<param name="approx_sync" value="true" type="bool"/>
+		<param name="objects_path" value="$(arg objects_path)" type="str"/>
+		<param name="object_prefix" value="$(arg object_prefix)" type="str"/>
+		<param name="approx_sync" value="$(arg approx_sync)" type="bool"/>
+		<param name="pnp" value="$(arg pnp)" type="bool"/>
 		
-		<remap from="rgb/image_rect_color" to="camera/rgb/image_rect_color"/>
-		<remap from="depth_registered/image_raw" to="camera/depth_registered/image_raw"/>
-		<remap from="depth_registered/camera_info" to="camera/depth_registered/camera_info"/>
+		<remap from="rgb/image_rect_color" to="$(arg rgb_topic)"/>
+		<remap from="depth_registered/image_raw" to="$(arg depth_topic)"/>
+		<remap from="depth_registered/camera_info" to="$(arg camera_info_topic)"/>
 	</node>
 	
 	<!-- Example of tf synchronisation with the objectsStamped message -->
-	<node name="tf_example" pkg="find_object_2d" type="tf_example" output="screen">
-		<param name="map_frame_id" value="/map" type="string"/>
-		<param name="object_prefix" value="object" type="str"/>
+	<node if="$(arg tf_example)" name="tf_example" pkg="find_object_2d" type="tf_example" output="screen">
+		<param name="object_prefix" value="$(arg object_prefix)" type="str"/>
 	</node>
-	<!-- fake some tf frames for the example /map -> /odom -> /base_link -> /camera_link -->
-	<node pkg="tf" type="static_transform_publisher" name="base_to_camera_tf" 
-		args="0.1 0.0 0.3 0.0 0.0 0.0 /base_link /camera_link 100" />
-	<node pkg="tf" type="static_transform_publisher" name="odom_to_base_tf" 
-		args="1.0 0.0 0.1 1.5707 0.0 0.0 /odom /base_link 100" />
-	<node pkg="tf" type="static_transform_publisher" name="map_to_odom_tf" 
-		args="0.0 0.5 0.0 0.7853 0.0 0.0 /map /odom 100" />
 </launch>

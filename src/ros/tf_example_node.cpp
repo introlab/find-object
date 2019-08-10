@@ -34,11 +34,10 @@ class TfExample
 {
 public:
 	TfExample() :
-		mapFrameId_("/map"),
 		objFramePrefix_("object")
 	{
 		ros::NodeHandle pnh("~");
-		pnh.param("map_frame_id", mapFrameId_, mapFrameId_);
+		pnh.param("target_frame_id", targetFrameId_, targetFrameId_);
 		pnh.param("object_prefix", objFramePrefix_, objFramePrefix_);
 
 		ros::NodeHandle nh;
@@ -51,6 +50,11 @@ public:
 	{
 		if(msg->objects.data.size())
 		{
+			std::string targetFrameId = targetFrameId_;
+			if(targetFrameId.empty())
+			{
+				targetFrameId = msg->header.frame_id;
+			}
 			char multiSubId = 'b';
 			int previousId = -1;
 			for(unsigned int i=0; i<msg->objects.data.size(); i+=12)
@@ -73,13 +77,11 @@ public:
 				std::string objectFrameId = QString("%1_%2%3").arg(objFramePrefix_.c_str()).arg(id).arg(multiSuffix).toStdString();
 
 				tf::StampedTransform pose;
-				tf::StampedTransform poseCam;
 				try
 				{
-					// Get transformation from "object_#" frame to target frame "map"
+					// Get transformation from "object_#" frame to target frame
 					// The timestamp matches the one sent over TF
-					tfListener_.lookupTransform(mapFrameId_, objectFrameId, msg->header.stamp, pose);
-					tfListener_.lookupTransform(msg->header.frame_id, objectFrameId, msg->header.stamp, poseCam);
+					tfListener_.lookupTransform(targetFrameId, objectFrameId, msg->header.stamp, pose);
 				}
 				catch(tf::TransformException & ex)
 				{
@@ -87,21 +89,17 @@ public:
 					continue;
 				}
 
-				// Here "pose" is the position of the object "id" in "/map" frame.
+				// Here "pose" is the position of the object "id" in target frame.
 				ROS_INFO("%s [x,y,z] [x,y,z,w] in \"%s\" frame: [%f,%f,%f] [%f,%f,%f,%f]",
-						objectFrameId.c_str(), mapFrameId_.c_str(),
+						objectFrameId.c_str(), targetFrameId.c_str(),
 						pose.getOrigin().x(), pose.getOrigin().y(), pose.getOrigin().z(),
 						pose.getRotation().x(), pose.getRotation().y(), pose.getRotation().z(), pose.getRotation().w());
-				ROS_INFO("%s [x,y,z] [x,y,z,w] in \"%s\" frame: [%f,%f,%f] [%f,%f,%f,%f]",
-						objectFrameId.c_str(), msg->header.frame_id.c_str(),
-						poseCam.getOrigin().x(), poseCam.getOrigin().y(), poseCam.getOrigin().z(),
-						poseCam.getRotation().x(), poseCam.getRotation().y(), poseCam.getRotation().z(), poseCam.getRotation().w());
 			}
 		}
 	}
 
 private:
-	std::string mapFrameId_;
+	std::string targetFrameId_;
 	std::string objFramePrefix_;
     ros::Subscriber subs_;
     tf::TransformListener tfListener_;

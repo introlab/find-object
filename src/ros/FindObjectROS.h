@@ -63,6 +63,7 @@ private:
 	ros::Publisher pubInfo_;
 
 	std::string objFramePrefix_;
+	bool usePnP_;
 	tf::TransformBroadcaster tfBroadcaster_;
 
 };
