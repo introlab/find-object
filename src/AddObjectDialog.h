@@ -56,6 +56,7 @@ public:
 
 private Q_SLOTS:
 	void update(const cv::Mat &);
+	void update(const cv::Mat &, const QString &, double, const cv::Mat &, float);
 	void next();
 	void back();
 	void cancel();

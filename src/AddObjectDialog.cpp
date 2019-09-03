@@ -112,6 +112,7 @@ void AddObjectDialog::closeEvent(QCloseEvent* event)
 	if(camera_)
 	{
 		disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
+		disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &, const QString &, double, const cv::Mat &, float)), this, SLOT(update(const cv::Mat &, const QString &, double, const cv::Mat &, float)));
 	}
 	QDialog::closeEvent(event);
 }
@@ -228,6 +229,7 @@ void AddObjectDialog::setState(int state)
 		else
 		{
 			connect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
+			connect(camera_, SIGNAL(imageReceived(const cv::Mat &, const QString &, double, const cv::Mat &, float)), this, SLOT(update(const cv::Mat &, const QString &, double, const cv::Mat &, float)));
 		}
 	}
 	else if(state == kSelectFeatures)
@@ -235,6 +237,7 @@ void AddObjectDialog::setState(int state)
 		if(camera_)
 		{
 			disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
+			disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &, const QString &, double, const cv::Mat &, float)), this, SLOT(update(const cv::Mat &, const QString &, double, const cv::Mat &, float)));
 			camera_->pause();
 		}
 
@@ -265,6 +268,7 @@ void AddObjectDialog::setState(int state)
 		if(camera_)
 		{
 			disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
+			disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &, const QString &, double, const cv::Mat &, float)), this, SLOT(update(const cv::Mat &, const QString &, double, const cv::Mat &, float)));
 			camera_->pause();
 		}
 
@@ -369,6 +373,12 @@ void AddObjectDialog::setState(int state)
 }
 
 void AddObjectDialog::update(const cv::Mat & image)
+{
+	UERROR("");
+	update(image, "", 0.0, cv::Mat(), 0.0);
+}
+
+void AddObjectDialog::update(const cv::Mat & image, const QString & frameId, double stamp, const cv::Mat & depth, float depthConstant)
 {
 	cameraImage_ = cv::Mat();
 	if(!image.empty())
