@@ -374,7 +374,6 @@ void AddObjectDialog::setState(int state)
 
 void AddObjectDialog::update(const cv::Mat & image)
 {
-	UERROR("");
 	update(image, "", 0.0, cv::Mat(), 0.0);
 }
 
