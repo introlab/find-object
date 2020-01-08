@@ -179,7 +179,7 @@ int main(int argc, char** argv)
 		QCoreApplication app(argc, argv);
 
 		// connect stuff:
-		QObject::connect(camera, SIGNAL(imageReceived(const cv::Mat &)), findObjectROS, SLOT(detect(const cv::Mat &)));
+		QObject::connect(camera, SIGNAL(imageReceived(const cv::Mat &, const QString &, double, const cv::Mat &, float)), findObjectROS, SLOT(detect(const cv::Mat &, const QString &, double, const cv::Mat &, float)));
 
 		//loop
 		camera->start();
