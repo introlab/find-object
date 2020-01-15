@@ -1,0 +1,67 @@
+name: find-object
+base: core18
+version: '0.6.2+git'
+summary: Find-Object project, visit http://introlab.github.io/find-object/
+description: |
+  Features:
+  - You can change any parameters at runtime, make it easier to test feature detectors and descriptors without always recompiling.
+  - Detectors/descriptors supported (from OpenCV): BRIEF, Dense, FAST, GoodFeaturesToTrack, MSER, ORB, SIFT, STAR, SURF, FREAK and BRISK.
+  - Sample code with the OpenCV C++ interface below...
+  - For an example of an application using SURF descriptors: see my project RTAB-Map (an appearance-based loop closure detector for SLAM).
+
+grade: devel # must be 'stable' to release into candidate/stable channels
+confinement: devmode # use 'strict' once you have the right plugs and slots
+
+apps:
+  find-object:
+    command: desktop-launch find_object
+    plugs: [unity7, x11, opengl, home, network, network-bind, removable-media, raw-usb, wayland, desktop-legacy, desktop]
+    
+parts:
+  desktop-qt5:
+    source: https://github.com/ubuntu/snapcraft-desktop-helpers.git
+    source-subdir: qt
+    plugin: make
+    make-parameters: ["FLAVOR=qt5"]
+    build-packages:
+      - qtbase5-dev
+      - dpkg-dev
+    stage-packages:
+      - libxkbcommon0
+      - ttf-ubuntu-font-family
+      - dmz-cursor-theme
+      - light-themes
+      - adwaita-icon-theme
+      - gnome-themes-standard
+      - shared-mime-info
+      - libqt5gui5
+      - libgdk-pixbuf2.0-0
+      - libgtk2.0-0
+      - libqt5svg5 # for loading icon themes which are svg
+      - try: [appmenu-qt5] # not available on core18
+      - locales-all
+
+  find-object:
+    after: [desktop-qt5]
+    plugin: cmake
+    source: .
+    build-packages:
+      - libopencv-dev
+      - qtbase5-dev
+    organize:
+      usr/lib/x86_64-linux-gnu/blas/libblas.so.3: usr/lib/x86_64-linux-gnu/libblas.so.3
+      usr/lib/x86_64-linux-gnu/blas/libblas.so.3.7.1: usr/lib/x86_64-linux-gnu/libblas.so.3.7.1
+      usr/lib/x86_64-linux-gnu/lapack/liblapack.so.3: usr/lib/x86_64-linux-gnu/liblapack.so.3
+      usr/lib/x86_64-linux-gnu/lapack/liblapack.so.3.7.1: usr/lib/x86_64-linux-gnu/liblapack.so.3.7.1
+    stage-packages:
+      - libopencv-calib3d3.2
+      - libopencv-core3.2
+      - libopencv-features2d3.2
+      - libopencv-flann3.2
+      - libopencv-imgcodecs3.2
+      - libopencv-imgproc3.2
+      - libopencv-video3.2
+      - libqt5core5a
+      - libqt5gui5
+      - libqt5network5
+      - libqt5widgets5
