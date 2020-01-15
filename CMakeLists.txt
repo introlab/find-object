@@ -52,6 +52,9 @@ ADD_DEFINITIONS(-DPROJECT_PREFIX="${PROJECT_PREFIX}")
 ADD_DEFINITIONS(-DPROJECT_VERSION="${PROJECT_VERSION}")
 ADD_DEFINITIONS(-DPROJECT_NAME="${PROJECT_NAME}")
 
+CONFIGURE_FILE(snap/snapcraft.yaml.in ${PROJECT_SOURCE_DIR}/snap/snapcraft.yaml)
+message(STATUS "\"snap/snapcraft.yaml\" has been generated with version \"${PROJECT_VERSION}\". To create a snap, do \"snapcraft\" in find-object's root directory.")
+
 ####### DEPENDENCIES #######
 FIND_PACKAGE(OpenCV REQUIRED) # tested on 2.3.1
 

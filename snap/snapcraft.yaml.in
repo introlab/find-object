@@ -1,6 +1,6 @@
 name: find-object
 base: core18
-version: '0.6.2+git'
+version: '@PROJECT_VERSION@+git'
 summary: Find-Object project, visit http://introlab.github.io/find-object/
 description: |
   Features:
