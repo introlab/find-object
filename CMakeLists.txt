@@ -52,11 +52,16 @@ ADD_DEFINITIONS(-DPROJECT_PREFIX="${PROJECT_PREFIX}")
 ADD_DEFINITIONS(-DPROJECT_VERSION="${PROJECT_VERSION}")
 ADD_DEFINITIONS(-DPROJECT_NAME="${PROJECT_NAME}")
 
-CONFIGURE_FILE(snap/snapcraft.yaml.in ${PROJECT_SOURCE_DIR}/snap/snapcraft.yaml)
-message(STATUS "\"snap/snapcraft.yaml\" has been generated with version \"${PROJECT_VERSION}\". To create a snap, do \"snapcraft\" in find-object's root directory.")
-
 ####### DEPENDENCIES #######
 FIND_PACKAGE(OpenCV REQUIRED) # tested on 2.3.1
+
+# For SuperPoint
+SET(TORCH 0)
+FIND_PACKAGE(Torch QUIET)
+IF(TORCH_FOUND)
+    MESSAGE(STATUS "Found Torch: ${TORCH_INCLUDE_DIRS}")
+    SET(TORCH 1)
+ENDIF(TORCH_FOUND)
 
 IF(OpenCV_VERSION_MAJOR EQUAL 4)
   IF(NOT MSVC)
@@ -284,9 +289,14 @@ IF(NOT CATKIN_BUILD)
      ENDIF()
    ELSE()
      IF(OPENCV_XFEATURES2D_FOUND)
-       MESSAGE(STATUS "  With OpenCV ${OpenCV_VERSION_MAJOR} xfeatures2d module (SIFT/SURF/BRIEF/FREAK) = YES")
+       MESSAGE(STATUS "  With OpenCV ${OpenCV_VERSION_MAJOR} xfeatures2d module (BRIEF/FREAK/KAZE) = YES")
      ELSE()
-       MESSAGE(STATUS "  With OpenCV ${OpenCV_VERSION_MAJOR} xfeatures2d module (SIFT/SURF/BRIEF/FREAK) = NO (not found)")
+       MESSAGE(STATUS "  With OpenCV ${OpenCV_VERSION_MAJOR} xfeatures2d module (BRIEF/FREAK/KAZE) = NO (not found)")
+     ENDIF()
+     IF(NONFREE)
+       MESSAGE(STATUS "  With OpenCV ${OpenCV_VERSION_MAJOR} nonfree module (SIFT/SURF) = YES")
+     ELSE()
+       MESSAGE(STATUS "  With OpenCV ${OpenCV_VERSION_MAJOR} nonfree module (SIFT/SURF) = NO")
      ENDIF()
    ENDIF()
 
@@ -303,6 +313,12 @@ IF(NOT CATKIN_BUILD)
    ELSE()
       MESSAGE(STATUS "  With tcmalloc = NO (tcmalloc not found)")
    ENDIF(Tcmalloc_FOUND)
+   
+   IF(TORCH_FOUND)
+      MESSAGE(STATUS "  With Torch = YES")
+   ELSE()
+      MESSAGE(STATUS "  With Torch = NO (libtorch not found)")
+   ENDIF(TORCH_FOUND)
 
    IF(APPLE)
       MESSAGE(STATUS "  BUILD_AS_BUNDLE = ${BUILD_AS_BUNDLE}")

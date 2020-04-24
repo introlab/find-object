@@ -450,6 +450,7 @@ void Vocabulary::search(const cv::Mat & descriptorsIn, cv::Mat & results, cv::Ma
 		if(Settings::isBruteForceNearestNeighbor())
 		{
 			std::vector<std::vector<cv::DMatch> > matches;
+			bool isL2NotSqr = false;
 			if(Settings::getNearestNeighbor_BruteForce_gpu() && CVCUDA::getCudaEnabledDeviceCount())
 			{
 				CVCUDA::GpuMat newDescriptorsGpu(descriptors);
@@ -464,6 +465,7 @@ void Vocabulary::search(const cv::Mat & descriptorsIn, cv::Mat & results, cv::Ma
 				{
 					CVCUDA::BruteForceMatcher_GPU<cv::L2<float> > gpuMatcher;
 					gpuMatcher.knnMatch(newDescriptorsGpu, lastDescriptorsGpu, matches, k);
+					isL2NotSqr = true;
 				}
 #else
 #ifdef HAVE_OPENCV_CUDAFEATURES2D
@@ -477,6 +479,7 @@ void Vocabulary::search(const cv::Mat & descriptorsIn, cv::Mat & results, cv::Ma
 				{
 					gpuMatcher = cv::cuda::DescriptorMatcher::createBFMatcher(cv::NORM_L2);
 					gpuMatcher->knnMatch(newDescriptorsGpu, lastDescriptorsGpu, matches, k);
+					isL2NotSqr = true;
 				}
 #else
 				UERROR("OpenCV3 is not built with CUDAFEATURES2D module, cannot do brute force matching on GPU!");
@@ -485,7 +488,7 @@ void Vocabulary::search(const cv::Mat & descriptorsIn, cv::Mat & results, cv::Ma
 			}
 			else
 			{
-				cv::BFMatcher matcher(indexedDescriptors_.type()==CV_8U?cv::NORM_HAMMING:cv::NORM_L2);
+				cv::BFMatcher matcher(indexedDescriptors_.type()==CV_8U?cv::NORM_HAMMING:cv::NORM_L2SQR);
 				matcher.knnMatch(descriptors, indexedDescriptors_, matches, k);
 			}
 
@@ -497,7 +500,16 @@ void Vocabulary::search(const cv::Mat & descriptorsIn, cv::Mat & results, cv::Ma
 				for(int j=0; j<k; ++j)
 				{
 					results.at<int>(i, j) = matches[i].at(j).trainIdx;
-					dists.at<float>(i, j) = matches[i].at(j).distance;
+
+					if(isL2NotSqr)
+					{
+						// Make sure we use L2SQR to match FLANN
+						dists.at<float>(i, j) = matches[i].at(j).distance*matches[i].at(j).distance;
+					}
+					else
+					{
+						dists.at<float>(i, j) = matches[i].at(j).distance;
+					}
 				}
 			}
 		}

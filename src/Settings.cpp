@@ -58,6 +58,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   #include <opencv2/xfeatures2d/cuda.hpp>
 #endif
 
+#if FINDOBJECT_TORCH == 1
+#include "superpoint_torch/SuperPoint.h"
+#endif
+
 namespace find_object {
 
 ParametersMap Settings::defaultParameters_;
@@ -130,10 +134,10 @@ ParametersMap Settings::loadSettings(const QString & fileName)
 						value = QVariant(str);
 						UINFO("Updated list of parameter \"%s\"", key.toStdString().c_str());
 					}
-#if FINDOBJECT_NONFREE == 0
 					int index = str.split(':').first().toInt();
 					if(key.compare(Settings::kFeature2D_1Detector()) == 0)
 					{
+#if FINDOBJECT_NONFREE == 0
 						if(index == 5 || index == 7)
 						{
 							index = Settings::defaultFeature2D_1Detector().split(':').first().toInt();
@@ -142,9 +146,21 @@ ParametersMap Settings::loadSettings(const QString & fileName)
 								  Settings::kFeature2D_1Detector().toStdString().c_str(),
 								  Settings::defaultFeature2D_1Detector().split(':').last().split(";").at(index).toStdString().c_str());
 						}
+#endif
+#if FINDOBJECT_TORCH == 0
+						if(index == 12)
+						{
+							index = Settings::defaultFeature2D_1Detector().split(':').first().toInt();
+							UWARN("Trying to set \"%s\" to SuperPointTorch but Find-Object isn't built "
+								  "with the Torch. Keeping default combo value: %s.",
+								  Settings::kFeature2D_1Detector().toStdString().c_str(),
+								  Settings::defaultFeature2D_1Detector().split(':').last().split(";").at(index).toStdString().c_str());
+						}
+#endif
 					}
 					else if(key.compare(Settings::kFeature2D_2Descriptor()) == 0)
 					{
+#if FINDOBJECT_NONFREE == 0
 						if(index == 2 || index == 3)
 						{
 							index = Settings::defaultFeature2D_2Descriptor().split(':').first().toInt();
@@ -153,23 +169,21 @@ ParametersMap Settings::loadSettings(const QString & fileName)
 								  Settings::kFeature2D_2Descriptor().toStdString().c_str(),
 								  Settings::defaultFeature2D_2Descriptor().split(':').last().split(";").at(index).toStdString().c_str());
 						}
-					}
-					else if(key.compare(Settings::kNearestNeighbor_1Strategy()) == 0)
-					{
-						if(index <= 4)
+#endif
+#if FINDOBJECT_TORCH == 0
+						if(index == 11)
 						{
-							index = Settings::defaultNearestNeighbor_1Strategy().split(':').first().toInt();
-							UWARN("Trying to set \"%s\" to one FLANN approach but Find-Object isn't built "
-									  "with the nonfree module from OpenCV and FLANN cannot be used "
-									  "with binary descriptors. Keeping default combo value: %s.",
-									  Settings::kNearestNeighbor_1Strategy().toStdString().c_str(),
-									  Settings::defaultNearestNeighbor_1Strategy().split(':').last().split(";").at(index).toStdString().c_str());
+							index = Settings::defaultFeature2D_2Descriptor().split(':').first().toInt();
+							UWARN("Trying to set \"%s\" to SuperPointTorch but Find-Object isn't built "
+								  "with the Torch. Keeping default combo value: %s.",
+								  Settings::kFeature2D_1Detector().toStdString().c_str(),
+								  Settings::defaultFeature2D_1Detector().split(':').last().split(";").at(index).toStdString().c_str());
 						}
+#endif
 					}
 					str = getParameter(key).toString();
 					str = QString::number(index)+":"+ str.split(':').back();
 					value = QVariant(str);
-#endif
 				}
 				loadedParameters.insert(key, value);
 				setParameter(key, value);
@@ -403,7 +417,7 @@ public:
 	: fast_(CVCUDA::FastFeatureDetector::create(
 			threshold,
 			nonmaxSuppression,
-			CVCUDA::FastFeatureDetector::TYPE_9_16,
+			cv::FastFeatureDetector::TYPE_9_16,
 			max_npoints))
 #endif
 #endif
@@ -614,10 +628,54 @@ private:
 #endif
 };
 
+#if FINDOBJECT_TORCH == 1
+class SuperPointTorch : public Feature2D
+{
+public:
+	SuperPointTorch(
+			const QString & modelPath,
+			float threshold = Settings::defaultFeature2D_SuperPointTorch_threshold(),
+			bool nms = Settings::defaultFeature2D_SuperPointTorch_NMS(),
+			int nmsRadius = Settings::defaultFeature2D_SuperPointTorch_NMS_radius(),
+			bool cuda = Settings::defaultFeature2D_SuperPointTorch_cuda())
+	{
+		superPoint_ = cv::Ptr<SPDetector>(new SPDetector(modelPath.toStdString(), threshold, nms, nmsRadius, cuda));
+	}
+
+	virtual ~SuperPointTorch() {}
+
+	virtual void detect(const cv::Mat & image,
+			std::vector<cv::KeyPoint> & keypoints,
+			const cv::Mat & mask = cv::Mat())
+	{
+		keypoints = superPoint_->detect(image);
+	}
+
+	virtual void compute( const cv::Mat& image,
+			std::vector<cv::KeyPoint>& keypoints,
+			cv::Mat& descriptors)
+	{
+		descriptors = superPoint_->compute(keypoints);
+	}
+
+	virtual void detectAndCompute( const cv::Mat& image,
+			std::vector<cv::KeyPoint>& keypoints,
+			cv::Mat& descriptors,
+			const cv::Mat & mask = cv::Mat())
+	{
+		keypoints = superPoint_->detect(image);
+		descriptors = superPoint_->compute(keypoints);
+	}
+private:
+	cv::Ptr<SPDetector> superPoint_;
+};
+#endif
+
 Feature2D * Settings::createKeypointDetector()
 {
 	Feature2D * feature2D = 0;
 	QString str = getFeature2D_1Detector();
+	UDEBUG("Type=%s", str.toStdString().c_str());
 	QStringList split = str.split(':');
 	if(split.size()==2)
 	{
@@ -638,6 +696,18 @@ Feature2D * Settings::createKeypointDetector()
 					index = Settings::defaultFeature2D_1Detector().split(':').first().toInt();
 					UERROR("Find-Object is not built with OpenCV nonfree module so "
 							"SIFT/SURF cannot be used! Using default \"%s\" instead.",
+							strategies.at(index).toStdString().c_str());
+
+				}
+#endif
+
+#if FINDOBJECT_TORCH == 0
+				//check for nonfree stuff
+				if(strategies.at(index).compare("SuperPointTorch") == 0)
+				{
+					index = Settings::defaultFeature2D_1Detector().split(':').first().toInt();
+					UERROR("Find-Object is not built with Torch so "
+							"SuperPointTorch cannot be used! Using default \"%s\" instead.",
 							strategies.at(index).toStdString().c_str());
 
 				}
@@ -948,6 +1018,18 @@ Feature2D * Settings::createKeypointDetector()
 					}
 				}
 #endif
+#if FINDOBJECT_TORCH == 1
+				else if(strategies.at(index).compare("SuperPointTorch") == 0)
+				{
+					feature2D = new SuperPointTorch(
+							getFeature2D_SuperPointTorch_modelPath(),
+							getFeature2D_SuperPointTorch_threshold(),
+							getFeature2D_SuperPointTorch_NMS(),
+							getFeature2D_SuperPointTorch_NMS_radius(),
+							getFeature2D_SuperPointTorch_cuda());
+					UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
+				}
+#endif
 			}
 		}
 	}
@@ -959,6 +1041,7 @@ Feature2D * Settings::createDescriptorExtractor()
 {
 	Feature2D * feature2D = 0;
 	QString str = getFeature2D_2Descriptor();
+	UDEBUG("Type=%s", str.toStdString().c_str());
 	QStringList split = str.split(':');
 	if(split.size()==2)
 	{
@@ -978,6 +1061,18 @@ Feature2D * Settings::createDescriptorExtractor()
 					index = Settings::defaultFeature2D_2Descriptor().split(':').first().toInt();
 					UERROR("Find-Object is not built with OpenCV nonfree module so "
 							"SIFT/SURF cannot be used! Using default \"%s\" instead.",
+							strategies.at(index).toStdString().c_str());
+
+				}
+#endif
+
+#if FINDOBJECT_TORCH == 0
+				//check for nonfree stuff
+				if(strategies.at(index).compare("SuperPointTorch") == 0)
+				{
+					index = Settings::defaultFeature2D_2Descriptor().split(':').first().toInt();
+					UERROR("Find-Object is not built with Torch so "
+							"SuperPointTorch cannot be used! Using default \"%s\" instead.",
 							strategies.at(index).toStdString().c_str());
 
 				}
@@ -1226,6 +1321,18 @@ Feature2D * Settings::createDescriptorExtractor()
 #endif
 						UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 					}
+				}
+#endif
+#if FINDOBJECT_TORCH == 1
+				else if(strategies.at(index).compare("SuperPointTorch") == 0)
+				{
+					feature2D = new SuperPointTorch(
+							getFeature2D_SuperPointTorch_modelPath(),
+							getFeature2D_SuperPointTorch_threshold(),
+							getFeature2D_SuperPointTorch_NMS(),
+							getFeature2D_SuperPointTorch_NMS_radius(),
+							getFeature2D_SuperPointTorch_cuda());
+					UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 				}
 #endif
 			}

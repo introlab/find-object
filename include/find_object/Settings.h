@@ -113,8 +113,8 @@ class FINDOBJECT_EXP Settings
 
 	//List format : [Index:item0;item1;item3;...]
 
-	PARAMETER_COND(Feature2D, 1Detector, QString, FINDOBJECT_NONFREE, "7:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK;AGAST;KAZE;AKAZE" , "4:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK;AGAST;KAZE;AKAZE", "Keypoint detector.");
-	PARAMETER_COND(Feature2D, 2Descriptor, QString, FINDOBJECT_NONFREE, "3:Brief;ORB;SIFT;SURF;BRISK;FREAK;KAZE;AKAZE;LUCID;LATCH;DAISY", "1:Brief;ORB;SIFT;SURF;BRISK;FREAK;KAZE;AKAZE;LUCID;LATCH;DAISY", "Keypoint descriptor.");
+	PARAMETER_COND(Feature2D, 1Detector, QString, FINDOBJECT_NONFREE, "7:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK;AGAST;KAZE;AKAZE;SuperPointTorch" , "4:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK;AGAST;KAZE;AKAZE;SuperPointTorch", "Keypoint detector.");
+	PARAMETER_COND(Feature2D, 2Descriptor, QString, FINDOBJECT_NONFREE, "3:Brief;ORB;SIFT;SURF;BRISK;FREAK;KAZE;AKAZE;LUCID;LATCH;DAISY;SuperPointTorch", "1:Brief;ORB;SIFT;SURF;BRISK;FREAK;KAZE;AKAZE;LUCID;LATCH;DAISY;SuperPointTorch", "Keypoint descriptor.");
 	PARAMETER(Feature2D, 3MaxFeatures, int, 0, "Maximum features per image. If the number of features extracted is over this threshold, only X features with the highest response are kept. 0 means all features are kept.");
 	PARAMETER(Feature2D, 4Affine, bool, false, "(ASIFT) Extract features on multiple affine transformations of the image.");
 	PARAMETER(Feature2D, 5AffineCount, int, 6, "(ASIFT) Higher the value, more affine transformations will be done.");
@@ -227,6 +227,12 @@ class FINDOBJECT_EXP Settings
 	PARAMETER(Feature2D, DAISY_q_hist, int, 8, "Amount of gradient orientations range division quantity.");
 	PARAMETER(Feature2D, DAISY_interpolation, bool, true, "Switch to disable interpolation for speed improvement at minor quality loss.");
 	PARAMETER(Feature2D, DAISY_use_orientation, bool, false, "Sample patterns using keypoints orientation, disabled by default.");
+
+	PARAMETER(Feature2D, SuperPointTorch_modelPath, QString, "", "[Required] Path to pre-trained weights Torch file of SuperPoint (*.pt).");
+	PARAMETER(Feature2D, SuperPointTorch_threshold, float, 0.2, "Detector response threshold to accept keypoint.");
+	PARAMETER(Feature2D, SuperPointTorch_NMS, bool,  true, "If true, non-maximum suppression is applied to detected keypoints.");
+	PARAMETER(Feature2D, SuperPointTorch_NMS_radius, int, 4, "[%s=true] Minimum distance (pixels) between keypoints");
+	PARAMETER(Feature2D, SuperPointTorch_cuda, bool, false, "Use Cuda device for Torch, otherwise CPU device is used by default.");
 
 	PARAMETER_COND(NearestNeighbor, 1Strategy, QString, FINDOBJECT_NONFREE, "1:Linear;KDTree;KMeans;Composite;Autotuned;Lsh;BruteForce", "6:Linear;KDTree;KMeans;Composite;Autotuned;Lsh;BruteForce", "Nearest neighbor strategy.");
 	PARAMETER_COND(NearestNeighbor, 2Distance_type, QString, FINDOBJECT_NONFREE, "0:EUCLIDEAN_L2;MANHATTAN_L1;MINKOWSKI;MAX;HIST_INTERSECT;HELLINGER;CHI_SQUARE_CS;KULLBACK_LEIBLER_KL;HAMMING", "1:EUCLIDEAN_L2;MANHATTAN_L1;MINKOWSKI;MAX;HIST_INTERSECT;HELLINGER;CHI_SQUARE_CS;KULLBACK_LEIBLER_KL;HAMMING", "Distance type.");
