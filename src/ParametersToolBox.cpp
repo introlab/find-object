@@ -346,7 +346,9 @@ void ParametersToolBox::addParameter(QVBoxLayout * layout,
 		if(key.compare(Settings::kFeature2D_1Detector()) == 0)
 		{
 #if FINDOBJECT_NONFREE == 0
+#if CV_MAJOR_VERSION < 4 || (CV_MAJOR_VERSION == 4 && CV_MINOR_VERSION < 3) // <4.3.0
 			widget->setItemData(5, 0, Qt::UserRole - 1); // disable SIFT
+#endif
 			widget->setItemData(7, 0, Qt::UserRole - 1); // disable SURF
 #endif
 #if CV_MAJOR_VERSION < 3
@@ -366,7 +368,9 @@ void ParametersToolBox::addParameter(QVBoxLayout * layout,
 		if(key.compare(Settings::kFeature2D_2Descriptor()) == 0)
 		{
 #if FINDOBJECT_NONFREE == 0
+#if CV_MAJOR_VERSION < 4 || (CV_MAJOR_VERSION == 4 && CV_MINOR_VERSION < 3) // <4.3.0
 			widget->setItemData(2, 0, Qt::UserRole - 1); // disable SIFT
+#endif
 			widget->setItemData(3, 0, Qt::UserRole - 1); // disable SURF
 #endif
 #if CV_MAJOR_VERSION < 3

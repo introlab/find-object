@@ -108,8 +108,10 @@ int main(int argc, char * argv[])
 		// detector = cv::Ptr(new cv::StarFeatureDetector());
 		// detector = cv::Ptr(new cv::SURF(600.0));
 		// detector = cv::Ptr(new cv::BRISK());
-#else
+#elif CV_MAJOR_VERSION < 4 || (CV_MAJOR_VERSION == 4 && CV_MINOR_VERSION < 3)
 		detector = cv::xfeatures2d::SIFT::create();
+#else // >= 4.3.0
+        detector = cv::SIFT::create();
 #endif
 		detector->detect(objectImg, objectKeypoints);
 		printf("Object: %d keypoints detected in %d ms\n", (int)objectKeypoints.size(), time.restart());
@@ -128,8 +130,10 @@ int main(int argc, char * argv[])
 		// extractor = cv::Ptr(new cv::SURF(600.0));
 		// extractor = cv::Ptr(new cv::BRISK());
 		// extractor = cv::Ptr(new cv::FREAK());
-#else
+#elif CV_MAJOR_VERSION < 4 || (CV_MAJOR_VERSION == 4 && CV_MINOR_VERSION < 3)
 		extractor = cv::xfeatures2d::SIFT::create();
+#else // >= 4.3.0
+        extractor = cv::SIFT::create();
 #endif
 		extractor->compute(objectImg, objectKeypoints, objectDescriptors);
 		printf("Object: %d descriptors extracted in %d ms\n", objectDescriptors.rows, time.restart());

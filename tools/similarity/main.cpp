@@ -121,7 +121,11 @@ int main(int argc, char * argv[])
 		////////////////////////////
 		// EXTRACT KEYPOINTS
 		////////////////////////////
+#if CV_MAJOR_VERSION < 4 || (CV_MAJOR_VERSION == 4 and CV_MINOR_VERSION < 3)
 		cv::Ptr<cv::xfeatures2d::SIFT> sift = cv::xfeatures2d::SIFT::create();
+#else
+        cv::Ptr<cv::SIFT> sift = cv::SIFT::create();
+#endif
 		sift->detect(objectImg, objectKeypoints);
 		sift->detect(sceneImg, sceneKeypoints);
 

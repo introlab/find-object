@@ -137,11 +137,22 @@ ParametersMap Settings::loadSettings(const QString & fileName)
 					int index = str.split(':').first().toInt();
 					if(key.compare(Settings::kFeature2D_1Detector()) == 0)
 					{
+#if CV_MAJOR_VERSION < 4 || (CV_MAJOR_VERSION == 4 && CV_MINOR_VERSION < 3)
 #if FINDOBJECT_NONFREE == 0
 						if(index == 5 || index == 7)
 						{
 							index = Settings::defaultFeature2D_1Detector().split(':').first().toInt();
 							UWARN("Trying to set \"%s\" to SIFT/SURF but Find-Object isn't built "
+								  "with the nonfree module from OpenCV. Keeping default combo value: %s.",
+								  Settings::kFeature2D_1Detector().toStdString().c_str(),
+								  Settings::defaultFeature2D_1Detector().split(':').last().split(";").at(index).toStdString().c_str());
+						}
+#endif
+#elif FINDOBJECT_NONFREE == 0
+                        if(index == 7)
+						{
+							index = Settings::defaultFeature2D_1Detector().split(':').first().toInt();
+							UWARN("Trying to set \"%s\" to SURF but Find-Object isn't built "
 								  "with the nonfree module from OpenCV. Keeping default combo value: %s.",
 								  Settings::kFeature2D_1Detector().toStdString().c_str(),
 								  Settings::defaultFeature2D_1Detector().split(':').last().split(";").at(index).toStdString().c_str());
@@ -160,11 +171,22 @@ ParametersMap Settings::loadSettings(const QString & fileName)
 					}
 					else if(key.compare(Settings::kFeature2D_2Descriptor()) == 0)
 					{
+#if CV_MAJOR_VERSION < 4 || (CV_MAJOR_VERSION == 4 && CV_MINOR_VERSION < 3)
 #if FINDOBJECT_NONFREE == 0
 						if(index == 2 || index == 3)
 						{
 							index = Settings::defaultFeature2D_2Descriptor().split(':').first().toInt();
 							UWARN("Trying to set \"%s\" to SIFT/SURF but Find-Object isn't built "
+								  "with the nonfree module from OpenCV. Keeping default combo value: %s.",
+								  Settings::kFeature2D_2Descriptor().toStdString().c_str(),
+								  Settings::defaultFeature2D_2Descriptor().split(':').last().split(";").at(index).toStdString().c_str());
+						}
+#endif
+#elif FINDOBJECT_NONFREE == 0
+                        if(index == 3)
+						{
+							index = Settings::defaultFeature2D_2Descriptor().split(':').first().toInt();
+							UWARN("Trying to set \"%s\" to SURF but Find-Object isn't built "
 								  "with the nonfree module from OpenCV. Keeping default combo value: %s.",
 								  Settings::kFeature2D_2Descriptor().toStdString().c_str(),
 								  Settings::defaultFeature2D_2Descriptor().split(':').last().split(";").at(index).toStdString().c_str());
@@ -688,14 +710,25 @@ Feature2D * Settings::createKeypointDetector()
 			if(index>=0 && index<strategies.size())
 			{
 
+                //check for nonfree stuff
+#if CV_MAJOR_VERSION < 4 || (CV_MAJOR_VERSION == 4 && CV_MINOR_VERSION < 3)
 #if FINDOBJECT_NONFREE == 0
-				//check for nonfree stuff
 				if(strategies.at(index).compare("SIFT") == 0 ||
 				   strategies.at(index).compare("SURF") == 0)
 				{
 					index = Settings::defaultFeature2D_1Detector().split(':').first().toInt();
 					UERROR("Find-Object is not built with OpenCV nonfree module so "
 							"SIFT/SURF cannot be used! Using default \"%s\" instead.",
+							strategies.at(index).toStdString().c_str());
+
+				}
+#endif
+#elif FINDOBJECT_NONFREE == 0
+                if(strategies.at(index).compare("SURF") == 0)
+				{
+					index = Settings::defaultFeature2D_1Detector().split(':').first().toInt();
+					UERROR("Find-Object is not built with OpenCV nonfree module so "
+							"SURF cannot be used! Using default \"%s\" instead.",
 							strategies.at(index).toStdString().c_str());
 
 				}
@@ -964,6 +997,7 @@ Feature2D * Settings::createKeypointDetector()
 #endif
 					UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 				}
+#if CV_MAJOR_VERSION < 4 || (CV_MAJOR_VERSION == 4 && CV_MINOR_VERSION < 3) // <4.3.0
 #if FINDOBJECT_NONFREE == 1
 				else if(strategies.at(index).compare("SIFT") == 0)
 				{
@@ -1018,6 +1052,44 @@ Feature2D * Settings::createKeypointDetector()
 					}
 				}
 #endif
+#else // >= 4.3.0
+                else if(strategies.at(index).compare("SIFT") == 0)
+				{
+					feature2D = new Feature2D(cv::SIFT::create(
+							getFeature2D_SIFT_nfeatures(),
+							getFeature2D_SIFT_nOctaveLayers(),
+							getFeature2D_SIFT_contrastThreshold(),
+							getFeature2D_SIFT_edgeThreshold(),
+							getFeature2D_SIFT_sigma()));
+					UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
+				}
+#if FINDOBJECT_NONFREE == 1
+				else if(strategies.at(index).compare("SURF") == 0)
+				{
+					if(getFeature2D_SURF_gpu() && CVCUDA::getCudaEnabledDeviceCount())
+					{
+						feature2D = new GPUSURF(
+								getFeature2D_SURF_hessianThreshold(),
+								getFeature2D_SURF_nOctaves(),
+								getFeature2D_SURF_nOctaveLayers(),
+								getFeature2D_SURF_extended(),
+								getFeature2D_SURF_keypointsRatio(),
+								getFeature2D_SURF_upright());
+						UDEBUG("type=%s (GPU)", strategies.at(index).toStdString().c_str());
+					}
+					else
+					{
+						feature2D = new Feature2D(cv::xfeatures2d::SURF::create(
+							getFeature2D_SURF_hessianThreshold(),
+							getFeature2D_SURF_nOctaves(),
+							getFeature2D_SURF_nOctaveLayers(),
+							getFeature2D_SURF_extended(),
+							getFeature2D_SURF_upright()));
+						UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
+					}
+				}
+#endif
+#endif
 #if FINDOBJECT_TORCH == 1
 				else if(strategies.at(index).compare("SuperPointTorch") == 0)
 				{
@@ -1053,14 +1125,25 @@ Feature2D * Settings::createDescriptorExtractor()
 			if(index>=0 && index<strategies.size())
 			{
 
+                //check for nonfree stuff
+#if CV_MAJOR_VERSION < 4 || (CV_MAJOR_VERSION == 4 && CV_MINOR_VERSION < 3)
 #if FINDOBJECT_NONFREE == 0
-				//check for nonfree stuff
 				if(strategies.at(index).compare("SIFT") == 0 ||
 				   strategies.at(index).compare("SURF") == 0)
 				{
 					index = Settings::defaultFeature2D_2Descriptor().split(':').first().toInt();
 					UERROR("Find-Object is not built with OpenCV nonfree module so "
 							"SIFT/SURF cannot be used! Using default \"%s\" instead.",
+							strategies.at(index).toStdString().c_str());
+
+				}
+#endif
+#elif FINDOBJECT_NONFREE == 0 // >= 4.3.0
+                if(strategies.at(index).compare("SURF") == 0)
+				{
+					index = Settings::defaultFeature2D_2Descriptor().split(':').first().toInt();
+					UERROR("Find-Object is not built with OpenCV nonfree module so "
+							"SURF cannot be used! Using default \"%s\" instead.",
 							strategies.at(index).toStdString().c_str());
 
 				}
@@ -1269,6 +1352,7 @@ Feature2D * Settings::createDescriptorExtractor()
 					UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 				}
 #endif
+#if CV_MAJOR_VERSION < 4 || (CV_MAJOR_VERSION == 4 && CV_MINOR_VERSION < 3) // <4.3.0
 #if FINDOBJECT_NONFREE == 1
 				else if(strategies.at(index).compare("SIFT") == 0)
 				{
@@ -1323,6 +1407,45 @@ Feature2D * Settings::createDescriptorExtractor()
 					}
 				}
 #endif
+#else // >= 4.3.0
+                else if(strategies.at(index).compare("SIFT") == 0)
+				{
+					feature2D = new Feature2D(cv::SIFT::create(
+							getFeature2D_SIFT_nfeatures(),
+							getFeature2D_SIFT_nOctaveLayers(),
+							getFeature2D_SIFT_contrastThreshold(),
+							getFeature2D_SIFT_edgeThreshold(),
+							getFeature2D_SIFT_sigma()));
+					UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
+				}
+#if FINDOBJECT_NONFREE == 1
+				else if(strategies.at(index).compare("SURF") == 0)
+				{
+					if(getFeature2D_SURF_gpu() && CVCUDA::getCudaEnabledDeviceCount())
+					{
+						feature2D = new GPUSURF(
+								getFeature2D_SURF_hessianThreshold(),
+								getFeature2D_SURF_nOctaves(),
+								getFeature2D_SURF_nOctaveLayers(),
+								getFeature2D_SURF_extended(),
+								getFeature2D_SURF_keypointsRatio(),
+								getFeature2D_SURF_upright());
+						UDEBUG("type=%s (GPU)", strategies.at(index).toStdString().c_str());
+					}
+					else
+					{
+						feature2D = new Feature2D(cv::xfeatures2d::SURF::create(
+								getFeature2D_SURF_hessianThreshold(),
+								getFeature2D_SURF_nOctaves(),
+								getFeature2D_SURF_nOctaveLayers(),
+								getFeature2D_SURF_extended(),
+								getFeature2D_SURF_upright()));
+						UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
+					}
+				}
+#endif
+#endif
+
 #if FINDOBJECT_TORCH == 1
 				else if(strategies.at(index).compare("SuperPointTorch") == 0)
 				{
