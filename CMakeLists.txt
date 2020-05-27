@@ -380,7 +380,8 @@ ELSE()
    #############
    ## Mark other files for installation (e.g. launch and bag files, etc.)
    install(FILES
-      launch/find_object_2d_gui.launch
+      launch/find_object_3d_kinect2.launch
+      launch/find_object_3d_zed.launch
       launch/find_object_2d.launch
       launch/find_object_3d.launch
       DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
