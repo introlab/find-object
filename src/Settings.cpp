@@ -137,7 +137,7 @@ ParametersMap Settings::loadSettings(const QString & fileName)
 					int index = str.split(':').first().toInt();
 					if(key.compare(Settings::kFeature2D_1Detector()) == 0)
 					{
-#if CV_MAJOR_VERSION < 4 || (CV_MAJOR_VERSION == 4 && CV_MINOR_VERSION < 3)
+#if CV_MAJOR_VERSION < 4 || (CV_MAJOR_VERSION == 4 && (CV_MINOR_VERSION < 3 || (CV_MINOR_VERSION==3 && !defined(OPENCV_DEV))))
 #if FINDOBJECT_NONFREE == 0
 						if(index == 5 || index == 7)
 						{
@@ -171,7 +171,7 @@ ParametersMap Settings::loadSettings(const QString & fileName)
 					}
 					else if(key.compare(Settings::kFeature2D_2Descriptor()) == 0)
 					{
-#if CV_MAJOR_VERSION < 4 || (CV_MAJOR_VERSION == 4 && CV_MINOR_VERSION < 3)
+#if CV_MAJOR_VERSION < 4 || (CV_MAJOR_VERSION == 4 && (CV_MINOR_VERSION < 3 || (CV_MINOR_VERSION==3 && !defined(OPENCV_DEV))))
 #if FINDOBJECT_NONFREE == 0
 						if(index == 2 || index == 3)
 						{
@@ -711,7 +711,7 @@ Feature2D * Settings::createKeypointDetector()
 			{
 
                 //check for nonfree stuff
-#if CV_MAJOR_VERSION < 4 || (CV_MAJOR_VERSION == 4 && CV_MINOR_VERSION < 3)
+#if CV_MAJOR_VERSION < 4 || (CV_MAJOR_VERSION == 4 && (CV_MINOR_VERSION < 3 || (CV_MINOR_VERSION==3 && !defined(OPENCV_DEV))))
 #if FINDOBJECT_NONFREE == 0
 				if(strategies.at(index).compare("SIFT") == 0 ||
 				   strategies.at(index).compare("SURF") == 0)
@@ -997,7 +997,7 @@ Feature2D * Settings::createKeypointDetector()
 #endif
 					UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 				}
-#if CV_MAJOR_VERSION < 4 || (CV_MAJOR_VERSION == 4 && CV_MINOR_VERSION < 3) // <4.3.0
+#if CV_MAJOR_VERSION < 4 || (CV_MAJOR_VERSION == 4 && (CV_MINOR_VERSION < 3 || (CV_MINOR_VERSION==3 && !defined(OPENCV_DEV))))
 #if FINDOBJECT_NONFREE == 1
 				else if(strategies.at(index).compare("SIFT") == 0)
 				{
@@ -1052,7 +1052,7 @@ Feature2D * Settings::createKeypointDetector()
 					}
 				}
 #endif
-#else // >= 4.3.0
+#else // >= 4.3.0-dev
                 else if(strategies.at(index).compare("SIFT") == 0)
 				{
 					feature2D = new Feature2D(cv::SIFT::create(
@@ -1126,7 +1126,7 @@ Feature2D * Settings::createDescriptorExtractor()
 			{
 
                 //check for nonfree stuff
-#if CV_MAJOR_VERSION < 4 || (CV_MAJOR_VERSION == 4 && CV_MINOR_VERSION < 3)
+#if CV_MAJOR_VERSION < 4 || (CV_MAJOR_VERSION == 4 && (CV_MINOR_VERSION < 3 || (CV_MINOR_VERSION==3 && !defined(OPENCV_DEV))))
 #if FINDOBJECT_NONFREE == 0
 				if(strategies.at(index).compare("SIFT") == 0 ||
 				   strategies.at(index).compare("SURF") == 0)
@@ -1352,7 +1352,7 @@ Feature2D * Settings::createDescriptorExtractor()
 					UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 				}
 #endif
-#if CV_MAJOR_VERSION < 4 || (CV_MAJOR_VERSION == 4 && CV_MINOR_VERSION < 3) // <4.3.0
+#if CV_MAJOR_VERSION < 4 || (CV_MAJOR_VERSION == 4 && (CV_MINOR_VERSION < 3 || (CV_MINOR_VERSION==3 && !defined(OPENCV_DEV))))
 #if FINDOBJECT_NONFREE == 1
 				else if(strategies.at(index).compare("SIFT") == 0)
 				{
@@ -1407,7 +1407,7 @@ Feature2D * Settings::createDescriptorExtractor()
 					}
 				}
 #endif
-#else // >= 4.3.0
+#else // >= 4.3.0-dev
                 else if(strategies.at(index).compare("SIFT") == 0)
 				{
 					feature2D = new Feature2D(cv::SIFT::create(
