@@ -2,6 +2,7 @@
 	<!-- Example finding 3D poses of the objects detected -->
 	<!-- $ roslaunch zed_wrapper zed.launch -->
 
+    <arg name="zed_prefix"    default="/zed/zed_node"/>
 	<arg name="object_prefix" default="object"/>
 	<arg name="objects_path"  default=""/>
 	<arg name="gui"           default="true"/>
@@ -15,8 +16,8 @@
 		<param name="object_prefix" value="$(arg object_prefix)" type="str"/>
 		<param name="approx_sync" value="false" type="bool"/>
 		
-		<remap from="rgb/image_rect_color" to="/zed/rgb/image_rect_color"/>
-		<remap from="depth_registered/image_raw" to="/zed/depth/depth_registered"/>
-		<remap from="depth_registered/camera_info" to="/zed/rgb/camera_info"/>
+		<remap from="rgb/image_rect_color" to="$(arg zed_prefix)/rgb/image_rect_color"/>
+		<remap from="depth_registered/image_raw" to="$(arg zed_prefix)/depth/depth_registered"/>
+		<remap from="depth_registered/camera_info" to="$(arg zed_prefix)/rgb/camera_info"/>
 	</node>
 </launch>
