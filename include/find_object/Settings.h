@@ -112,9 +112,18 @@ class FINDOBJECT_EXP Settings
 	PARAMETER(Camera, 9queueSize, int, 1, "Maximum images buffered from TCP. If 0, all images are buffered.");
 
 	//List format : [Index:item0;item1;item3;...]
-
+#if CV_MAJOR_VERSION < 3 || (CV_MAJOR_VERSION == 4 && CV_MINOR_VERSION <= 3) || (CV_MAJOR_VERSION == 3 && (CV_MINOR_VERSION < 4 || (CV_MINOR_VERSION==4 && CV_SUBMINOR_VERSION<11)))
+#if CV_MAJOR_VERSION >= 3 // NONFREE=SURF, DEFAULT=KAZE
+	PARAMETER_COND(Feature2D, 1Detector, QString, FINDOBJECT_NONFREE, "7:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK;AGAST;KAZE;AKAZE;SuperPointTorch" , "10:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK;AGAST;KAZE;AKAZE;SuperPointTorch", "Keypoint detector.");
+	PARAMETER_COND(Feature2D, 2Descriptor, QString, FINDOBJECT_NONFREE, "3:Brief;ORB;SIFT;SURF;BRISK;FREAK;KAZE;AKAZE;LUCID;LATCH;DAISY;SuperPointTorch", "6:Brief;ORB;SIFT;SURF;BRISK;FREAK;KAZE;AKAZE;LUCID;LATCH;DAISY;SuperPointTorch", "Keypoint descriptor.");
+#else // NONFREE=SURF, DEFAULT=ORB
 	PARAMETER_COND(Feature2D, 1Detector, QString, FINDOBJECT_NONFREE, "7:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK;AGAST;KAZE;AKAZE;SuperPointTorch" , "4:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK;AGAST;KAZE;AKAZE;SuperPointTorch", "Keypoint detector.");
 	PARAMETER_COND(Feature2D, 2Descriptor, QString, FINDOBJECT_NONFREE, "3:Brief;ORB;SIFT;SURF;BRISK;FREAK;KAZE;AKAZE;LUCID;LATCH;DAISY;SuperPointTorch", "1:Brief;ORB;SIFT;SURF;BRISK;FREAK;KAZE;AKAZE;LUCID;LATCH;DAISY;SuperPointTorch", "Keypoint descriptor.");
+#endif
+#else // >=4.4 >=3.4.11: NONFREE=SURF, DEFAULT=SIFT
+	PARAMETER_COND(Feature2D, 1Detector, QString, FINDOBJECT_NONFREE, "7:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK;AGAST;KAZE;AKAZE;SuperPointTorch" , "5:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK;AGAST;KAZE;AKAZE;SuperPointTorch", "Keypoint detector.");
+	PARAMETER_COND(Feature2D, 2Descriptor, QString, FINDOBJECT_NONFREE, "3:Brief;ORB;SIFT;SURF;BRISK;FREAK;KAZE;AKAZE;LUCID;LATCH;DAISY;SuperPointTorch", "2:Brief;ORB;SIFT;SURF;BRISK;FREAK;KAZE;AKAZE;LUCID;LATCH;DAISY;SuperPointTorch", "Keypoint descriptor.");
+#endif
 	PARAMETER(Feature2D, 3MaxFeatures, int, 0, "Maximum features per image. If the number of features extracted is over this threshold, only X features with the highest response are kept. 0 means all features are kept.");
 	PARAMETER(Feature2D, 4Affine, bool, false, "(ASIFT) Extract features on multiple affine transformations of the image.");
 	PARAMETER(Feature2D, 5AffineCount, int, 6, "(ASIFT) Higher the value, more affine transformations will be done.");
@@ -234,8 +243,8 @@ class FINDOBJECT_EXP Settings
 	PARAMETER(Feature2D, SuperPointTorch_NMS_radius, int, 4, "[%s=true] Minimum distance (pixels) between keypoints");
 	PARAMETER(Feature2D, SuperPointTorch_cuda, bool, false, "Use Cuda device for Torch, otherwise CPU device is used by default.");
 
-	PARAMETER_COND(NearestNeighbor, 1Strategy, QString, FINDOBJECT_NONFREE, "1:Linear;KDTree;KMeans;Composite;Autotuned;Lsh;BruteForce", "6:Linear;KDTree;KMeans;Composite;Autotuned;Lsh;BruteForce", "Nearest neighbor strategy.");
-	PARAMETER_COND(NearestNeighbor, 2Distance_type, QString, FINDOBJECT_NONFREE, "0:EUCLIDEAN_L2;MANHATTAN_L1;MINKOWSKI;MAX;HIST_INTERSECT;HELLINGER;CHI_SQUARE_CS;KULLBACK_LEIBLER_KL;HAMMING", "1:EUCLIDEAN_L2;MANHATTAN_L1;MINKOWSKI;MAX;HIST_INTERSECT;HELLINGER;CHI_SQUARE_CS;KULLBACK_LEIBLER_KL;HAMMING", "Distance type.");
+	PARAMETER_COND(NearestNeighbor, 1Strategy, QString, FINDOBJECT_NONFREE || CV_MAJOR_VERSION >= 3, "1:Linear;KDTree;KMeans;Composite;Autotuned;Lsh;BruteForce", "6:Linear;KDTree;KMeans;Composite;Autotuned;Lsh;BruteForce", "Nearest neighbor strategy.");
+	PARAMETER_COND(NearestNeighbor, 2Distance_type, QString, FINDOBJECT_NONFREE || CV_MAJOR_VERSION >= 3, "0:EUCLIDEAN_L2;MANHATTAN_L1;MINKOWSKI;MAX;HIST_INTERSECT;HELLINGER;CHI_SQUARE_CS;KULLBACK_LEIBLER_KL;HAMMING", "1:EUCLIDEAN_L2;MANHATTAN_L1;MINKOWSKI;MAX;HIST_INTERSECT;HELLINGER;CHI_SQUARE_CS;KULLBACK_LEIBLER_KL;HAMMING", "Distance type.");
 	PARAMETER(NearestNeighbor, 3nndrRatioUsed, bool, true, "Nearest neighbor distance ratio approach to accept the best match.");
 	PARAMETER(NearestNeighbor, 4nndrRatio, float, 0.8f, "Nearest neighbor distance ratio.");
 	PARAMETER(NearestNeighbor, 5minDistanceUsed, bool, false, "Minimum distance with the nearest descriptor to accept a match.");

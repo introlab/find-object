@@ -137,7 +137,7 @@ ParametersMap Settings::loadSettings(const QString & fileName)
 					int index = str.split(':').first().toInt();
 					if(key.compare(Settings::kFeature2D_1Detector()) == 0)
 					{
-#if CV_MAJOR_VERSION < 4 || (CV_MAJOR_VERSION == 4 && (CV_MINOR_VERSION < 3 || (CV_MINOR_VERSION==3 && !defined(OPENCV_DEV))))
+#if CV_MAJOR_VERSION < 3 || (CV_MAJOR_VERSION == 4 && CV_MINOR_VERSION <= 3) || (CV_MAJOR_VERSION == 3 && (CV_MINOR_VERSION < 4 || (CV_MINOR_VERSION==4 && CV_SUBMINOR_VERSION<11)))
 #if FINDOBJECT_NONFREE == 0
 						if(index == 5 || index == 7)
 						{
@@ -171,7 +171,7 @@ ParametersMap Settings::loadSettings(const QString & fileName)
 					}
 					else if(key.compare(Settings::kFeature2D_2Descriptor()) == 0)
 					{
-#if CV_MAJOR_VERSION < 4 || (CV_MAJOR_VERSION == 4 && (CV_MINOR_VERSION < 3 || (CV_MINOR_VERSION==3 && !defined(OPENCV_DEV))))
+#if CV_MAJOR_VERSION < 3 || (CV_MAJOR_VERSION == 4 && CV_MINOR_VERSION <= 3) || (CV_MAJOR_VERSION == 3 && (CV_MINOR_VERSION < 4 || (CV_MINOR_VERSION==4 && CV_SUBMINOR_VERSION<11)))
 #if FINDOBJECT_NONFREE == 0
 						if(index == 2 || index == 3)
 						{
@@ -211,6 +211,32 @@ ParametersMap Settings::loadSettings(const QString & fileName)
 				setParameter(key, value);
 			}
 		}
+
+		//validate descriptors and nearest neighbor compatibilities
+		bool isBinaryDescriptor = currentDescriptorType().compare("ORB") == 0 ||
+								  currentDescriptorType().compare("Brief") == 0 ||
+								  currentDescriptorType().compare("BRISK") == 0 ||
+								  currentDescriptorType().compare("FREAK") == 0 ||
+								  currentDescriptorType().compare("AKAZE") == 0 ||
+								  currentDescriptorType().compare("LATCH") == 0 ||
+								  currentDescriptorType().compare("LUCID") == 0;
+		bool binToFloat = getNearestNeighbor_7ConvertBinToFloat();
+		if(isBinaryDescriptor && !binToFloat && currentNearestNeighborType().compare("Lsh") != 0 && currentNearestNeighborType().compare("BruteForce") != 0)
+		{
+			UWARN("Current selected descriptor type (\"%s\") is binary while nearest neighbor strategy is not (\"%s\").\n"
+				   "Falling back to \"BruteForce\" nearest neighbor strategy with Hamming distance (by default).",
+				   currentDescriptorType().toStdString().c_str(),
+				   currentNearestNeighborType().toStdString().c_str());
+			QString tmp = Settings::getNearestNeighbor_1Strategy();
+			*tmp.begin() = '6'; // set BruteForce
+			setNearestNeighbor_1Strategy(tmp);
+			loadedParameters.insert(Settings::kNearestNeighbor_1Strategy(), tmp);
+			tmp = Settings::getNearestNeighbor_2Distance_type();
+			*tmp.begin() = '8'; // set HAMMING
+			setNearestNeighbor_2Distance_type(tmp);
+			loadedParameters.insert(Settings::kNearestNeighbor_2Distance_type(), tmp);
+		}
+
 		UINFO("Settings loaded from %s.", path.toStdString().c_str());
 	}
 	else
@@ -711,7 +737,7 @@ Feature2D * Settings::createKeypointDetector()
 			{
 
                 //check for nonfree stuff
-#if CV_MAJOR_VERSION < 4 || (CV_MAJOR_VERSION == 4 && (CV_MINOR_VERSION < 3 || (CV_MINOR_VERSION==3 && !defined(OPENCV_DEV))))
+#if CV_MAJOR_VERSION < 3 || (CV_MAJOR_VERSION == 4 && CV_MINOR_VERSION <= 3) || (CV_MAJOR_VERSION == 3 && (CV_MINOR_VERSION < 4 || (CV_MINOR_VERSION==4 && CV_SUBMINOR_VERSION<11)))
 #if FINDOBJECT_NONFREE == 0
 				if(strategies.at(index).compare("SIFT") == 0 ||
 				   strategies.at(index).compare("SURF") == 0)
@@ -997,7 +1023,7 @@ Feature2D * Settings::createKeypointDetector()
 #endif
 					UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 				}
-#if CV_MAJOR_VERSION < 4 || (CV_MAJOR_VERSION == 4 && (CV_MINOR_VERSION < 3 || (CV_MINOR_VERSION==3 && !defined(OPENCV_DEV))))
+#if CV_MAJOR_VERSION < 3 || (CV_MAJOR_VERSION == 4 && CV_MINOR_VERSION <= 3) || (CV_MAJOR_VERSION == 3 && (CV_MINOR_VERSION < 4 || (CV_MINOR_VERSION==4 && CV_SUBMINOR_VERSION<11)))
 #if FINDOBJECT_NONFREE == 1
 				else if(strategies.at(index).compare("SIFT") == 0)
 				{
@@ -1126,7 +1152,7 @@ Feature2D * Settings::createDescriptorExtractor()
 			{
 
                 //check for nonfree stuff
-#if CV_MAJOR_VERSION < 4 || (CV_MAJOR_VERSION == 4 && (CV_MINOR_VERSION < 3 || (CV_MINOR_VERSION==3 && !defined(OPENCV_DEV))))
+#if CV_MAJOR_VERSION < 3 || (CV_MAJOR_VERSION == 4 && CV_MINOR_VERSION <= 3) || (CV_MAJOR_VERSION == 3 && (CV_MINOR_VERSION < 4 || (CV_MINOR_VERSION==4 && CV_SUBMINOR_VERSION<11)))
 #if FINDOBJECT_NONFREE == 0
 				if(strategies.at(index).compare("SIFT") == 0 ||
 				   strategies.at(index).compare("SURF") == 0)
@@ -1352,7 +1378,7 @@ Feature2D * Settings::createDescriptorExtractor()
 					UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 				}
 #endif
-#if CV_MAJOR_VERSION < 4 || (CV_MAJOR_VERSION == 4 && (CV_MINOR_VERSION < 3 || (CV_MINOR_VERSION==3 && !defined(OPENCV_DEV))))
+#if CV_MAJOR_VERSION < 3 || (CV_MAJOR_VERSION == 4 && CV_MINOR_VERSION <= 3) || (CV_MAJOR_VERSION == 3 && (CV_MINOR_VERSION < 4 || (CV_MINOR_VERSION==4 && CV_SUBMINOR_VERSION<11)))
 #if FINDOBJECT_NONFREE == 1
 				else if(strategies.at(index).compare("SIFT") == 0)
 				{
