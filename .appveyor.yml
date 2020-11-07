@@ -22,7 +22,7 @@ install:
   # make sure Qt bin path is before cmake bin path to avoid copying qt5 dlls from cmake before qt installation
   - set PATH=%QTDIR%\bin;%PATH%
   # OpenCV
-  - ps: wget 'http://kent.dl.sourceforge.net/project/opencvlibrary/opencv-win/3.4.1/opencv-3.4.1-vc14_vc15.exe' -outfile opencv-3.4.1-vc14_vc15.exe
+  - ps: $url = "http://kent.dl.sourceforge.net/project/opencvlibrary/opencv-win/3.4.1/opencv-3.4.1-vc14_vc15.exe?r=&ts="+([int64](([datetime]::UtcNow)-(get-date "1/1/1970")).TotalSeconds) ; wget $url -outfile opencv-3.4.1-vc14_vc15.exe
   - cmd: opencv-3.4.1-vc14_vc15.exe -o"C:\Program Files" -y
   - ECHO "Installed OpenCV:"
   - ps: "ls \"C:/Program Files/opencv/build\""
