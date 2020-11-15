@@ -121,7 +121,7 @@ int main(int argc, char * argv[])
 		////////////////////////////
 		// EXTRACT KEYPOINTS
 		////////////////////////////
-#if CV_MAJOR_VERSION < 4 || (CV_MAJOR_VERSION == 4 and CV_MINOR_VERSION < 3)
+#if (CV_MAJOR_VERSION == 4 && CV_MINOR_VERSION <= 3) || (CV_MAJOR_VERSION == 3 && (CV_MINOR_VERSION < 4 || (CV_MINOR_VERSION==4 && CV_SUBMINOR_VERSION<11)))
 		cv::Ptr<cv::xfeatures2d::SIFT> sift = cv::xfeatures2d::SIFT::create();
 #else
         cv::Ptr<cv::SIFT> sift = cv::SIFT::create();
