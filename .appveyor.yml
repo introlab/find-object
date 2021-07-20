@@ -22,12 +22,11 @@ install:
   # make sure Qt bin path is before cmake bin path to avoid copying qt5 dlls from cmake before qt installation
   - set PATH=%QTDIR%\bin;%PATH%
   # OpenCV
-  - ps: "[Net.ServicePointManager]::SecurityProtocol = 'Ssl3, Tls, Tls11, Tls12'"
-  - ps: $url = "https://downloads.sourceforge.net/project/opencvlibrary/opencv-win/3.4.1/opencv-3.4.1-vc14_vc15.exe?r=&ts="+([int64](([datetime]::UtcNow)-(get-date "1/1/1970")).TotalSeconds) ; wget $url -outfile opencv-3.4.1-vc14_vc15.exe
-  - cmd: opencv-3.4.1-vc14_vc15.exe -o"C:\Program Files" -y
+  - ps: wget 'https://dl.dropboxusercontent.com/s/o6ofn491bc0jso1/opencv450_vc14.exe?dl=0' -outfile opencv.exe
+  - cmd: opencv.exe -o"C:\Program Files" -y
   - ECHO "Installed OpenCV:"
-  - ps: "ls \"C:/Program Files/opencv/build\""
-  - set PATH=%PATH%;C:\Program Files\opencv\build\x64\vc14\bin
+  - ps: "ls \"C:/Program Files/opencv\""
+  - set PATH=%PATH%;C:\Program Files\opencv\x64\vc14\bin
   # zlib
   - ps: wget 'https://docs.google.com/uc?authuser=0&id=0B46akLGdg-uaYm9MTTI4MUtUcmc&export=download' -outfile zlib-1.2.8-vc2010-x64.zip
   - ps: Expand-Archive zlib-1.2.8-vc2010-x64.zip -DestinationPath 'C:\Program Files'
