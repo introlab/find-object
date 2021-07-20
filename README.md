@@ -1,5 +1,5 @@
 ## find-object (standalone) 
-Linux: [![Build Status](https://travis-ci.org/introlab/find-object.svg?branch=master)](https://travis-ci.org/introlab/find-object) Windows: [![Build status](https://ci.appveyor.com/api/projects/status/hn51r6p5c0peqctb/branch/master?svg=true)](https://ci.appveyor.com/project/matlabbe/find-object/branch/master)
+Linux: [![Build Status](https://travis-ci.com/introlab/find-object.svg?branch=master)](https://travis-ci.com/introlab/find-object) Windows: [![Build status](https://ci.appveyor.com/api/projects/status/hn51r6p5c0peqctb/branch/master?svg=true)](https://ci.appveyor.com/project/matlabbe/find-object/branch/master)
 
 Find-Object project, visit the [home page](http://introlab.github.io/find-object/) for more information.
 
