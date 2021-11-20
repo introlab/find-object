@@ -28,7 +28,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef INCLUDE_FIND_OBJECT_HEADER_H_
 #define INCLUDE_FIND_OBJECT_HEADER_H_
 
-#include <bits/stdint-uintn.h>
+#include <stdint.h>
 #include <QString>
 
 namespace find_object {
