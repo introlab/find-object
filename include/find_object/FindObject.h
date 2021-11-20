@@ -28,11 +28,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef FINDOBJECT_H_
 #define FINDOBJECT_H_
 
+#include <find_object/Header.h>
 #include "find_object/FindObjectExp.h" // DLL export/import defines
 
 #include "find_object/DetectionInfo.h"
 #include "find_object/Settings.h"
-
 #include <QtCore/QObject>
 #include <QtCore/QString>
 #include <QtCore/QMap>
@@ -92,10 +92,10 @@ public Q_SLOTS:
 	void addObjectAndUpdate(const cv::Mat & image, int id=0, const QString & filePath = QString());
 	void removeObjectAndUpdate(int id);
 	void detect(const cv::Mat & image); // emit objectsFound()
-	void detect(const cv::Mat & image, const QString & frameId, double stamp, const cv::Mat & depth, float depthConstant); // emit objectsFound()
+	void detect(const cv::Mat & image, const find_object::Header & header, const cv::Mat & depth, float depthConstant); // emit objectsFound()
 
 Q_SIGNALS:
-	void objectsFound(const find_object::DetectionInfo &, const QString &, double, const cv::Mat &, float);
+	void objectsFound(const find_object::DetectionInfo &, const find_object::Header &, const cv::Mat &, float);
 
 private:
 	void clearVocabulary();

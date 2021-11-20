@@ -52,10 +52,10 @@ FindObjectROS::FindObjectROS(QObject * parent) :
 	pubStamped_ = nh.advertise<find_object_2d::ObjectsStamped>("objectsStamped", 1);
 	pubInfo_ = nh.advertise<find_object_2d::DetectionInfo>("info", 1);
 
-	this->connect(this, SIGNAL(objectsFound(const find_object::DetectionInfo &, const QString &, double, const cv::Mat &, float)), this, SLOT(publish(const find_object::DetectionInfo &, const QString &, double, const cv::Mat &, float)));
+	this->connect(this, SIGNAL(objectsFound(const find_object::DetectionInfo &, const find_object::Header &, const cv::Mat &, float)), this, SLOT(publish(const find_object::DetectionInfo &, const find_object::Header &, const cv::Mat &, float)));
 }
 
-void FindObjectROS::publish(const find_object::DetectionInfo & info, const QString & frameId, double stamp, const cv::Mat & depth, float depthConstant)
+void FindObjectROS::publish(const find_object::DetectionInfo & info, const Header & header, const cv::Mat & depth, float depthConstant)
 {
 	// send tf before the message
 	if(info.objDetected_.size() && !depth.empty() && depthConstant != 0.0f)
@@ -116,8 +116,9 @@ void FindObjectROS::publish(const find_object::DetectionInfo & info, const QStri
 				tf::StampedTransform transform;
 				transform.setIdentity();
 				transform.child_frame_id_ = QString("%1_%2%3").arg(objFramePrefix_.c_str()).arg(id).arg(multiSuffix).toStdString();
-				transform.frame_id_ = frameId.toStdString();
-				transform.stamp_.fromSec(stamp);
+				transform.frame_id_ = header.frameId_.toStdString();
+				transform.stamp_.sec = header.sec_;
+				transform.stamp_.nsec = header.nsec_;
 
 				tf::Quaternion q;
 				if(usePnP_)
@@ -274,15 +275,17 @@ void FindObjectROS::publish(const find_object::DetectionInfo & info, const QStri
 		if(pubStamped_.getNumSubscribers())
 		{
 			// use same header as the input image (for synchronization and frame reference)
-			msgStamped.header.frame_id = frameId.toStdString();
-			msgStamped.header.stamp.fromSec(stamp);
+			msgStamped.header.frame_id = header.frameId_.toStdString();
+			msgStamped.header.stamp.sec = header.sec_;
+			msgStamped.header.stamp.nsec = header.nsec_;
 			pubStamped_.publish(msgStamped);
 		}
 		if(pubInfo_.getNumSubscribers())
 		{
 			// use same header as the input image (for synchronization and frame reference)
-			infoMsg.header.frame_id = frameId.toStdString();
-			infoMsg.header.stamp.fromSec(stamp);
+			infoMsg.header.frame_id = header.frameId_.toStdString();
+			infoMsg.header.stamp.sec = header.sec_;
+			infoMsg.header.stamp.nsec = header.nsec_;
 			pubInfo_.publish(infoMsg);
 		}
 	}

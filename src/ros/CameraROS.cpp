@@ -139,7 +139,7 @@ void CameraROS::imgReceivedCallback(const sensor_msgs::ImageConstPtr & msg)
 				image = cv_bridge::cvtColor(imgPtr, "bgr8")->image;
 			}
 
-			Q_EMIT imageReceived(image, QString(msg->header.frame_id.c_str()), msg->header.stamp.toSec(), cv::Mat(), 0.0f);
+			Q_EMIT imageReceived(image, Header(msg->header.frame_id.c_str(), msg->header.stamp.sec, msg->header.stamp.nsec), cv::Mat(), 0.0f);
 		}
 		catch(const cv_bridge::Exception & e)
 		{
@@ -180,7 +180,7 @@ void CameraROS::imgDepthReceivedCallback(
 				image = cv_bridge::cvtColor(imgPtr, "bgr8")->image;
 			}
 
-			Q_EMIT imageReceived(image, QString(rgbMsg->header.frame_id.c_str()), rgbMsg->header.stamp.toSec(), ptrDepth->image, depthConstant);
+			Q_EMIT imageReceived(image, Header(rgbMsg->header.frame_id.c_str(), rgbMsg->header.stamp.sec, rgbMsg->header.stamp.nsec), ptrDepth->image, depthConstant);
 		}
 		catch(const cv_bridge::Exception & e)
 		{

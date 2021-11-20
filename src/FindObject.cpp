@@ -57,6 +57,7 @@ FindObject::FindObject(bool keepImagesInRAM, QObject * parent) :
 	keepImagesInRAM_(keepImagesInRAM)
 {
 	qRegisterMetaType<find_object::DetectionInfo>("find_object::DetectionInfo");
+	qRegisterMetaType<find_object::Header>("find_object::Header");
 	UASSERT(detector_ != 0 && extractor_ != 0);
 
 	if(Settings::getGeneral_debug())
@@ -1383,10 +1384,10 @@ private:
 
 void FindObject::detect(const cv::Mat & image)
 {
-	detect(image, "", 0.0, cv::Mat(), 0.0);
+	detect(image, Header(), cv::Mat(), 0.0);
 }
 
-void FindObject::detect(const cv::Mat & image, const QString & frameId, double stamp, const cv::Mat & depth, float depthConstant)
+void FindObject::detect(const cv::Mat & image, const Header & header, const cv::Mat & depth, float depthConstant)
 {
 	QTime time;
 	time.start();
@@ -1416,7 +1417,7 @@ void FindObject::detect(const cv::Mat & image, const QString & frameId, double s
 
 	if(info.objDetected_.size() > 0 || Settings::getGeneral_sendNoObjDetectedEvents())
 	{
-		Q_EMIT objectsFound(info, frameId, stamp, depth, depthConstant);
+		Q_EMIT objectsFound(info, header, depth, depthConstant);
 	}
 }
 

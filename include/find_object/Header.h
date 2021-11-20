@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2011-2014, Mathieu Labbe - IntRoLab - Universite de Sherbrooke
+Copyright (c) 2011-2021, Mathieu Labbe - IntRoLab - Universite de Sherbrooke
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -25,67 +25,32 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef ADDOBJECTDIALOG_H_
-#define ADDOBJECTDIALOG_H_
+#ifndef INCLUDE_FIND_OBJECT_HEADER_H_
+#define INCLUDE_FIND_OBJECT_HEADER_H_
 
-#include <QDialog>
-#include <QtCore/QTimer>
-#include <opencv2/features2d/features2d.hpp>
-#include <opencv2/core/core.hpp>
-#include "find_object/Header.h"
-
-class Ui_addObjectDialog;
+#include <bits/stdint-uintn.h>
+#include <QString>
 
 namespace find_object {
 
-class ObjWidget;
-class Camera;
-class KeypointItem;
-class Feature2D;
-class ObjSignature;
-
-class AddObjectDialog : public QDialog {
-
-	Q_OBJECT
-
+class Header {
 public:
-	AddObjectDialog(Camera * camera, const cv::Mat & image, bool mirrorView, QWidget * parent = 0, Qt::WindowFlags f = 0);
-	virtual ~AddObjectDialog();
-
-	// ownership transferred to caller
-	void retrieveObject(ObjWidget ** widget, ObjSignature ** signature);
-
-private Q_SLOTS:
-	void update(const cv::Mat &);
-	void update(const cv::Mat &, const find_object::Header &, const cv::Mat &, float);
-	void next();
-	void back();
-	void cancel();
-	void takePicture();
-	void updateNextButton();
-	void updateNextButton(const cv::Rect &);
-	void changeSelectionMode();
-
-protected:
-	virtual void closeEvent(QCloseEvent* event);
-
-private:
-	void setState(int state);
-	cv::Rect computeROI(const std::vector<cv::KeyPoint> & kpts);
-private:
-	Ui_addObjectDialog * ui_;
-	Camera * camera_;
-	ObjWidget * objWidget_;
-	ObjSignature * objSignature_;
-	cv::Mat cameraImage_;
-	cv::Rect roi_;
-	Feature2D * detector_;
-	Feature2D * extractor_;
-
-	enum State{kTakePicture, kSelectFeatures, kVerifySelection, kClosing};
-	int state_;
+	Header() :
+		sec_(0),
+		nsec_(0)
+	{
+	}
+	Header(const char * frameId, uint64_t sec, uint64_t nsec) :
+		frameId_(frameId),
+		sec_(sec),
+		nsec_(nsec)
+	{
+	}
+	QString frameId_;
+	uint64_t sec_;
+	uint64_t nsec_;
 };
 
-} // namespace find_object
+}
 
-#endif /* ADDOBJECTDIALOG_H_ */
+#endif /* INCLUDE_FIND_OBJECT_HEADER_H_ */

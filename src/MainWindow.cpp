@@ -287,7 +287,7 @@ MainWindow::MainWindow(FindObject * findObject, Camera * camera, QWidget * paren
 MainWindow::~MainWindow()
 {
 	disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
-	disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &, const QString &, double, const cv::Mat &, float)), this, SLOT(update(const cv::Mat &, const QString &, double, const cv::Mat &, float)));
+	disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &, const find_object::Header &, const cv::Mat &, float)), this, SLOT(update(const cv::Mat &, const find_object::Header &, const cv::Mat &, float)));
 	disconnect(camera_, SIGNAL(finished()), this, SLOT(stopProcessing()));
 	camera_->stop();
 	qDeleteAll(objWidgets_);
@@ -351,7 +351,7 @@ void MainWindow::setupTCPServer()
 		delete tcpServer_;
 	}
 	tcpServer_ = new TcpServer(Settings::getGeneral_port(), this);
-	connect(this, SIGNAL(objectsFound(const find_object::DetectionInfo &, const QString &, double, const cv::Mat &, float)), tcpServer_, SLOT(publishDetectionInfo(find_object::DetectionInfo)));
+	connect(this, SIGNAL(objectsFound(const find_object::DetectionInfo &, const find_object::Header &, const cv::Mat &, float)), tcpServer_, SLOT(publishDetectionInfo(find_object::DetectionInfo)));
 	ui_->label_ipAddress->setText(tcpServer_->getHostAddress().toString());
 	ui_->label_port->setNum(tcpServer_->getPort());
 	UINFO("Detection sent on port: %d (IP=%s)", tcpServer_->getPort(), tcpServer_->getHostAddress().toString().toStdString().c_str());
@@ -786,7 +786,7 @@ void MainWindow::hideObjectsFeatures()
 void MainWindow::addObjectFromScene()
 {
 	disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
-	disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &, const QString &, double, const cv::Mat &, float)), this, SLOT(update(const cv::Mat &, const QString &, double, const cv::Mat &, float)));
+	disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &, const find_object::Header &, const cv::Mat &, float)), this, SLOT(update(const cv::Mat &, const find_object::Header &, const cv::Mat &, float)));
 	disconnect(camera_, SIGNAL(finished()), this, SLOT(stopProcessing()));
 	AddObjectDialog * dialog;
 	bool resumeCamera = camera_->isRunning();
@@ -822,7 +822,7 @@ void MainWindow::addObjectFromScene()
 	else
 	{
 		connect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)), Qt::UniqueConnection);
-		connect(camera_, SIGNAL(imageReceived(const cv::Mat &, const QString &, double, const cv::Mat &, float)), this, SLOT(update(const cv::Mat &, const QString &, double, const cv::Mat &, float)), Qt::UniqueConnection);
+		connect(camera_, SIGNAL(imageReceived(const cv::Mat &, const find_object::Header &, const cv::Mat &, float)), this, SLOT(update(const cv::Mat &, const find_object::Header &, const cv::Mat &, float)), Qt::UniqueConnection);
 		connect(camera_, SIGNAL(finished()), this, SLOT(stopProcessing()), Qt::UniqueConnection);
 		if(!sceneImage_.empty())
 		{
@@ -1167,7 +1167,7 @@ void MainWindow::startProcessing()
 	if(camera_->start())
 	{
 		connect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)), Qt::UniqueConnection);
-		connect(camera_, SIGNAL(imageReceived(const cv::Mat &, const QString &, double, const cv::Mat &, float)), this, SLOT(update(const cv::Mat &, const QString &, double, const cv::Mat &, float)), Qt::UniqueConnection);
+		connect(camera_, SIGNAL(imageReceived(const cv::Mat &, const find_object::Header &, const cv::Mat &, float)), this, SLOT(update(const cv::Mat &, const find_object::Header &, const cv::Mat &, float)), Qt::UniqueConnection);
 		connect(camera_, SIGNAL(finished()), this, SLOT(stopProcessing()), Qt::UniqueConnection);
 		ui_->actionStop_camera->setEnabled(true);
 		ui_->actionPause_camera->setEnabled(true);
@@ -1225,7 +1225,7 @@ void MainWindow::stopProcessing()
 	if(camera_)
 	{
 		disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
-		disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &, const QString &, double, const cv::Mat &, float)), this, SLOT(update(const cv::Mat &, const QString &, double, const cv::Mat &, float)));
+		disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &, const find_object::Header &, const cv::Mat &, float)), this, SLOT(update(const cv::Mat &, const find_object::Header &, const cv::Mat &, float)));
 		disconnect(camera_, SIGNAL(finished()), this, SLOT(stopProcessing()));
 		camera_->stop();
 	}
@@ -1290,10 +1290,10 @@ void MainWindow::rectHovered(int objId)
 
 void MainWindow::update(const cv::Mat & image)
 {
-	update(image, "", 0.0, cv::Mat(), 0.0);
+	update(image, Header(), cv::Mat(), 0.0);
 }
 
-void MainWindow::update(const cv::Mat & image, const QString & frameId, double stamp, const cv::Mat & depth, float depthConstant)
+void MainWindow::update(const cv::Mat & image, const Header & header, const cv::Mat & depth, float depthConstant)
 {
 	if(image.empty())
 	{
@@ -1559,7 +1559,7 @@ void MainWindow::update(const cv::Mat & image, const QString & frameId, double s
 
 		if(info.objDetected_.size() > 0 || Settings::getGeneral_sendNoObjDetectedEvents())
 		{
-			Q_EMIT objectsFound(info, frameId, stamp, depth, depthConstant);
+			Q_EMIT objectsFound(info, header, depth, depthConstant);
 		}
 		ui_->label_objectsDetected->setNum(info.objDetected_.size());
 	}

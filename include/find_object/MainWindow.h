@@ -31,6 +31,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "find_object/FindObjectExp.h" // DLL export/import defines
 
 #include "find_object/DetectionInfo.h"
+#include "find_object/Header.h"
 
 #include <QMainWindow>
 #include <QtCore/QSet>
@@ -80,7 +81,7 @@ public Q_SLOTS:
 	void stopProcessing();
 	void pauseProcessing();
 	void update(const cv::Mat & image);
-	void update(const cv::Mat & image, const QString & frameId, double stamp, const cv::Mat & depth, float depthConstant);
+	void update(const cv::Mat & image, const find_object::Header & header, const cv::Mat & depth, float depthConstant);
 
 private Q_SLOTS:
 	void loadSession();
@@ -114,7 +115,7 @@ private Q_SLOTS:
 	void rectHovered(int objId);
 
 Q_SIGNALS:
-	void objectsFound(const find_object::DetectionInfo &, const QString & frameId, double stamp, const cv::Mat & depth, float depthConstant);
+	void objectsFound(const find_object::DetectionInfo &, const find_object::Header & header, const cv::Mat & depth, float depthConstant);
 
 private:
 	bool loadSettings(const QString & path);

@@ -148,9 +148,9 @@ int main(int argc, char** argv)
 
 		QObject::connect(
 				&mainWindow,
-				SIGNAL(objectsFound(const find_object::DetectionInfo &, const QString &, double, const cv::Mat &, float)),
+				SIGNAL(objectsFound(const find_object::DetectionInfo &, const find_object::Header &, const cv::Mat &, float)),
 				findObjectROS,
-				SLOT(publish(const find_object::DetectionInfo &, const QString &, double, const cv::Mat &, float)));
+				SLOT(publish(const find_object::DetectionInfo &, const find_object::Header &, const cv::Mat &, float)));
 
 		QStringList topics = camera->subscribedTopics();
 		if(topics.size() == 1)
@@ -179,7 +179,7 @@ int main(int argc, char** argv)
 		QCoreApplication app(argc, argv);
 
 		// connect stuff:
-		QObject::connect(camera, SIGNAL(imageReceived(const cv::Mat &, const QString &, double, const cv::Mat &, float)), findObjectROS, SLOT(detect(const cv::Mat &, const QString &, double, const cv::Mat &, float)));
+		QObject::connect(camera, SIGNAL(imageReceived(const cv::Mat &, const find_object::Header &, const cv::Mat &, float)), findObjectROS, SLOT(detect(const cv::Mat &, const QString &, double, const cv::Mat &, float)));
 
 		//loop
 		camera->start();

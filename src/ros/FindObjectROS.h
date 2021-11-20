@@ -48,7 +48,7 @@ public:
 	virtual ~FindObjectROS() {}
 
 public Q_SLOTS:
-	void publish(const find_object::DetectionInfo & info, const QString & frameId, double stamp, const cv::Mat & depth, float depthConstant);
+	void publish(const find_object::DetectionInfo & info, const find_object::Header & header, const cv::Mat & depth, float depthConstant);
 
 private:
 	cv::Vec3f getDepth(const cv::Mat & depthImage,

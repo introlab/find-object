@@ -28,8 +28,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef CAMERA_H_
 #define CAMERA_H_
 
+#include <find_object/Header.h>
 #include "find_object/FindObjectExp.h" // DLL export/import defines
-
 #include <opencv2/highgui/highgui.hpp>
 #include <QtCore/QObject>
 #include <QtCore/QTimer>
@@ -57,7 +57,7 @@ public:
 
 Q_SIGNALS:
 	void imageReceived(const cv::Mat & image);
-	void imageReceived(const cv::Mat & image, const QString & frameId, double stamp, const cv::Mat & depth, float depthConstant);
+	void imageReceived(const cv::Mat & image, const find_object::Header & header, const cv::Mat & depth, float depthConstant);
 	void finished();
 
 public Q_SLOTS:

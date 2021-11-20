@@ -112,7 +112,7 @@ void AddObjectDialog::closeEvent(QCloseEvent* event)
 	if(camera_)
 	{
 		disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
-		disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &, const QString &, double, const cv::Mat &, float)), this, SLOT(update(const cv::Mat &, const QString &, double, const cv::Mat &, float)));
+		disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &, const find_object::Header &, const cv::Mat &, float)), this, SLOT(update(const cv::Mat &, const find_object::Header &, const cv::Mat &, float)));
 	}
 	QDialog::closeEvent(event);
 }
@@ -229,7 +229,7 @@ void AddObjectDialog::setState(int state)
 		else
 		{
 			connect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
-			connect(camera_, SIGNAL(imageReceived(const cv::Mat &, const QString &, double, const cv::Mat &, float)), this, SLOT(update(const cv::Mat &, const QString &, double, const cv::Mat &, float)));
+			connect(camera_, SIGNAL(imageReceived(const cv::Mat &, const find_object::Header &, const cv::Mat &, float)), this, SLOT(update(const cv::Mat &, const find_object::Header &, const cv::Mat &, float)));
 		}
 	}
 	else if(state == kSelectFeatures)
@@ -237,7 +237,7 @@ void AddObjectDialog::setState(int state)
 		if(camera_)
 		{
 			disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
-			disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &, const QString &, double, const cv::Mat &, float)), this, SLOT(update(const cv::Mat &, const QString &, double, const cv::Mat &, float)));
+			disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &, const find_object::Header &, const cv::Mat &, float)), this, SLOT(update(const cv::Mat &, const find_object::Header &, const cv::Mat &, float)));
 			camera_->pause();
 		}
 
@@ -268,7 +268,7 @@ void AddObjectDialog::setState(int state)
 		if(camera_)
 		{
 			disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &)), this, SLOT(update(const cv::Mat &)));
-			disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &, const QString &, double, const cv::Mat &, float)), this, SLOT(update(const cv::Mat &, const QString &, double, const cv::Mat &, float)));
+			disconnect(camera_, SIGNAL(imageReceived(const cv::Mat &, const find_object::Header &, const cv::Mat &, float)), this, SLOT(update(const cv::Mat &, const find_object::Header &, const cv::Mat &, float)));
 			camera_->pause();
 		}
 
@@ -302,7 +302,7 @@ void AddObjectDialog::setState(int state)
 				roi_ = computeROI(selectedKeypoints);
 			}
 
-			cv::Mat imgRoi(cameraImage_, roi_);
+			cv::Mat imgRoi = cv::Mat(cameraImage_, roi_).clone();
 
 			if(ui_->comboBox_selection->currentIndex() == 1)
 			{
@@ -321,7 +321,7 @@ void AddObjectDialog::setState(int state)
 				selectedKeypoints.clear();
 				detector_->detect(imgRoi, selectedKeypoints);
 			}
-			ui_->objectView->updateImage(cvtCvMat2QImage(imgRoi.clone()));
+			ui_->objectView->updateImage(cvtCvMat2QImage(imgRoi));
 			ui_->objectView->updateData(selectedKeypoints, QMultiMap<int,int>());
 			ui_->objectView->setMinimumSize(roi_.width, roi_.height);
 			ui_->objectView->update();
@@ -345,7 +345,14 @@ void AddObjectDialog::setState(int state)
 			if(keypoints.size())
 			{
 				// Extract descriptors
-				extractor_->compute(imgRoi, keypoints, descriptors);
+				if(Settings::currentDetectorType() == Settings::currentDescriptorType())
+				{
+					detector_->compute(imgRoi, keypoints, descriptors);
+				}
+				else
+				{
+					extractor_->compute(imgRoi, keypoints, descriptors);
+				}
 
 				if(keypoints.size() != (unsigned int)descriptors.rows)
 				{
@@ -374,10 +381,10 @@ void AddObjectDialog::setState(int state)
 
 void AddObjectDialog::update(const cv::Mat & image)
 {
-	update(image, "", 0.0, cv::Mat(), 0.0);
+	update(image, Header(), cv::Mat(), 0.0);
 }
 
-void AddObjectDialog::update(const cv::Mat & image, const QString & frameId, double stamp, const cv::Mat & depth, float depthConstant)
+void AddObjectDialog::update(const cv::Mat & image, const Header & header, const cv::Mat & depth, float depthConstant)
 {
 	cameraImage_ = cv::Mat();
 	if(!image.empty())
