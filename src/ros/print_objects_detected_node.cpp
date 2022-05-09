@@ -155,7 +155,8 @@ int main(int argc, char** argv)
 	message_filters::Subscriber<find_object_2d::ObjectsStamped> objectsSub;
 	objectsSub.subscribe(nh, "objectsStamped", 1);
     message_filters::Synchronizer<MyExactSyncPolicy> exactSync(MyExactSyncPolicy(10), imageSub, objectsSub);
-    exactSync.registerCallback(boost::bind(&imageObjectsDetectedCallback, _1, _2));
+    exactSync.registerCallback(boost::bind(&imageObjectsDetectedCallback,
+        boost::placeholders::_1, boost::placeholders::_2));
 
     imagePub = it.advertise("image_with_objects", 1);
 
