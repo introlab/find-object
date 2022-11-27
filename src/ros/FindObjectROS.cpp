@@ -332,7 +332,7 @@ cv::Vec3f FindObjectROS::getDepth(const cv::Mat & depthImage,
 	else
 	{
 		depth = depthImage.at<float>(y,x);
-		isValid = std::isfinite(depth);
+		isValid = std::isfinite(depth) && depth > 0.0f;
 	}
 
 	// Check for invalid measurements
