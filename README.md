@@ -89,4 +89,4 @@ ros2 launch find_object_2d find_object_3d.launch.py \
 # Show 3D pose in camera frame:
 ros2 run find_object_2d tf_example
 ```
-
+See [find_object_2d](http://wiki.ros.org/find_object_2d) for more information (same parameters/topics are used between ROS1 and ROS2 versions).
