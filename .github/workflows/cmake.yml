@@ -2,11 +2,9 @@ name: CMake
 
 on:
   push:
-    branches: 
-      - '**'
+    branches: [ master ]
   pull_request:
-    branches: 
-      - '**'
+    branches: [ master ]
 
 env:
   BUILD_TYPE: Release
@@ -24,7 +22,7 @@ jobs:
       run: |
         DEBIAN_FRONTEND=noninteractive
         sudo apt-get update
-        sudo apt-get -y install libopencv-dev git cmake software-properties-common
+        sudo apt-get -y install libopencv-dev qtbase5-dev git cmake software-properties-common
 
     - uses: actions/checkout@v2
 
