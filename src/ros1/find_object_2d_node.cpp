@@ -25,9 +25,8 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "CameraROS.h"
-#include "FindObjectROS.h"
-
+#include <ros1/CameraROS.h>
+#include <ros1/FindObjectROS.h>
 #include <QApplication>
 #include <QDir>
 #include "find_object/MainWindow.h"

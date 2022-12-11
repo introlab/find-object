@@ -26,7 +26,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "FindObjectROS.h"
-
 #include <std_msgs/Float32MultiArray.h>
 #include "find_object_2d/ObjectsStamped.h"
 #include "find_object_2d/DetectionInfo.h"

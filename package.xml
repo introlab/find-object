@@ -1,38 +1,51 @@
 <?xml version="1.0"?>
-<package>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
   <name>find_object_2d</name>
   <version>0.6.4</version>
   <description>The find_object_2d package</description>
-
   <maintainer email="matlabbe@gmail.com">Mathieu Labbe</maintainer>
+  <author>Mathieu Labbe</author>
   <license>BSD</license>
-  <url type="website">http://find-object.googlecode.com</url>
-  <author email="matlabbe@gmail.com">Mathieu Labbe</author>
+  <url type="bugtracker">https://github.com/introlab/find-object/issues</url>
+  <url type="repository">https://github.com/introlab/find-object</url>
 
-  <buildtool_depend>catkin</buildtool_depend>
+  <buildtool_depend condition="$ROS_VERSION == 1">catkin</buildtool_depend>
+  <buildtool_depend condition="$ROS_VERSION == 2">ament_cmake</buildtool_depend>
+  
+  <depend condition="$ROS_VERSION == 1">roscpp</depend>
+  <depend condition="$ROS_VERSION == 1">tf</depend>
+  <depend condition="$ROS_VERSION == 2">rclcpp</depend>
+  <depend condition="$ROS_VERSION == 2">tf2</depend>
+  <depend condition="$ROS_VERSION == 2">tf2_ros</depend>
+  
+  <build_depend    condition="$ROS_VERSION == 2">ros_environment</build_depend>
+  <depend          condition="$ROS_VERSION == 2">builtin_interfaces</depend>
+  <build_depend    condition="$ROS_VERSION == 2">rosidl_default_generators</build_depend>
+  <exec_depend     condition="$ROS_VERSION == 2">rosidl_default_runtime</exec_depend>
+  <member_of_group condition="$ROS_VERSION == 2">rosidl_interface_packages</member_of_group>
  
-  <build_depend>message_generation</build_depend>
+  <build_depend condition="$ROS_VERSION == 1">message_generation</build_depend>
   <build_depend>qtbase5-dev</build_depend>
   <build_depend>cv_bridge</build_depend>
-  <build_depend>roscpp</build_depend>
-  <build_depend>rospy</build_depend>
   <build_depend>sensor_msgs</build_depend>
   <build_depend>std_msgs</build_depend>
   <build_depend>std_srvs</build_depend>
+  <build_depend>geometry_msgs</build_depend>
   <build_depend>image_transport</build_depend>
   <build_depend>message_filters</build_depend>
-  <build_depend>tf</build_depend>
   
-  <run_depend>message_runtime</run_depend>
-  <run_depend>qtbase5-dev</run_depend>
-  <run_depend>cv_bridge</run_depend>
-  <run_depend>roscpp</run_depend>
-  <run_depend>rospy</run_depend>
-  <run_depend>sensor_msgs</run_depend>
-  <run_depend>std_msgs</run_depend>
-  <run_depend>std_srvs</run_depend>
-  <run_depend>image_transport</run_depend>
-  <run_depend>message_filters</run_depend>
-  <run_depend>tf</run_depend>
+  <exec_depend condition="$ROS_VERSION == 1">message_runtime</exec_depend>
+  <exec_depend>qtbase5-dev</exec_depend>
+  <exec_depend>cv_bridge</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>std_srvs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>image_transport</exec_depend>
+  <exec_depend>message_filters</exec_depend>
   
+  <export>
+	<build_type condition="$ROS_VERSION == 2">ament_cmake</build_type>
+  </export>
 </package>
