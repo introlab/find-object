@@ -393,6 +393,7 @@ ELSE()
    ## DEPENDS: system dependencies of this project that dependent projects also need
    catkin_package(
      CATKIN_DEPENDS cv_bridge roscpp rospy sensor_msgs std_msgs image_transport message_filters tf message_runtime
+     DEPENDS OpenCV
    )
 
    ###########

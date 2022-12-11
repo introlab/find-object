@@ -96,12 +96,6 @@ SET(INCLUDE_DIRS
    ${CMAKE_CURRENT_BINARY_DIR} # for qt ui generated in binary dir
    ${ZLIB_INCLUDE_DIRS}
 )
-IF(CATKIN_BUILD)
-   SET(INCLUDE_DIRS
-      ${INCLUDE_DIRS}
-      ${catkin_INCLUDE_DIRS}
-   )
-ENDIF(CATKIN_BUILD)
 
 IF(QT4_FOUND)
     INCLUDE(${QT_USE_FILE})
@@ -139,6 +133,10 @@ ENDIF(TORCH_FOUND)
 
 #include files
 INCLUDE_DIRECTORIES(${INCLUDE_DIRS})
+
+IF(CATKIN_BUILD)
+   INCLUDE_DIRECTORIES(SYSTEM ${catkin_INCLUDE_DIRS})
+ENDIF(CATKIN_BUILD)
 
 # create a library from the source files
 ADD_LIBRARY(find_object ${SRC_FILES})
