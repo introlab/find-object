@@ -208,7 +208,7 @@ void FindObjectROS::publish(const find_object::DetectionInfo & info, const Heade
 			infoMsg.ids.resize(info.objDetected_.size());
 			infoMsg.widths.resize(info.objDetected_.size());
 			infoMsg.heights.resize(info.objDetected_.size());
-			infoMsg.filePaths.resize(info.objDetected_.size());
+			infoMsg.file_paths.resize(info.objDetected_.size());
 			infoMsg.inliers.resize(info.objDetected_.size());
 			infoMsg.outliers.resize(info.objDetected_.size());
 			infoMsg.homographies.resize(info.objDetected_.size());
@@ -252,7 +252,7 @@ void FindObjectROS::publish(const find_object::DetectionInfo & info, const Heade
 				infoMsg.ids[infoIndex].data = iter.key();
 				infoMsg.widths[infoIndex].data = iterSizes->width();
 				infoMsg.heights[infoIndex].data = iterSizes->height();
-				infoMsg.filePaths[infoIndex].data = iterFilePaths.value().toStdString();
+				infoMsg.file_paths[infoIndex].data = iterFilePaths.value().toStdString();
 				infoMsg.inliers[infoIndex].data = iterInliers.value();
 				infoMsg.outliers[infoIndex].data = iterOutliers.value();
 				infoMsg.homographies[infoIndex].data.resize(9);
