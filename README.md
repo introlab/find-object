@@ -1,5 +1,4 @@
 ## find-object (standalone) 
-Linux: [![Build Status](https://travis-ci.com/introlab/find-object.svg?branch=master)](https://travis-ci.com/introlab/find-object) Windows: [![Build status](https://ci.appveyor.com/api/projects/status/hn51r6p5c0peqctb/branch/master?svg=true)](https://ci.appveyor.com/project/matlabbe/find-object/branch/master)
 
 Find-Object project, visit the [home page](http://introlab.github.io/find-object/) for more information.
 
@@ -91,4 +90,21 @@ A RGB-D camera is required. Example with Realsense D400 camera:
  # Show 3D pose in camera frame:
  $ ros2 run find_object_2d tf_example
 ```
+
+## CI Latest
+
+  <table>
+    <tbody>
+        <tr>
+           <td>Linux</td>
+           <td><a href="https://github.com/introlab/find-object/actions/workflows/cmake.yml"><img src="https://github.com/introlab/find-object/actions/workflows/cmake.yml/badge.svg" alt="Build Status"/> <br> <a href="https://github.com/introlab/find-object/actions/workflows/ros1.yml"><img src="https://github.com/introlab/find-object/actions/workflows/ros1.yml/badge.svg" alt="Build Status"/> <br> <a href="https://github.com/introlab/find-object/actions/workflows/ros2.yml"><img src="https://github.com/introlab/find-object/actions/workflows/ros2.yml/badge.svg" alt="Build Status"/>
+           </td>
+        </tr>
+        <tr>
+           <td>Windows</td>
+           <td><a href="https://ci.appveyor.com/project/matlabbe/find-object/branch/master"><img src="https://ci.appveyor.com/api/projects/status/hn51r6p5c0peqctb/branch/master?svg=true" alt="Build Status"/>
+           </td>
+        </tr>
+     </tbody>
+  </table>
 
