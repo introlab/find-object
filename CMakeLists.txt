@@ -1,18 +1,33 @@
-cmake_minimum_required(VERSION 2.8.5)
+cmake_minimum_required(VERSION 3.5)
 
-# Detect if it is called by catkin
+SET(CATKIN_BUILD FALSE)
+SET(COLCON_BUILD FALSE)
+
+# Detect if it is called by catkin (ros1)
 IF(CATKIN_TOPLEVEL OR CATKIN_BUILD_BINARY_PACKAGE OR CATKIN_SKIP_TESTING OR CATKIN_ENABLE_TESTING OR CATKIN_DEVEL_PREFIX)
   SET(CATKIN_BUILD TRUE)
-ENDIF(CATKIN_TOPLEVEL OR CATKIN_BUILD_BINARY_PACKAGE OR CATKIN_SKIP_TESTING OR CATKIN_ENABLE_TESTING OR CATKIN_DEVEL_PREFIX)
+ELSE()
+  # Detect if it is called by colcon (ros2)
+  string(FIND ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR} POS)
+  IF(${POS} EQUAL -1)
+     SET(COLCON_BUILD TRUE)
+  ENDIF()
+ENDIF()
 
 MESSAGE(STATUS "CATKIN_BUILD=${CATKIN_BUILD}")
+MESSAGE(STATUS "COLCON_BUILD=${COLCON_BUILD}")
+SET(ROS_BUILD FALSE)
+IF(CATKIN_BUILD OR COLCON_BUILD)
+  SET(ROS_BUILD TRUE)
+ENDIF()
 
-IF(NOT CATKIN_BUILD)
+IF(NOT ROS_BUILD)
    #Standalone build
    PROJECT( Find-Object )
 ELSE()
-   #ROS catkin build
+   #ROS build
    PROJECT( find_object_2d )
+   MESSAGE(STATUS "ROS_DISTRO=$ENV{ROS_DISTRO}")
 ENDIF()
 
 # Catkin doesn't support multiarch library path, 
@@ -130,7 +145,7 @@ ENDIF()
 
 CONFIGURE_FILE(Version.h.in ${PROJECT_SOURCE_DIR}/include/${PROJECT_PREFIX}/Version.h)
 
-IF(NOT CATKIN_BUILD)
+IF(NOT ROS_BUILD)
    #Standalone build
    IF(WIN32 AND NOT MINGW)
        ADD_DEFINITIONS("-wd4251")
@@ -358,14 +373,14 @@ IF(NOT CATKIN_BUILD)
    ENDIF(APPLE)
    MESSAGE(STATUS "--------------------------------------------")
 
-ELSE()
+ELSEIF(CATKIN_BUILD)
    #ROS Catkin build
 
    ## Find catkin macros and libraries
    ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
    ## is used, also find other catkin packages
    find_package(catkin REQUIRED COMPONENTS 
-           cv_bridge roscpp rospy sensor_msgs std_msgs image_transport message_filters tf message_generation
+           cv_bridge roscpp sensor_msgs std_msgs image_transport message_filters tf message_generation
    )
 
    ## Generate messages in the 'msg' folder
@@ -392,7 +407,7 @@ ELSE()
    ## CATKIN_DEPENDS: catkin_packages dependent projects also need
    ## DEPENDS: system dependencies of this project that dependent projects also need
    catkin_package(
-     CATKIN_DEPENDS cv_bridge roscpp rospy sensor_msgs std_msgs image_transport message_filters tf message_runtime
+     CATKIN_DEPENDS cv_bridge roscpp sensor_msgs std_msgs image_transport message_filters tf message_runtime
      DEPENDS OpenCV
    )
 
@@ -405,12 +420,49 @@ ELSE()
    ## Install ##
    #############
    ## Mark other files for installation (e.g. launch and bag files, etc.)
-   install(FILES
-      launch/find_object_3d_kinect2.launch
-      launch/find_object_3d_zed.launch
-      launch/find_object_2d.launch
-      launch/find_object_3d.launch
+   install(DIRECTORY
+      launch/ros1
       DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
    )
+ELSE() # COLCON_BUILD
+   #ROS Colcon build
+
+   find_package(ament_cmake REQUIRED)
+   find_package(builtin_interfaces REQUIRED)
+   find_package(rosidl_default_generators REQUIRED)
+   find_package(rclcpp REQUIRED)
+   find_package(rclcpp_components REQUIRED)
+   find_package(cv_bridge REQUIRED)
+   find_package(sensor_msgs REQUIRED)
+   find_package(std_msgs REQUIRED)
+   find_package(image_transport REQUIRED)
+   find_package(message_filters REQUIRED)
+   find_package(tf2 REQUIRED)
+   find_package(tf2_ros REQUIRED)
+   find_package(tf2_geometry_msgs REQUIRED)
+   find_package(geometry_msgs REQUIRED)
+
+   ## Generate messages and services
+   rosidl_generate_interfaces(${PROJECT_NAME}
+      msg/ObjectsStamped.msg
+      msg/DetectionInfo.msg
+      DEPENDENCIES std_msgs sensor_msgs
+   )
+   ament_export_dependencies(rosidl_default_runtime)
+
+   ###########
+   ## Build ##
+   ###########
+   ADD_SUBDIRECTORY( src )
+
+   #############
+   ## Install ##
+   #############
+   install(DIRECTORY 
+      launch/ros2/.
+      DESTINATION share/${PROJECT_NAME}/launch
+   )
+
+   ament_package()
 ENDIF()
 

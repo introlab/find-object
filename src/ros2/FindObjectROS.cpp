@@ -27,30 +27,36 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "FindObjectROS.h"
 
-#include <std_msgs/Float32MultiArray.h>
-#include "find_object_2d/ObjectsStamped.h"
-#include "find_object_2d/DetectionInfo.h"
+#include <geometry_msgs/msg/transform_stamped.hpp>
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2/LinearMath/Vector3.h>
+#include <tf2/LinearMath/Matrix3x3.h>
+#ifdef PRE_ROS_HUMBLE
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#else
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#endif
 
 #include <cmath>
 
 using namespace find_object;
 
-FindObjectROS::FindObjectROS(QObject * parent) :
-	FindObject(true, parent),
+FindObjectROS::FindObjectROS(rclcpp::Node * node) :
+	FindObject(true),
+	node_(node),
 	objFramePrefix_("object"),
 	usePnP_(true)
 {
-	ros::NodeHandle pnh("~"); // public
-	pnh.param("object_prefix", objFramePrefix_, objFramePrefix_);
-	pnh.param("pnp", usePnP_, usePnP_);
-	ROS_INFO("object_prefix = %s", objFramePrefix_.c_str());
-	ROS_INFO("pnp = %s", usePnP_?"true":"false");
+	tfBroadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(node);
 
-	ros::NodeHandle nh; // public
+	objFramePrefix_ = node->declare_parameter("object_prefix", objFramePrefix_);
+	usePnP_ = node->declare_parameter("pnp", usePnP_);
+	RCLCPP_INFO(node->get_logger(), "object_prefix = %s", objFramePrefix_.c_str());
+	RCLCPP_INFO(node->get_logger(), "pnp = %s", usePnP_?"true":"false");
 
-	pub_ = nh.advertise<std_msgs::Float32MultiArray>("objects", 1);
-	pubStamped_ = nh.advertise<find_object_2d::ObjectsStamped>("objectsStamped", 1);
-	pubInfo_ = nh.advertise<find_object_2d::DetectionInfo>("info", 1);
+	pub_ = node->create_publisher<std_msgs::msg::Float32MultiArray>("objects", rclcpp::QoS(1).reliability((rmw_qos_reliability_policy_t)1));
+	pubStamped_ = node->create_publisher<find_object_2d::msg::ObjectsStamped>("objectsStamped", rclcpp::QoS(1).reliability((rmw_qos_reliability_policy_t)1));
+	pubInfo_ = node->create_publisher<find_object_2d::msg::DetectionInfo>("info", rclcpp::QoS(1).reliability((rmw_qos_reliability_policy_t)1));
 
 	this->connect(this, SIGNAL(objectsFound(const find_object::DetectionInfo &, const find_object::Header &, const cv::Mat &, float)), this, SLOT(publish(const find_object::DetectionInfo &, const find_object::Header &, const cv::Mat &, float)));
 }
@@ -60,7 +66,7 @@ void FindObjectROS::publish(const find_object::DetectionInfo & info, const Heade
 	// send tf before the message
 	if(info.objDetected_.size() && !depth.empty() && depthConstant != 0.0f)
 	{
-		std::vector<tf::StampedTransform> transforms;
+		std::vector<geometry_msgs::msg::TransformStamped> transforms;
 		char multiSubId = 'b';
 		int previousId = -1;
 		QMultiMap<int, QSize>::const_iterator iterSizes=info.objDetectedSizes_.constBegin();
@@ -113,14 +119,20 @@ void FindObjectROS::publish(const find_object::DetectionInfo & info, const Heade
 				 std::isfinite(axisEndX.val[0]) && std::isfinite(axisEndX.val[1]) && std::isfinite(axisEndX.val[2]) &&
 				 std::isfinite(axisEndY.val[0]) && std::isfinite(axisEndY.val[1]) && std::isfinite(axisEndY.val[2])))
 			{
-				tf::StampedTransform transform;
-				transform.setIdentity();
-				transform.child_frame_id_ = QString("%1_%2%3").arg(objFramePrefix_.c_str()).arg(id).arg(multiSuffix).toStdString();
-				transform.frame_id_ = header.frameId_.toStdString();
-				transform.stamp_.sec = header.sec_;
-				transform.stamp_.nsec = header.nsec_;
+				geometry_msgs::msg::TransformStamped transform;
+				transform.transform.rotation.x=0;
+				transform.transform.rotation.y=0;
+				transform.transform.rotation.z=0;
+				transform.transform.rotation.w=1;
+				transform.transform.translation.x=0;
+				transform.transform.translation.y=0;
+				transform.transform.translation.z=0;
+				transform.child_frame_id = QString("%1_%2%3").arg(objFramePrefix_.c_str()).arg(id).arg(multiSuffix).toStdString();
+				transform.header.frame_id = header.frameId_.toStdString();
+				transform.header.stamp.sec = header.sec_;
+				transform.header.stamp.nanosec = header.nsec_;
 
-				tf::Quaternion q;
+				tf2::Quaternion q;
 				if(usePnP_)
 				{
 					std::vector<cv::Point3f> objectPoints(4);
@@ -153,40 +165,43 @@ void FindObjectROS::publish(const find_object::DetectionInfo & info, const Heade
 
 					cv::Mat R;
 					cv::Rodrigues(rvec, R);
-					tf::Matrix3x3 rotationMatrix(
+					tf2::Matrix3x3 rotationMatrix(
 							R.at<double>(0,0), R.at<double>(0,1), R.at<double>(0,2),
 							R.at<double>(1,0), R.at<double>(1,1), R.at<double>(1,2),
 							R.at<double>(2,0), R.at<double>(2,1), R.at<double>(2,2));
 					rotationMatrix.getRotation(q);
-					transform.setOrigin(tf::Vector3(
-							tvec.at<double>(0)*(center3D.val[2]/tvec.at<double>(2)),
-							tvec.at<double>(1)*(center3D.val[2]/tvec.at<double>(2)),
-							tvec.at<double>(2)*(center3D.val[2]/tvec.at<double>(2))));
+					transform.transform.translation.x = tvec.at<double>(0)*(center3D.val[2]/tvec.at<double>(2));
+					transform.transform.translation.y = tvec.at<double>(1)*(center3D.val[2]/tvec.at<double>(2));
+					transform.transform.translation.z = tvec.at<double>(2)*(center3D.val[2]/tvec.at<double>(2));
 				}
 				else
 				{
-					tf::Vector3 xAxis(axisEndX.val[0] - center3D.val[0], axisEndX.val[1] - center3D.val[1], axisEndX.val[2] - center3D.val[2]);
+					tf2::Vector3 xAxis(axisEndX.val[0] - center3D.val[0], axisEndX.val[1] - center3D.val[1], axisEndX.val[2] - center3D.val[2]);
 					xAxis.normalize();
-					tf::Vector3 yAxis(axisEndY.val[0] - center3D.val[0], axisEndY.val[1] - center3D.val[1], axisEndY.val[2] - center3D.val[2]);
+					tf2::Vector3 yAxis(axisEndY.val[0] - center3D.val[0], axisEndY.val[1] - center3D.val[1], axisEndY.val[2] - center3D.val[2]);
 					yAxis.normalize();
-					tf::Vector3 zAxis = xAxis.cross(yAxis);
+					tf2::Vector3 zAxis = xAxis.cross(yAxis);
 					zAxis.normalize();
-					tf::Matrix3x3 rotationMatrix(
+					tf2::Matrix3x3 rotationMatrix(
 								xAxis.x(), yAxis.x() ,zAxis.x(),
 								xAxis.y(), yAxis.y(), zAxis.y(),
 								xAxis.z(), yAxis.z(), zAxis.z());
 					rotationMatrix.getRotation(q);
-					transform.setOrigin(tf::Vector3(center3D.val[0], center3D.val[1], center3D.val[2]));
+					transform.transform.translation.x = center3D.val[0];
+					transform.transform.translation.y = center3D.val[1];
+					transform.transform.translation.z = center3D.val[2];
 				}
 
-				// set x axis going front of the object, with z up and z left
-				q *= tf::createQuaternionFromRPY(CV_PI/2.0, CV_PI/2.0, 0);
-				transform.setRotation(q.normalized());
+				// set x axis going front of the object, with z up and y left
+				tf2::Quaternion q2;
+				q2.setRPY(CV_PI/2.0, CV_PI/2.0, 0);
+				q *= q2;
+				transform.transform.rotation = tf2::toMsg(q.normalized());
 				transforms.push_back(transform);
 			}
 			else
 			{
-				ROS_WARN("Object %d detected, center 2D at (%f,%f), but invalid depth, cannot set frame \"%s\"! "
+				RCLCPP_WARN(node_->get_logger(), "Object %d detected, center 2D at (%f,%f), but invalid depth, cannot set frame \"%s\"! "
 						 "(maybe object is too near of the camera or bad depth image)\n",
 						id,
 						center.x(), center.y(),
@@ -195,21 +210,21 @@ void FindObjectROS::publish(const find_object::DetectionInfo & info, const Heade
 		}
 		if(transforms.size())
 		{
-			tfBroadcaster_.sendTransform(transforms);
+			tfBroadcaster_->sendTransform(transforms);
 		}
 	}
 
-	if(pub_.getNumSubscribers() || pubStamped_.getNumSubscribers() || pubInfo_.getNumSubscribers())
+	if(pub_->get_subscription_count() || pubStamped_->get_subscription_count() || pubInfo_->get_subscription_count())
 	{
-		std_msgs::Float32MultiArray msg;
-		find_object_2d::ObjectsStamped msgStamped;
-		find_object_2d::DetectionInfo infoMsg;
-		if(pubInfo_.getNumSubscribers())
+		std_msgs::msg::Float32MultiArray msg;
+		find_object_2d::msg::ObjectsStamped msgStamped;
+		find_object_2d::msg::DetectionInfo infoMsg;
+		if(pubInfo_->get_subscription_count())
 		{
 			infoMsg.ids.resize(info.objDetected_.size());
 			infoMsg.widths.resize(info.objDetected_.size());
 			infoMsg.heights.resize(info.objDetected_.size());
-			infoMsg.filePaths.resize(info.objDetected_.size());
+			infoMsg.file_paths.resize(info.objDetected_.size());
 			infoMsg.inliers.resize(info.objDetected_.size());
 			infoMsg.outliers.resize(info.objDetected_.size());
 			infoMsg.homographies.resize(info.objDetected_.size());
@@ -217,7 +232,7 @@ void FindObjectROS::publish(const find_object::DetectionInfo & info, const Heade
 		msg.data = std::vector<float>(info.objDetected_.size()*12);
 		msgStamped.objects.data = std::vector<float>(info.objDetected_.size()*12);
 
-		ROS_ASSERT(info.objDetected_.size() == info.objDetectedSizes_.size() &&
+		Q_ASSERT(info.objDetected_.size() == info.objDetectedSizes_.size() &&
 				   info.objDetected_.size() == info.objDetectedFilePaths_.size() &&
 				   info.objDetected_.size() == info.objDetectedInliersCount_.size() &&
 				   info.objDetected_.size() == info.objDetectedOutliersCount_.size());
@@ -232,7 +247,7 @@ void FindObjectROS::publish(const find_object::DetectionInfo & info, const Heade
 			iter!=info.objDetected_.constEnd();
 			++iter, ++iterSizes, ++iterFilePaths, ++infoIndex, ++iterInliers, ++iterOutliers)
 		{
-			if(pub_.getNumSubscribers() || pubStamped_.getNumSubscribers())
+			if(pub_->get_subscription_count() || pubStamped_->get_subscription_count())
 			{
 				msg.data[i] = msgStamped.objects.data[i] = iter.key(); ++i;
 				msg.data[i] = msgStamped.objects.data[i] = iterSizes->width(); ++i;
@@ -248,12 +263,12 @@ void FindObjectROS::publish(const find_object::DetectionInfo & info, const Heade
 				msg.data[i] = msgStamped.objects.data[i] = iter->m33(); ++i;
 			}
 
-			if(pubInfo_.getNumSubscribers())
+			if(pubInfo_->get_subscription_count())
 			{
 				infoMsg.ids[infoIndex].data = iter.key();
 				infoMsg.widths[infoIndex].data = iterSizes->width();
 				infoMsg.heights[infoIndex].data = iterSizes->height();
-				infoMsg.filePaths[infoIndex].data = iterFilePaths.value().toStdString();
+				infoMsg.file_paths[infoIndex].data = iterFilePaths.value().toStdString();
 				infoMsg.inliers[infoIndex].data = iterInliers.value();
 				infoMsg.outliers[infoIndex].data = iterOutliers.value();
 				infoMsg.homographies[infoIndex].data.resize(9);
@@ -268,25 +283,25 @@ void FindObjectROS::publish(const find_object::DetectionInfo & info, const Heade
 				infoMsg.homographies[infoIndex].data[8] = iter->m33();
 			}
 		}
-		if(pub_.getNumSubscribers())
+		if(pub_->get_subscription_count())
 		{
-			pub_.publish(msg);
+			pub_->publish(msg);
 		}
-		if(pubStamped_.getNumSubscribers())
+		if(pubStamped_->get_subscription_count())
 		{
 			// use same header as the input image (for synchronization and frame reference)
 			msgStamped.header.frame_id = header.frameId_.toStdString();
 			msgStamped.header.stamp.sec = header.sec_;
-			msgStamped.header.stamp.nsec = header.nsec_;
-			pubStamped_.publish(msgStamped);
+			msgStamped.header.stamp.nanosec = header.nsec_;
+			pubStamped_->publish(msgStamped);
 		}
-		if(pubInfo_.getNumSubscribers())
+		if(pubInfo_->get_subscription_count())
 		{
 			// use same header as the input image (for synchronization and frame reference)
 			infoMsg.header.frame_id = header.frameId_.toStdString();
 			infoMsg.header.stamp.sec = header.sec_;
-			infoMsg.header.stamp.nsec = header.nsec_;
-			pubInfo_.publish(infoMsg);
+			infoMsg.header.stamp.nanosec = header.nsec_;
+			pubInfo_->publish(infoMsg);
 		}
 	}
 }
@@ -298,7 +313,7 @@ cv::Vec3f FindObjectROS::getDepth(const cv::Mat & depthImage,
 {
 	if(!(x >=0 && x<depthImage.cols && y >=0 && y<depthImage.rows))
 	{
-		ROS_ERROR("Point must be inside the image (x=%d, y=%d), image size=(%d,%d)",
+		RCLCPP_ERROR(node_->get_logger(), "Point must be inside the image (x=%d, y=%d), image size=(%d,%d)",
 				x, y,
 				depthImage.cols, depthImage.rows);
 		return cv::Vec3f(
