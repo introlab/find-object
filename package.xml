@@ -35,6 +35,7 @@
   <build_depend>geometry_msgs</build_depend>
   <build_depend>image_transport</build_depend>
   <build_depend>message_filters</build_depend>
+  <build_depend>zlib</build_depend>
   
   <exec_depend condition="$ROS_VERSION == 1">message_runtime</exec_depend>
   <exec_depend>qtbase5-dev</exec_depend>
@@ -45,6 +46,7 @@
   <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>image_transport</exec_depend>
   <exec_depend>message_filters</exec_depend>
+  <exec_depend>zlib</exec_depend>
   
   <export>
     <build_type condition="$ROS_VERSION == 1">catkin</build_type>
