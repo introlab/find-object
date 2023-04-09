@@ -21,13 +21,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        ros_distro: [foxy, galactic, humble]
+        ros_distro: [foxy, humble, rolling]
         include:
         - ros_distro: 'foxy'
           os: ubuntu-20.04
-        - ros_distro: 'galactic'
-          os: ubuntu-20.04
         - ros_distro: 'humble'
+          os: ubuntu-22.04
+        - ros_distro: 'rolling'
           os: ubuntu-22.04
 
     steps:   
