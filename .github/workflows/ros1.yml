@@ -20,12 +20,10 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-20.04, ubuntu-18.04]
+        os: [ubuntu-20.04]
         include:
         - os: ubuntu-20.04
           ros_distro: 'noetic'
-        - os: ubuntu-18.04
-          ros_distro: 'melodic'
 
     steps:   
     - uses: ros-tooling/setup-ros@v0.2
