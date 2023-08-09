@@ -119,7 +119,7 @@ IF(NOT MSVC)
 ENDIF()
 
 # look for Qt5 before Qt4
-FIND_PACKAGE(Qt5 COMPONENTS Widgets Core Gui Network QUIET)
+FIND_PACKAGE(Qt5 COMPONENTS Widgets Core Gui Network PrintSupport QUIET)
 IF(NOT Qt5_FOUND)
    FIND_PACKAGE(Qt4 COMPONENTS QtCore QtGui QtNetwork REQUIRED)
 ENDIF(NOT Qt5_FOUND)
