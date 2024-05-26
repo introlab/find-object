@@ -43,7 +43,6 @@ jobs:
         cd ${{github.workspace}}/catkin_ws/src
         catkin_init_workspace
         cd ..
-        catkin config --init --cmake-args -DSETUPTOOLS_DEB_LAYOUT=OFF -DCMAKE_C_FLAGS="-Wformat -Werror=format-security" -DCMAKE_CXX_FLAGS="-Wformat -Werror=format-security"
         catkin_make
         
     - uses: actions/checkout@v2
