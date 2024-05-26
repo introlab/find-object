@@ -34,6 +34,7 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get -y install ros-${{ matrix.ros_distro }}-cv-bridge qtbase5-dev
+        sudo pip3 uninstall empy --yes
         
     - name: Setup catkin workspace
       run: | 
@@ -42,6 +43,7 @@ jobs:
         cd ${{github.workspace}}/catkin_ws/src
         catkin_init_workspace
         cd ..
+        catkin config --init --cmake-args -DSETUPTOOLS_DEB_LAYOUT=OFF -DCMAKE_C_FLAGS="-Wformat -Werror=format-security" -DCMAKE_CXX_FLAGS="-Wformat -Werror=format-security"
         catkin_make
         
     - uses: actions/checkout@v2

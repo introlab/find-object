@@ -21,17 +21,17 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        ros_distro: [foxy, humble, rolling]
+        ros_distro: [humble, jazzy, rolling]
         include:
-        - ros_distro: 'foxy'
-          os: ubuntu-20.04
         - ros_distro: 'humble'
           os: ubuntu-22.04
+        - ros_distro: 'jazzy'
+          os: ubuntu-24.04
         - ros_distro: 'rolling'
-          os: ubuntu-22.04
+          os: ubuntu-24.04
 
     steps:   
-    - uses: ros-tooling/setup-ros@v0.4
+    - uses: ros-tooling/setup-ros@v0.6
       with:
         required-ros-distributions: ${{ matrix.ros_distro }}
     
