@@ -453,6 +453,10 @@ ELSE() # COLCON_BUILD
       DEPENDENCIES std_msgs sensor_msgs
    )
    ament_export_dependencies(rosidl_default_runtime)
+   
+   IF("$ENV{ROS_DISTRO}" STRLESS "iron")
+      add_definitions(-DPRE_ROS_IRON)
+   ENDIF()
 
    ###########
    ## Build ##

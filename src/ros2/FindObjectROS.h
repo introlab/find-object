@@ -29,7 +29,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define FINDOBJECTROS_H_
 
 #include <rclcpp/rclcpp.hpp>
+#ifdef PRE_ROS_IRON
 #include <cv_bridge/cv_bridge.h>
+#else
+#include <cv_bridge/cv_bridge.hpp>
+#endif
 #include <tf2_ros/transform_broadcaster.h>
 #include "find_object/FindObject.h"
 

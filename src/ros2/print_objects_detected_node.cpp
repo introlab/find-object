@@ -31,7 +31,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <message_filters/time_synchronizer.h>
 #include <image_transport/image_transport.hpp>
 #include <image_transport/subscriber_filter.hpp>
+#ifdef PRE_ROS_IRON
 #include <cv_bridge/cv_bridge.h>
+#else
+#include <cv_bridge/cv_bridge.hpp>
+#endif
 #include <opencv2/opencv.hpp>
 #include <QTransform>
 #include <QColor>
