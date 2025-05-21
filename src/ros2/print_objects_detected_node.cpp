@@ -27,8 +27,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <rclcpp/rclcpp.hpp>
 #include <find_object_2d/msg/objects_stamped.hpp>
-#include <message_filters/subscriber.h>
-#include <message_filters/time_synchronizer.h>
+#include <message_filters/subscriber.hpp>
+#include <message_filters/time_synchronizer.hpp>
 #include <image_transport/image_transport.hpp>
 #include <image_transport/subscriber_filter.hpp>
 #ifdef PRE_ROS_IRON
