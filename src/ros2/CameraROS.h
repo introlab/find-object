@@ -31,14 +31,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <rclcpp/rclcpp.hpp>
 #ifdef PRE_ROS_IRON
 #include <cv_bridge/cv_bridge.h>
+#include <message_filters/subscriber.h>
+#include <message_filters/synchronizer.h>
+#include <message_filters/sync_policies/approximate_time.h>
+#include <message_filters/sync_policies/exact_time.h>
 #else
 #include <cv_bridge/cv_bridge.hpp>
-#endif
-
 #include <message_filters/subscriber.hpp>
 #include <message_filters/synchronizer.hpp>
 #include <message_filters/sync_policies/approximate_time.hpp>
 #include <message_filters/sync_policies/exact_time.hpp>
+#endif
 
 #include <image_transport/image_transport.hpp>
 #include <image_transport/subscriber_filter.hpp>
