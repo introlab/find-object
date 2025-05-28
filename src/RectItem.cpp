@@ -81,7 +81,7 @@ void RectItem::showDescription()
 				//  Find the smaller angle
 				QLineF ab(rectH.at(a).x(), rectH.at(a).y(), rectH.at((a+1)%4).x(), rectH.at((a+1)%4).y());
 				QLineF cb(rectH.at((a+1)%4).x(), rectH.at((a+1)%4).y(), rectH.at((a+2)%4).x(), rectH.at((a+2)%4).y());
-				float angleTmp =  ab.angle(cb);
+				float angleTmp =  qMin(ab.angleTo(cb), cb.angleTo(ab));
 				if(angleTmp > 90.0f)
 				{
 					angleTmp  = 180.0f - angleTmp;

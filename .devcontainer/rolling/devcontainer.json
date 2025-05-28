@@ -1,0 +1,10 @@
+{
+    "image": "osrf/ros:rolling-desktop",
+    "customizations": {
+        "vscode": {
+          "extensions": ["ms-vscode.cpptools-themes", "ms-vscode.cmake-tools", "ms-vscode.cpptools-extension-pack"]
+        }
+      },
+    "workspaceMount": "source=${localWorkspaceFolder},target=/ros2_ws/src/find_object_2d,type=bind",
+    "workspaceFolder": "/ros2_ws"
+}

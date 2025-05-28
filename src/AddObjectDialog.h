@@ -49,7 +49,7 @@ class AddObjectDialog : public QDialog {
 	Q_OBJECT
 
 public:
-	AddObjectDialog(Camera * camera, const cv::Mat & image, bool mirrorView, QWidget * parent = 0, Qt::WindowFlags f = 0);
+	AddObjectDialog(Camera * camera, const cv::Mat & image, bool mirrorView, QWidget * parent = 0, Qt::WindowFlags f = Qt::WindowFlags());
 	virtual ~AddObjectDialog();
 
 	// ownership transferred to caller

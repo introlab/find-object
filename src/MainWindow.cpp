@@ -1126,7 +1126,7 @@ void MainWindow::updateVocabulary(const QList<int> & ids)
 {
 	this->statusBar()->showMessage(tr("Updating vocabulary..."));
 
-	QTime time;
+	QElapsedTimer time;
 	time.start();
 	findObject_->updateVocabulary(ids);
 
@@ -1144,7 +1144,7 @@ void MainWindow::updateVocabulary(const QList<int> & ids)
 		}
 	}
 
-	ui_->label_timeIndexing->setNum(time.elapsed());
+	ui_->label_timeIndexing->setNum((int)time.elapsed());
 	ui_->label_vocabularySize->setNum(findObject_->vocabulary()->size());
 	if(ids.size() && findObject_->vocabulary()->size() == 0 && Settings::getGeneral_vocabularyFixed() && Settings::getGeneral_invertedSearch())
 	{
@@ -1312,7 +1312,7 @@ void MainWindow::update(const cv::Mat & image, const Header & header, const cv::
 		}
 	}
 
-	QTime guiRefreshTime;
+	QElapsedTimer guiRefreshTime;
 
 	DetectionInfo info;
 	if(findObject_->detect(sceneImage_, info))
@@ -1621,7 +1621,7 @@ void MainWindow::update(const cv::Mat & image, const Header & header, const cv::
 		refreshStartTime_.start();
 	}
 
-	ui_->label_timeRefreshGUI->setNum(guiRefreshTime.elapsed());
+	ui_->label_timeRefreshGUI->setNum((int)guiRefreshTime.elapsed());
 }
 
 void MainWindow::notifyParametersChanged(const QStringList & paramChanged)

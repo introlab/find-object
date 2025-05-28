@@ -39,6 +39,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QtCore/QTime>
 #include <QtCore/QMap>
 #include <QtCore/QByteArray>
+#include <QElapsedTimer>
 
 #include <opencv2/opencv.hpp>
 
@@ -137,8 +138,8 @@ private:
 	rtabmap::PdfPlotCurve * inliersCurve_;
 	AboutDialog * aboutDialog_;
 	QMap<int, find_object::ObjWidget*> objWidgets_;
-	QTime updateRate_;
-	QTime refreshStartTime_;
+	QElapsedTimer updateRate_;
+	QElapsedTimer refreshStartTime_;
 	int lowestRefreshRate_;
 	bool objectsModified_;
 	QMap<int, QByteArray> imagesMap_;

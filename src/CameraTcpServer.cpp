@@ -82,7 +82,7 @@ QHostAddress CameraTcpServer::getHostAddress() const
 	{
 		if (ipAddressesList.at(i) != QHostAddress::LocalHost && ipAddressesList.at(i).toIPv4Address())
 		{
-			hostAddress = ipAddressesList.at(i).toString();
+			hostAddress = ipAddressesList.at(i);
 			break;
 		}
 	}

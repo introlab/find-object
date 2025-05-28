@@ -170,7 +170,7 @@ ENDIF(CATKIN_BUILD)
 ADD_LIBRARY(find_object ${SRC_FILES})
 # Linking with Qt libraries
 IF(Qt5_FOUND)
-    QT5_USE_MODULES(find_object Widgets Core Gui Network PrintSupport)
+    target_link_libraries(find_object Qt5::Core Qt5::Widgets Qt5::Gui Qt5::Network Qt5::PrintSupport)
 ENDIF(Qt5_FOUND)
 
 IF(NOT COLCON_BUILD)

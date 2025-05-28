@@ -54,9 +54,15 @@ FindObjectROS::FindObjectROS(rclcpp::Node * node) :
 	RCLCPP_INFO(node->get_logger(), "object_prefix = %s", objFramePrefix_.c_str());
 	RCLCPP_INFO(node->get_logger(), "pnp = %s", usePnP_?"true":"false");
 
+#ifdef PRE_ROS_IRON
 	pub_ = node->create_publisher<std_msgs::msg::Float32MultiArray>("objects", rclcpp::QoS(1).reliability((rmw_qos_reliability_policy_t)1));
 	pubStamped_ = node->create_publisher<find_object_2d::msg::ObjectsStamped>("objectsStamped", rclcpp::QoS(1).reliability((rmw_qos_reliability_policy_t)1));
 	pubInfo_ = node->create_publisher<find_object_2d::msg::DetectionInfo>("info", rclcpp::QoS(1).reliability((rmw_qos_reliability_policy_t)1));
+#else
+	pub_ = node->create_publisher<std_msgs::msg::Float32MultiArray>("objects", rclcpp::QoS(1).reliability(rclcpp::ReliabilityPolicy::Reliable));
+	pubStamped_ = node->create_publisher<find_object_2d::msg::ObjectsStamped>("objectsStamped", rclcpp::QoS(1).reliability(rclcpp::ReliabilityPolicy::Reliable));
+	pubInfo_ = node->create_publisher<find_object_2d::msg::DetectionInfo>("info", rclcpp::QoS(1).reliability(rclcpp::ReliabilityPolicy::Reliable));
+#endif
 
 	this->connect(this, SIGNAL(objectsFound(const find_object::DetectionInfo &, const find_object::Header &, const cv::Mat &, float)), this, SLOT(publish(const find_object::DetectionInfo &, const find_object::Header &, const cv::Mat &, float)));
 }

@@ -712,7 +712,7 @@ QPixmap ObjWidget::getSceneAsPixmap()
 	}
 	else
 	{
-		return QPixmap::grabWidget(this);
+		return this->grab();
 	}
 }
 

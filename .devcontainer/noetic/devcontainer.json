@@ -1,0 +1,10 @@
+{
+    "image": "ros:noetic-perception",
+    "customizations": {
+        "vscode": {
+          "extensions": ["ms-vscode.cpptools-themes", "ms-vscode.cmake-tools", "ms-vscode.cpptools-extension-pack"]
+        }
+      },
+    "workspaceMount": "source=${localWorkspaceFolder},target=/catkin_ws/src/find_object_2d,type=bind",
+    "workspaceFolder": "/catkin_ws"
+}

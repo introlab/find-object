@@ -17,7 +17,7 @@ class ImageDropWidget : public QWidget {
 	Q_OBJECT;
 
 public:
-	ImageDropWidget(QWidget *parent = 0, Qt::WindowFlags flags = 0);
+	ImageDropWidget(QWidget *parent = 0, Qt::WindowFlags flags = Qt::WindowFlags());
 	virtual ~ImageDropWidget();
 
 Q_SIGNALS:

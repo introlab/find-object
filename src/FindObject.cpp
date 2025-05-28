@@ -481,7 +481,7 @@ void computeFeatures(
 		int & timeDetection,
 		int & timeExtraction)
 {
-	QTime timeStep;
+	QElapsedTimer timeStep;
 	timeStep.start();
 	keypoints.clear();
 	descriptors = cv::Mat();
@@ -642,7 +642,7 @@ public:
 protected:
 	virtual void run()
 	{
-		QTime timeStep;
+		QElapsedTimer timeStep;
 		timeStep.start();
 		cv::Mat skewImage, skewMask, Ai;
 		FindObject::affineSkew(tilt_, phi_, image_, skewImage, skewMask, Ai);
@@ -738,11 +738,11 @@ public:
 protected:
 	virtual void run()
 	{
-		QTime time;
+		QElapsedTimer time;
 		time.start();
 		UDEBUG("Extracting descriptors from object %d...", objectId_);
 
-		QTime timeStep;
+		QElapsedTimer timeStep;
 		timeStep.start();
 
 		if(!Settings::getFeature2D_4Affine())
@@ -885,7 +885,7 @@ void FindObject::updateObjects(const QList<int> & ids)
 			threadCounts = objectsList.size();
 		}
 
-		QTime time;
+		QElapsedTimer time;
 		time.start();
 
 		if(objectsList.size())
@@ -1066,7 +1066,7 @@ void FindObject::updateVocabulary(const QList<int> & ids)
 		{
 			// Inverted index on (vocabulary)
 			sessionModified_ = true;
-			QTime time;
+			QElapsedTimer time;
 			time.start();
 			bool incremental = Settings::getGeneral_vocabularyIncremental() && !Settings::getGeneral_vocabularyFixed();
 			if(incremental)
@@ -1081,7 +1081,7 @@ void FindObject::updateVocabulary(const QList<int> & ids)
 			{
 				UINFO("Creating vocabulary...");
 			}
-			QTime localTime;
+			QElapsedTimer localTime;
 			localTime.start();
 			int updateVocabularyMinWords = Settings::getGeneral_vocabularyUpdateMinWords();
 			int addedWords = 0;
@@ -1389,7 +1389,7 @@ void FindObject::detect(const cv::Mat & image)
 
 void FindObject::detect(const cv::Mat & image, const Header & header, const cv::Mat & depth, float depthConstant)
 {
-	QTime time;
+	QElapsedTimer time;
 	time.start();
 	DetectionInfo info;
 	this->detect(image, info);
@@ -1423,7 +1423,7 @@ void FindObject::detect(const cv::Mat & image, const Header & header, const cv::
 
 bool FindObject::detect(const cv::Mat & image, find_object::DetectionInfo & info) const
 {
-	QTime totalTime;
+	QElapsedTimer totalTime;
 	totalTime.start();
 
 	// reset statistics
@@ -1478,7 +1478,7 @@ bool FindObject::detect(const cv::Mat & image, find_object::DetectionInfo & info
 		    consistentNNData)
 		{
 			success = true;
-			QTime time;
+			QElapsedTimer time;
 			time.start();
 
 			QMultiMap<int, int> words;
@@ -1567,7 +1567,7 @@ bool FindObject::detect(const cv::Mat & image, find_object::DetectionInfo & info
 						int wordId = results.at<int>(i,0);
 						if(Settings::getGeneral_invertedSearch())
 						{
-							info.sceneWords_.insertMulti(wordId, i);
+							info.sceneWords_.insert(wordId, i);
 							QList<int> objIds = vocabulary_->wordToObjects().values(wordId);
 							for(int j=0; j<objIds.size(); ++j)
 							{
@@ -1728,7 +1728,7 @@ bool FindObject::detect(const cv::Mat & image, find_object::DetectionInfo & info
 									//  Find the smaller angle
 									QLineF ab(rectH.at(a).x(), rectH.at(a).y(), rectH.at((a+1)%4).x(), rectH.at((a+1)%4).y());
 									QLineF cb(rectH.at((a+1)%4).x(), rectH.at((a+1)%4).y(), rectH.at((a+2)%4).x(), rectH.at((a+2)%4).y());
-									float angle =  ab.angle(cb);
+									float angle =  qMin(ab.angleTo(cb), cb.angleTo(ab));
 									float minAngle = (float)Settings::getHomography_minAngle();
 									if(angle < minAngle ||
 									   angle > 180.0-minAngle)
