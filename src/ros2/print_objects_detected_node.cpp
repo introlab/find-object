@@ -53,7 +53,7 @@ public:
 		imagePub_ = image_transport::create_publisher(this, "image_with_objects", rclcpp::QoS(1).reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE).get_rmw_qos_profile());
 
 		// Simple subscriber
-#ifdef PRE_ROS_IRON
+#ifdef PRE_ROS_KILTED
 		sub_ = create_subscription<std_msgs::msg::Float32MultiArray>("objects", rclcpp::QoS(1).reliability((rmw_qos_reliability_policy_t)1), std::bind(&PrintObjects::objectsDetectedCallback, this, std::placeholders::_1));
 #else
 		sub_ = create_subscription<std_msgs::msg::Float32MultiArray>("objects", rclcpp::QoS(1).reliability(rclcpp::ReliabilityPolicy::Reliable), std::bind(&PrintObjects::objectsDetectedCallback, this, std::placeholders::_1));
@@ -61,7 +61,7 @@ public:
 
 		// Synchronized image + objects example
 		imageSub_.subscribe(this, "image", hints.getTransport(), rclcpp::QoS(1).reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE).get_rmw_qos_profile());
-#ifdef PRE_ROS_IRON
+#ifdef PRE_ROS_KILTED
 		objectsSub_.subscribe(this, "objectsStamped", rclcpp::QoS(1).reliability((rmw_qos_reliability_policy_t)1).get_rmw_qos_profile());
 #else
 		objectsSub_.subscribe(this, "objectsStamped", rclcpp::QoS(1).reliability(rclcpp::ReliabilityPolicy::Reliable));

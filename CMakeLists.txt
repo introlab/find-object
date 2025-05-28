@@ -445,6 +445,9 @@ ELSE() # COLCON_BUILD
    IF("$ENV{ROS_DISTRO}" STRLESS "iron")
       add_definitions(-DPRE_ROS_IRON)
    ENDIF()
+   IF("$ENV{ROS_DISTRO}" STRLESS "kilted")
+      add_definitions(-DPRE_ROS_KILTED)
+   ENDIF()
 
    ###########
    ## Build ##

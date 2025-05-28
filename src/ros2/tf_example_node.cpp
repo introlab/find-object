@@ -49,7 +49,7 @@ public:
 		targetFrameId_ = this->declare_parameter("target_frame_id", targetFrameId_);
 		objFramePrefix_ = this->declare_parameter("object_prefix", objFramePrefix_);
 
-		#ifdef PRE_ROS_IRON
+#ifdef PRE_ROS_KILTED
 		subs_ = create_subscription<find_object_2d::msg::ObjectsStamped>("objectsStamped", rclcpp::QoS(5).reliability((rmw_qos_reliability_policy_t)1), std::bind(&TfExample::objectsDetectedCallback, this, std::placeholders::_1));
 #else
 		subs_ = create_subscription<find_object_2d::msg::ObjectsStamped>("objectsStamped", rclcpp::QoS(5).reliability(rclcpp::ReliabilityPolicy::Reliable), std::bind(&TfExample::objectsDetectedCallback, this, std::placeholders::_1));
