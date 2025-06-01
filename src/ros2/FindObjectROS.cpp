@@ -28,9 +28,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "FindObjectROS.h"
 
 #include <geometry_msgs/msg/transform_stamped.hpp>
+#ifdef PRE_ROS_KILTED
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/LinearMath/Vector3.h>
 #include <tf2/LinearMath/Matrix3x3.h>
+#else
+#include <tf2/LinearMath/Quaternion.hpp>
+#include <tf2/LinearMath/Vector3.hpp>
+#include <tf2/LinearMath/Matrix3x3.hpp>
+#endif
 #ifdef PRE_ROS_HUMBLE
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #else
