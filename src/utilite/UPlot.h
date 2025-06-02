@@ -34,7 +34,7 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QtCore/QTime>
-#include <QElapsedTimer>
+#include <QtCore/QElapsedTimer>
 
 class QGraphicsView;
 class QGraphicsScene;

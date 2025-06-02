@@ -74,12 +74,15 @@ IF(NOT ${matchres} EQUAL -1)
 ENDIF(NOT ${matchres} EQUAL -1)
 
 # For SuperPoint
+OPTION( WITH_TORCH "Include torch dependency (for superpoint)" ON )
 SET(TORCH 0)
-FIND_PACKAGE(Torch QUIET)
-IF(TORCH_FOUND)
-    MESSAGE(STATUS "Found Torch: ${TORCH_INCLUDE_DIRS}")
-    SET(TORCH 1)
-ENDIF(TORCH_FOUND)
+IF(WITH_TORCH)
+  FIND_PACKAGE(Torch QUIET)
+  IF(TORCH_FOUND)
+      MESSAGE(STATUS "Found Torch: ${TORCH_INCLUDE_DIRS}")
+      SET(TORCH 1)
+  ENDIF(TORCH_FOUND)
+ENDIF(WITH_TORCH)
 
 IF(NOT MSVC)
     # Latest ROS rolling requires c++17

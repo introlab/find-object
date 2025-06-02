@@ -39,7 +39,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QtCore/QTime>
 #include <QtCore/QMap>
 #include <QtCore/QByteArray>
-#include <QElapsedTimer>
+#include <QtCore/QElapsedTimer>
 
 #include <opencv2/opencv.hpp>
 

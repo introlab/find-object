@@ -38,6 +38,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QtCore/QFileInfo>
 #include <QtCore/QStringList>
 #include <QtCore/QTime>
+#include <QtCore/QElapsedTimer>
 #include <QtCore/QDir>
 #include <QGraphicsRectItem>
 #include <stdio.h>
