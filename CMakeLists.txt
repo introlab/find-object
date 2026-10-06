@@ -74,7 +74,7 @@ IF(NOT ${matchres} EQUAL -1)
 ENDIF(NOT ${matchres} EQUAL -1)
 
 # For SuperPoint
-OPTION( WITH_TORCH "Include torch dependency (for superpoint)" ON )
+OPTION( WITH_TORCH "Include torch dependency (for superpoint)" OFF )
 SET(TORCH 0)
 IF(WITH_TORCH)
   FIND_PACKAGE(Torch QUIET)
