@@ -174,7 +174,7 @@ IF((APPLE AND BUILD_AS_BUNDLE) OR WIN32)
   # directories to look for dependencies
   SET(DIRS ${QT_LIBRARY_DIRS} ${PROJECT_SOURCE_DIR}/bin)
   IF(APPLE)
-    SET(DIRS ${DIRS} /usr/local /usr/local/lib /opt/homebrew /opt/homebrew/lib)
+    SET(DIRS ${DIRS} /usr/local /usr/local/lib /opt/homebrew /opt/homebrew/lib /opt/homebrew/lib/gcc/current)
   ENDIF(APPLE)
 
   # Now the work of copying dependencies into the bundle/package
@@ -185,6 +185,8 @@ IF((APPLE AND BUILD_AS_BUNDLE) OR WIN32)
   # To find dependencies, cmake use "otool" on Apple and "dumpbin" on Windows (make sure you have one of them).
   install(CODE "
    file(GLOB_RECURSE QTPLUGINS \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${plugin_dest_dir}/plugins/*${CMAKE_SHARED_LIBRARY_SUFFIX}\")
+    # Homebrew libraries are read-only, make the copies writable so they can be fixed up
+    set(BU_CHMOD_BUNDLE_ITEMS ON)
     include(\"BundleUtilities\")
     fixup_bundle(\"${APPS}\" \"\${QTPLUGINS}\" \"${DIRS}\")
   " COMPONENT runtime)
