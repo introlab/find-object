@@ -408,7 +408,7 @@ int main(int argc, char* argv[])
 				++i;
 				if(i < argc)
 				{
-					customParameters.insert(name, argv[i]);
+					customParameters.insert(name, QString(argv[i]));
 				}
 				else
 				{
