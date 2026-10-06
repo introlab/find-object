@@ -48,9 +48,17 @@ public:
 	PrintObjects() :
 		Node("objects_detected")
 	{
+#ifdef PRE_ROS_LYRICAL
 		image_transport::TransportHints hints(this);
+#else
+		image_transport::TransportHints hints(*this);
+#endif
 
+#ifdef PRE_ROS_LYRICAL
 		imagePub_ = image_transport::create_publisher(this, "image_with_objects", rclcpp::QoS(1).reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE).get_rmw_qos_profile());
+#else
+		imagePub_ = image_transport::create_publisher(*this, "image_with_objects", rclcpp::QoS(1).reliability(rclcpp::ReliabilityPolicy::Reliable));
+#endif
 
 		// Simple subscriber
 #ifdef PRE_ROS_KILTED
@@ -60,7 +68,11 @@ public:
 #endif
 
 		// Synchronized image + objects example
+#ifdef PRE_ROS_LYRICAL
 		imageSub_.subscribe(this, "image", hints.getTransport(), rclcpp::QoS(1).reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE).get_rmw_qos_profile());
+#else
+		imageSub_.subscribe(*this, "image", hints.getTransport(), rclcpp::QoS(1).reliability(rclcpp::ReliabilityPolicy::Reliable));
+#endif
 #ifdef PRE_ROS_KILTED
 		objectsSub_.subscribe(this, "objectsStamped", rclcpp::QoS(1).reliability((rmw_qos_reliability_policy_t)1).get_rmw_qos_profile());
 #else

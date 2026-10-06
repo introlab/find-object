@@ -85,7 +85,11 @@ bool FindObject::loadSession(const QString & path, const ParametersMap & customP
 	if(QFile::exists(path) && !path.isEmpty() && QFileInfo(path).suffix().compare("bin") == 0)
 	{
 		QFile file(path);
-		file.open(QIODevice::ReadOnly);
+		if(!file.open(QIODevice::ReadOnly))
+		{
+			UERROR("Failed to open file \"%s\"", path.toStdString().c_str());
+			return false;
+		}
 		QDataStream in(&file);
 
 		ParametersMap parameters;
@@ -147,7 +151,11 @@ bool FindObject::saveSession(const QString & path)
 	if(!path.isEmpty() && QFileInfo(path).suffix().compare("bin") == 0)
 	{
 		QFile file(path);
-		file.open(QIODevice::WriteOnly);
+		if(!file.open(QIODevice::WriteOnly))
+		{
+			UERROR("Failed to open file \"%s\"", path.toStdString().c_str());
+			return false;
+		}
 		QDataStream out(&file);
 
 		// save parameters
@@ -175,7 +183,11 @@ bool FindObject::saveVocabulary(const QString & filePath) const
 	if(!filePath.isEmpty() && QFileInfo(filePath).suffix().compare("bin") == 0)
 	{
 		QFile file(filePath);
-		file.open(QIODevice::WriteOnly);
+		if(!file.open(QIODevice::WriteOnly))
+		{
+			UERROR("Failed to open file \"%s\"", filePath.toStdString().c_str());
+			return false;
+		}
 		QDataStream out(&file);
 
 		// ignore parameters
@@ -206,7 +218,11 @@ bool FindObject::loadVocabulary(const QString & filePath)
 	{
 		//binary format (from session format)
 		QFile file(filePath);
-		file.open(QIODevice::ReadOnly);
+		if(!file.open(QIODevice::ReadOnly))
+		{
+			UERROR("Failed to open file \"%s\"", filePath.toStdString().c_str());
+			return false;
+		}
 		QDataStream in(&file);
 
 		ParametersMap parameters;

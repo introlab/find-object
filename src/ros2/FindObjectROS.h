@@ -34,7 +34,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #else
 #include <cv_bridge/cv_bridge.hpp>
 #endif
+#if __has_include(<tf2_ros/transform_broadcaster.hpp>)
+#include <tf2_ros/transform_broadcaster.hpp>
+#else
 #include <tf2_ros/transform_broadcaster.h>
+#endif
 #include "find_object/FindObject.h"
 
 #include <std_msgs/msg/float32_multi_array.hpp>
