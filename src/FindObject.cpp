@@ -157,7 +157,7 @@ bool FindObject::saveSession(const QString & path)
 		vocabulary_->save(out);
 
 		// save objects
-		for(QMultiMap<int, ObjSignature*>::const_iterator iter=objects_.constBegin(); iter!=objects_.constEnd(); ++iter)
+		for(QMap<int, ObjSignature*>::const_iterator iter=objects_.constBegin(); iter!=objects_.constEnd(); ++iter)
 		{
 			iter.value()->save(out);
 		}

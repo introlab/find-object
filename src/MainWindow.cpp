@@ -1561,7 +1561,7 @@ void MainWindow::update(const cv::Mat & image, const Header & header, const cv::
 		{
 			Q_EMIT objectsFound(info, header, depth, depthConstant);
 		}
-		ui_->label_objectsDetected->setNum(info.objDetected_.size());
+		ui_->label_objectsDetected->setNum((int)info.objDetected_.size());
 	}
 	else
 	{

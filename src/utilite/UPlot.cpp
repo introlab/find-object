@@ -35,6 +35,7 @@
 #include <QToolButton>
 #include <QLabel>
 #include <QMenu>
+#include <QActionGroup>
 #include <QInputDialog>
 #include <QMessageBox>
 #include <QFileDialog>
