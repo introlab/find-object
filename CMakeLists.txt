@@ -74,7 +74,7 @@ IF(NOT ${matchres} EQUAL -1)
 ENDIF(NOT ${matchres} EQUAL -1)
 
 # For SuperPoint
-OPTION( WITH_TORCH "Include torch dependency (for superpoint)" ON )
+OPTION( WITH_TORCH "Include torch dependency (for superpoint)" OFF )
 SET(TORCH 0)
 IF(WITH_TORCH)
   FIND_PACKAGE(Torch QUIET)
@@ -113,11 +113,29 @@ IF(NOT MSVC)
     ENDIF()
 ENDIF()
 
-# look for Qt5 before Qt4
-FIND_PACKAGE(Qt5 COMPONENTS Widgets Core Gui Network PrintSupport QUIET)
-IF(NOT Qt5_FOUND)
-   FIND_PACKAGE(Qt4 COMPONENTS QtCore QtGui QtNetwork REQUIRED)
-ENDIF(NOT Qt5_FOUND)
+SET(FIND_OBJECT_QT_VERSION AUTO CACHE STRING "Force a specific Qt version.")
+SET_PROPERTY(CACHE FIND_OBJECT_QT_VERSION PROPERTY STRINGS AUTO 4 5 6)
+
+# look for Qt6, then Qt5, then Qt4
+IF(FIND_OBJECT_QT_VERSION STREQUAL "AUTO" OR FIND_OBJECT_QT_VERSION STREQUAL "6")
+   FIND_PACKAGE(Qt6 COMPONENTS Widgets Core Gui Network PrintSupport QUIET)
+ENDIF()
+IF(NOT Qt6_FOUND AND (FIND_OBJECT_QT_VERSION STREQUAL "AUTO" OR FIND_OBJECT_QT_VERSION STREQUAL "5"))
+   FIND_PACKAGE(Qt5 COMPONENTS Widgets Core Gui Network PrintSupport QUIET)
+ENDIF()
+IF(NOT Qt6_FOUND AND NOT Qt5_FOUND)
+   IF(FIND_OBJECT_QT_VERSION STREQUAL "AUTO" OR FIND_OBJECT_QT_VERSION STREQUAL "4")
+      FIND_PACKAGE(Qt4 COMPONENTS QtCore QtGui QtNetwork)
+   ENDIF()
+   IF(NOT QT4_FOUND)
+      MESSAGE(FATAL_ERROR "Qt not found (FIND_OBJECT_QT_VERSION=${FIND_OBJECT_QT_VERSION}).")
+   ENDIF()
+ENDIF()
+IF(Qt6_FOUND)
+   SET(QT_LIBRARIES Qt6::Widgets Qt6::Core Qt6::Gui Qt6::Network Qt6::PrintSupport)
+ELSEIF(Qt5_FOUND)
+   SET(QT_LIBRARIES Qt5::Widgets Qt5::Core Qt5::Gui Qt5::Network Qt5::PrintSupport)
+ENDIF()
 ADD_DEFINITIONS(-DQT_NO_KEYWORDS) # To avoid conflicts with boost signals used in ROS
 
 FIND_PACKAGE(Tcmalloc QUIET)
@@ -204,6 +222,12 @@ IF(NOT ROS_BUILD)
    IF(NONFREE OR OpenCV_VERSION VERSION_GREATER "4.2.0") # SIFT is free from 4.3.0
    ADD_SUBDIRECTORY( example )
    ENDIF(NONFREE OR OpenCV_VERSION VERSION_GREATER "4.2.0")
+
+   OPTION(BUILD_TESTING "Build the detection tests (run with ctest)" OFF)
+   IF(BUILD_TESTING)
+      ENABLE_TESTING()
+      ADD_SUBDIRECTORY( tests )
+   ENDIF(BUILD_TESTING)
 
    #######################
    # Uninstall target, for "make uninstall"
@@ -347,6 +371,8 @@ IF(NOT ROS_BUILD)
       MESSAGE(STATUS "  With Qt4 = YES")
    ELSEIF(Qt5_FOUND)
       MESSAGE(STATUS "  With Qt5 = YES")
+   ELSEIF(Qt6_FOUND)
+      MESSAGE(STATUS "  With Qt6 = YES")
    ELSE()
       MESSAGE(STATUS "  With Qt = NO (Qt not found)")
    ENDIF()
@@ -450,6 +476,9 @@ ELSE() # COLCON_BUILD
    ENDIF()
    IF("$ENV{ROS_DISTRO}" STRLESS "kilted")
       add_definitions(-DPRE_ROS_KILTED)
+   ENDIF()
+   IF("$ENV{ROS_DISTRO}" STRLESS "lyrical")
+      add_definitions(-DPRE_ROS_LYRICAL)
    ENDIF()
 
    ###########

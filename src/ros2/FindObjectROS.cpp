@@ -53,7 +53,11 @@ FindObjectROS::FindObjectROS(rclcpp::Node * node) :
 	objFramePrefix_("object"),
 	usePnP_(true)
 {
+#ifdef PRE_ROS_LYRICAL
 	tfBroadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(node);
+#else
+	tfBroadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(*node);
+#endif
 
 	objFramePrefix_ = node->declare_parameter("object_prefix", objFramePrefix_);
 	usePnP_ = node->declare_parameter("pnp", usePnP_);

@@ -26,8 +26,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include <rclcpp/rclcpp.hpp>
+#if __has_include(<tf2_ros/transform_listener.hpp>)
+#include <tf2_ros/transform_listener.hpp>
+#else
 #include <tf2_ros/transform_listener.h>
+#endif
+#if __has_include(<tf2_ros/buffer.hpp>)
+#include <tf2_ros/buffer.hpp>
+#else
 #include <tf2_ros/buffer.h>
+#endif
 #include <find_object_2d/msg/objects_stamped.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <QtCore/QString>

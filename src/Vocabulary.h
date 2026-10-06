@@ -54,6 +54,14 @@ public:
 	bool save(const QString & filename) const;
 	bool load(const QString & filename);
 
+	// True if binary descriptors of this type should be converted to float with
+	// convertBinTo32F() (when forced by the parameter or when the nearest neighbor
+	// strategy is a FLANN index that only supports float descriptors).
+	static bool isBinToFloatConverted(int descriptorsType);
+	// Each bit becomes a float (0 or 1), so that L2 distance between converted
+	// descriptors gives the same ordering as Hamming distance between binary descriptors.
+	static cv::Mat convertBinTo32F(const cv::Mat & descriptors);
+
 private:
 	cv::flann::Index flannIndex_;
 	cv::Mat indexedDescriptors_;

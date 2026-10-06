@@ -112,7 +112,11 @@ void JsonWriter::write(const DetectionInfo & info, const QString & path)
 		Json::StyledWriter styledWriter;
 		//std::cout << styledWriter.write(root);
 		QFile file(path);
-		file.open(QIODevice::WriteOnly | QIODevice::Text);
+		if(!file.open(QIODevice::WriteOnly | QIODevice::Text))
+		{
+			UERROR("Failed to open file \"%s\"", path.toStdString().c_str());
+			return;
+		}
 		QTextStream out(&file);
 		out << styledWriter.write(root).c_str();
 		file.close();

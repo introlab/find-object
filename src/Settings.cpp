@@ -33,7 +33,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QtCore/QStringList>
 #include <QtCore/QDir>
 #include <stdio.h>
+#include <opencv2/core/version.hpp>
+#if CV_MAJOR_VERSION < 5
 #include <opencv2/calib3d/calib3d.hpp>
+#else
+#include <opencv2/geometry.hpp>
+#endif
 #include <opencv2/opencv_modules.hpp>
 
 #if CV_MAJOR_VERSION < 3
@@ -60,6 +65,27 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #if FINDOBJECT_TORCH == 1
 #include "superpoint_torch/SuperPoint.h"
+#endif
+
+// BRISK, KAZE, AKAZE and AGAST moved to xfeatures2d in OpenCV 5
+#if CV_MAJOR_VERSION > 4
+#ifdef HAVE_OPENCV_XFEATURES2D
+typedef cv::xfeatures2d::BRISK CV_BRISK;
+typedef cv::xfeatures2d::KAZE CV_KAZE;
+typedef cv::xfeatures2d::AKAZE CV_AKAZE;
+typedef cv::xfeatures2d::AgastFeatureDetector CV_AGAST;
+#define FINDOBJECT_KAZE 1
+#else
+#define FINDOBJECT_KAZE 0
+#endif
+#elif CV_MAJOR_VERSION > 2
+typedef cv::BRISK CV_BRISK;
+typedef cv::KAZE CV_KAZE;
+typedef cv::AKAZE CV_AKAZE;
+typedef cv::AgastFeatureDetector CV_AGAST;
+#define FINDOBJECT_KAZE 1
+#else
+#define FINDOBJECT_KAZE 0
 #endif
 
 namespace find_object {
@@ -210,31 +236,6 @@ ParametersMap Settings::loadSettings(const QString & fileName)
 				loadedParameters.insert(key, value);
 				setParameter(key, value);
 			}
-		}
-
-		//validate descriptors and nearest neighbor compatibilities
-		bool isBinaryDescriptor = currentDescriptorType().compare("ORB") == 0 ||
-								  currentDescriptorType().compare("Brief") == 0 ||
-								  currentDescriptorType().compare("BRISK") == 0 ||
-								  currentDescriptorType().compare("FREAK") == 0 ||
-								  currentDescriptorType().compare("AKAZE") == 0 ||
-								  currentDescriptorType().compare("LATCH") == 0 ||
-								  currentDescriptorType().compare("LUCID") == 0;
-		bool binToFloat = getNearestNeighbor_7ConvertBinToFloat();
-		if(isBinaryDescriptor && !binToFloat && currentNearestNeighborType().compare("Lsh") != 0 && currentNearestNeighborType().compare("BruteForce") != 0)
-		{
-			UWARN("Current selected descriptor type (\"%s\") is binary while nearest neighbor strategy is not (\"%s\").\n"
-				   "Falling back to \"BruteForce\" nearest neighbor strategy with Hamming distance (by default).",
-				   currentDescriptorType().toStdString().c_str(),
-				   currentNearestNeighborType().toStdString().c_str());
-			QString tmp = Settings::getNearestNeighbor_1Strategy();
-			*tmp.begin() = '6'; // set BruteForce
-			setNearestNeighbor_1Strategy(tmp);
-			loadedParameters.insert(Settings::kNearestNeighbor_1Strategy(), tmp);
-			tmp = Settings::getNearestNeighbor_2Distance_type();
-			*tmp.begin() = '8'; // set HAMMING
-			setNearestNeighbor_2Distance_type(tmp);
-			loadedParameters.insert(Settings::kNearestNeighbor_2Distance_type(), tmp);
 		}
 
 		UINFO("Settings loaded from %s.", path.toStdString().c_str());
@@ -760,6 +761,19 @@ Feature2D * Settings::createKeypointDetector()
 				}
 #endif
 
+#if CV_MAJOR_VERSION > 4 && FINDOBJECT_KAZE == 0
+				if(strategies.at(index).compare("AGAST") == 0 ||
+				   strategies.at(index).compare("BRISK") == 0 ||
+				   strategies.at(index).compare("KAZE") == 0 ||
+				   strategies.at(index).compare("AKAZE") == 0)
+				{
+					index = Settings::defaultFeature2D_1Detector().split(':').first().toInt();
+					UERROR("Find-Object is built with OpenCV 5 without xfeatures2d module so "
+							"AGAST/BRISK/KAZE/AKAZE cannot be used! Using default \"%s\" instead.",
+							strategies.at(index).toStdString().c_str());
+				}
+#endif
+
 #if FINDOBJECT_TORCH == 0
 				//check for nonfree stuff
 				if(strategies.at(index).compare("SuperPointTorch") == 0)
@@ -847,10 +861,12 @@ Feature2D * Settings::createKeypointDetector()
 				{
 #if CV_MAJOR_VERSION < 3
 					UWARN("Find-Object is not built with OpenCV 3 so AGAST cannot be used!");
-#else
-					feature2D = new Feature2D(cv::AgastFeatureDetector::create(
+#elif FINDOBJECT_KAZE == 1
+					feature2D = new Feature2D(CV_AGAST::create(
 							getFeature2D_AGAST_threshold(),
 							getFeature2D_AGAST_nonmaxSuppression()));
+#else
+					UWARN("Find-Object is not built with OpenCV xfeatures2d module so AGAST cannot be used!");
 #endif
 					UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 				}
@@ -984,11 +1000,13 @@ Feature2D * Settings::createKeypointDetector()
 							getFeature2D_BRISK_thresh(),
 							getFeature2D_BRISK_octaves(),
 							getFeature2D_BRISK_patternScale())));
-#else
-					feature2D = new Feature2D(cv::BRISK::create(
+#elif FINDOBJECT_KAZE == 1
+					feature2D = new Feature2D(CV_BRISK::create(
 							getFeature2D_BRISK_thresh(),
 							getFeature2D_BRISK_octaves(),
 							getFeature2D_BRISK_patternScale()));
+#else
+					UWARN("Find-Object is not built with OpenCV xfeatures2d module so BRISK cannot be used!");
 #endif
 					UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 				}
@@ -996,14 +1014,16 @@ Feature2D * Settings::createKeypointDetector()
 				{
 #if CV_MAJOR_VERSION < 3
 					UWARN("Find-Object is not built with OpenCV 3 so KAZE cannot be used!");
-#else
-					feature2D = new Feature2D(cv::KAZE::create(
+#elif FINDOBJECT_KAZE == 1
+					feature2D = new Feature2D(CV_KAZE::create(
 							getFeature2D_KAZE_extended(),
 							getFeature2D_KAZE_upright(),
 							getFeature2D_KAZE_threshold(),
 							getFeature2D_KAZE_nOctaves(),
 							getFeature2D_KAZE_nOctaveLayers(),
-							cv::KAZE::DIFF_PM_G2)); // FIXME: make a parameter
+							CV_KAZE::DIFF_PM_G2)); // FIXME: make a parameter
+#else
+					UWARN("Find-Object is not built with OpenCV xfeatures2d module so KAZE cannot be used!");
 #endif
 					UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 				}
@@ -1011,15 +1031,17 @@ Feature2D * Settings::createKeypointDetector()
 				{
 #if CV_MAJOR_VERSION < 3
 					UWARN("Find-Object is not built with OpenCV 3 so AKAZE cannot be used!");
-#else
-					feature2D = new Feature2D(cv::AKAZE::create(
-							cv::AKAZE::DESCRIPTOR_MLDB, // FIXME: make a parameter
+#elif FINDOBJECT_KAZE == 1
+					feature2D = new Feature2D(CV_AKAZE::create(
+							CV_AKAZE::DESCRIPTOR_MLDB, // FIXME: make a parameter
 							getFeature2D_AKAZE_descriptorSize(),
 							getFeature2D_AKAZE_descriptorChannels(),
 							getFeature2D_AKAZE_threshold(),
 							getFeature2D_AKAZE_nOctaves(),
 							getFeature2D_AKAZE_nOctaveLayers(),
-							cv::KAZE::DIFF_PM_G2)); // FIXME: make a parameter
+							CV_KAZE::DIFF_PM_G2)); // FIXME: make a parameter
+#else
+					UWARN("Find-Object is not built with OpenCV xfeatures2d module so AKAZE cannot be used!");
 #endif
 					UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 				}
@@ -1175,6 +1197,18 @@ Feature2D * Settings::createDescriptorExtractor()
 				}
 #endif
 
+#if CV_MAJOR_VERSION > 4 && FINDOBJECT_KAZE == 0
+				if(strategies.at(index).compare("BRISK") == 0 ||
+				   strategies.at(index).compare("KAZE") == 0 ||
+				   strategies.at(index).compare("AKAZE") == 0)
+				{
+					index = Settings::defaultFeature2D_2Descriptor().split(':').first().toInt();
+					UERROR("Find-Object is built with OpenCV 5 without xfeatures2d module so "
+							"BRISK/KAZE/AKAZE cannot be used! Using default \"%s\" instead.",
+							strategies.at(index).toStdString().c_str());
+				}
+#endif
+
 #if FINDOBJECT_TORCH == 0
 				//check for nonfree stuff
 				if(strategies.at(index).compare("SuperPointTorch") == 0)
@@ -1284,11 +1318,13 @@ Feature2D * Settings::createDescriptorExtractor()
 							getFeature2D_BRISK_thresh(),
 							getFeature2D_BRISK_octaves(),
 							getFeature2D_BRISK_patternScale())));
-#else
-					feature2D = new Feature2D(cv::BRISK::create(
+#elif FINDOBJECT_KAZE == 1
+					feature2D = new Feature2D(CV_BRISK::create(
 							getFeature2D_BRISK_thresh(),
 							getFeature2D_BRISK_octaves(),
 							getFeature2D_BRISK_patternScale()));
+#else
+					UWARN("Find-Object is not built with OpenCV xfeatures2d module so BRISK cannot be used!");
 #endif
 					UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 				}
@@ -1296,14 +1332,16 @@ Feature2D * Settings::createDescriptorExtractor()
 				{
 #if CV_MAJOR_VERSION < 3
 					UWARN("Find-Object is not built with OpenCV 3 so KAZE cannot be used!");
-#else
-					feature2D = new Feature2D(cv::KAZE::create(
+#elif FINDOBJECT_KAZE == 1
+					feature2D = new Feature2D(CV_KAZE::create(
 							getFeature2D_KAZE_extended(),
 							getFeature2D_KAZE_upright(),
 							getFeature2D_KAZE_threshold(),
 							getFeature2D_KAZE_nOctaves(),
 							getFeature2D_KAZE_nOctaveLayers(),
-							cv::KAZE::DIFF_PM_G2)); // FIXME: make a parameter
+							CV_KAZE::DIFF_PM_G2)); // FIXME: make a parameter
+#else
+					UWARN("Find-Object is not built with OpenCV xfeatures2d module so KAZE cannot be used!");
 #endif
 					UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 				}
@@ -1311,15 +1349,17 @@ Feature2D * Settings::createDescriptorExtractor()
 				{
 #if CV_MAJOR_VERSION < 3
 					UWARN("Find-Object is not built with OpenCV 3 so AKAZE cannot be used!");
-#else
-					feature2D = new Feature2D(cv::AKAZE::create(
-							cv::AKAZE::DESCRIPTOR_MLDB, // FIXME: make a parameter
+#elif FINDOBJECT_KAZE == 1
+					feature2D = new Feature2D(CV_AKAZE::create(
+							CV_AKAZE::DESCRIPTOR_MLDB, // FIXME: make a parameter
 							getFeature2D_AKAZE_descriptorSize(),
 							getFeature2D_AKAZE_descriptorChannels(),
 							getFeature2D_AKAZE_threshold(),
 							getFeature2D_AKAZE_nOctaves(),
 							getFeature2D_AKAZE_nOctaveLayers(),
-							cv::KAZE::DIFF_PM_G2)); // FIXME: make a parameter
+							CV_KAZE::DIFF_PM_G2)); // FIXME: make a parameter
+#else
+					UWARN("Find-Object is not built with OpenCV xfeatures2d module so AKAZE cannot be used!");
 #endif
 					UDEBUG("type=%s", strategies.at(index).toStdString().c_str());
 				}
@@ -1739,6 +1779,33 @@ void Feature2D::detect(const cv::Mat & image,
 	}
 }
 
+// Remove keypoints with invalid (NaN) float descriptors, e.g., KAZE
+// descriptors computed on keypoints from another detector (AKAZE).
+static void removeInvalidDescriptors(std::vector<cv::KeyPoint> & keypoints, cv::Mat & descriptors)
+{
+	if(descriptors.type() != CV_32FC1 || descriptors.rows != (int)keypoints.size())
+	{
+		return;
+	}
+	std::vector<cv::KeyPoint> validKeypoints;
+	cv::Mat validDescriptors;
+	for(int i=0; i<descriptors.rows; ++i)
+	{
+		if(cv::checkRange(descriptors.row(i), true))
+		{
+			validKeypoints.push_back(keypoints[i]);
+			validDescriptors.push_back(descriptors.row(i));
+		}
+	}
+	if(validDescriptors.rows != descriptors.rows)
+	{
+		UWARN("Removed %d/%d keypoints with invalid descriptors (NaN or infinite values).",
+				descriptors.rows-validDescriptors.rows, descriptors.rows);
+		keypoints = validKeypoints;
+		descriptors = validDescriptors;
+	}
+}
+
 void Feature2D::compute(const cv::Mat & image,
 		std::vector<cv::KeyPoint> & keypoints,
 		cv::Mat & descriptors)
@@ -1758,6 +1825,7 @@ void Feature2D::compute(const cv::Mat & image,
 	{
 		UERROR("Feature2D not set!?!?");
 	}
+	removeInvalidDescriptors(keypoints, descriptors);
 }
 
 void Feature2D::detectAndCompute(const cv::Mat & image,
@@ -1772,6 +1840,7 @@ void Feature2D::detectAndCompute(const cv::Mat & image,
 #else
 		feature2D_->detectAndCompute(image, mask, keypoints, descriptors);
 #endif
+		removeInvalidDescriptors(keypoints, descriptors);
 	}
 	else
 	{

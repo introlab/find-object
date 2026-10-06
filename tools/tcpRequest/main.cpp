@@ -28,7 +28,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QtNetwork/QNetworkInterface>
 #include <QtCore/QCoreApplication>
 #include <QtCore/QFile>
-#include <QtCore/QTime>
+#include <QtCore/QElapsedTimer>
 #include <opencv2/opencv.hpp>
 #include <find_object/TcpServer.h>
 #include "TcpResponse.h"
@@ -244,7 +244,7 @@ int main(int argc, char * argv[])
 	qint64 bytes = requestPtr->write(block);
 	printf("Image published (%d bytes), waiting for response...\n", (int)bytes);
 
-	QTime time;
+	QElapsedTimer time;
 	time.start();
 
 	// wait for response
@@ -260,7 +260,7 @@ int main(int argc, char * argv[])
 
 	if(response.dataReceived())
 	{
-		printf("Response received! (%d ms)\n", time.elapsed());
+		printf("Response received! (%d ms)\n", (int)time.elapsed());
 		// print detected objects
 		if(response.info().objDetected_.size())
 		{

@@ -31,7 +31,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QtGui/QTransform>
 #include <QtCore/QSize>
 #include <QtCore/QString>
+#include <opencv2/core/version.hpp>
+#if CV_MAJOR_VERSION < 3
 #include <opencv2/features2d/features2d.hpp>
+#elif CV_MAJOR_VERSION < 5
+#include <opencv2/features2d.hpp>
+#else
+#include <opencv2/features.hpp>
+#endif
 #include <vector>
 
 namespace find_object {

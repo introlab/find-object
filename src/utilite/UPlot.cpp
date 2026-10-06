@@ -35,6 +35,7 @@
 #include <QToolButton>
 #include <QLabel>
 #include <QMenu>
+#include <QActionGroup>
 #include <QInputDialog>
 #include <QMessageBox>
 #include <QFileDialog>
@@ -1399,7 +1400,7 @@ void UPlotLegend::addItem(const UPlotCurve * curve)
 		QHBoxLayout * hLayout = new QHBoxLayout();
 		hLayout->addWidget(legendItem);
 		hLayout->addStretch(0);
-		hLayout->setMargin(0);
+		hLayout->setContentsMargins(0, 0, 0, 0);
 
 		// add to the legend
 		((QVBoxLayout*)this->layout())->insertLayout(this->layout()->count()-1, hLayout);

@@ -34,7 +34,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QtCore/QMap>
 #include <QtCore/QVariant>
 #include <QtCore/QByteArray>
+#include <opencv2/core/version.hpp>
+#if CV_MAJOR_VERSION < 3
 #include <opencv2/features2d/features2d.hpp>
+#elif CV_MAJOR_VERSION < 5
+#include <opencv2/features2d.hpp>
+#else
+#include <opencv2/features.hpp>
+#endif
 
 namespace find_object {
 
@@ -113,16 +120,16 @@ class FINDOBJECT_EXP Settings
 
 	//List format : [Index:item0;item1;item3;...]
 #if CV_MAJOR_VERSION < 3 || (CV_MAJOR_VERSION == 4 && CV_MINOR_VERSION <= 3) || (CV_MAJOR_VERSION == 3 && (CV_MINOR_VERSION < 4 || (CV_MINOR_VERSION==4 && CV_SUBMINOR_VERSION<11)))
-#if CV_MAJOR_VERSION >= 3 // NONFREE=SURF, DEFAULT=KAZE
-	PARAMETER_COND(Feature2D, 1Detector, QString, FINDOBJECT_NONFREE, "7:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK;AGAST;KAZE;AKAZE;SuperPointTorch" , "10:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK;AGAST;KAZE;AKAZE;SuperPointTorch", "Keypoint detector.");
-	PARAMETER_COND(Feature2D, 2Descriptor, QString, FINDOBJECT_NONFREE, "3:Brief;ORB;SIFT;SURF;BRISK;FREAK;KAZE;AKAZE;LUCID;LATCH;DAISY;SuperPointTorch", "6:Brief;ORB;SIFT;SURF;BRISK;FREAK;KAZE;AKAZE;LUCID;LATCH;DAISY;SuperPointTorch", "Keypoint descriptor.");
-#else // NONFREE=SURF, DEFAULT=ORB
-	PARAMETER_COND(Feature2D, 1Detector, QString, FINDOBJECT_NONFREE, "7:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK;AGAST;KAZE;AKAZE;SuperPointTorch" , "4:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK;AGAST;KAZE;AKAZE;SuperPointTorch", "Keypoint detector.");
-	PARAMETER_COND(Feature2D, 2Descriptor, QString, FINDOBJECT_NONFREE, "3:Brief;ORB;SIFT;SURF;BRISK;FREAK;KAZE;AKAZE;LUCID;LATCH;DAISY;SuperPointTorch", "1:Brief;ORB;SIFT;SURF;BRISK;FREAK;KAZE;AKAZE;LUCID;LATCH;DAISY;SuperPointTorch", "Keypoint descriptor.");
+#if CV_MAJOR_VERSION >= 3 // NONFREE=SIFT, DEFAULT=KAZE
+	PARAMETER_COND(Feature2D, 1Detector, QString, FINDOBJECT_NONFREE, "5:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK;AGAST;KAZE;AKAZE;SuperPointTorch" , "10:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK;AGAST;KAZE;AKAZE;SuperPointTorch", "Keypoint detector.");
+	PARAMETER_COND(Feature2D, 2Descriptor, QString, FINDOBJECT_NONFREE, "2:Brief;ORB;SIFT;SURF;BRISK;FREAK;KAZE;AKAZE;LUCID;LATCH;DAISY;SuperPointTorch", "6:Brief;ORB;SIFT;SURF;BRISK;FREAK;KAZE;AKAZE;LUCID;LATCH;DAISY;SuperPointTorch", "Keypoint descriptor.");
+#else // NONFREE=SIFT, DEFAULT=ORB
+	PARAMETER_COND(Feature2D, 1Detector, QString, FINDOBJECT_NONFREE, "5:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK;AGAST;KAZE;AKAZE;SuperPointTorch" , "4:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK;AGAST;KAZE;AKAZE;SuperPointTorch", "Keypoint detector.");
+	PARAMETER_COND(Feature2D, 2Descriptor, QString, FINDOBJECT_NONFREE, "2:Brief;ORB;SIFT;SURF;BRISK;FREAK;KAZE;AKAZE;LUCID;LATCH;DAISY;SuperPointTorch", "1:Brief;ORB;SIFT;SURF;BRISK;FREAK;KAZE;AKAZE;LUCID;LATCH;DAISY;SuperPointTorch", "Keypoint descriptor.");
 #endif
-#else // >=4.4 >=3.4.11: NONFREE=SURF, DEFAULT=SIFT
-	PARAMETER_COND(Feature2D, 1Detector, QString, FINDOBJECT_NONFREE, "7:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK;AGAST;KAZE;AKAZE;SuperPointTorch" , "5:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK;AGAST;KAZE;AKAZE;SuperPointTorch", "Keypoint detector.");
-	PARAMETER_COND(Feature2D, 2Descriptor, QString, FINDOBJECT_NONFREE, "3:Brief;ORB;SIFT;SURF;BRISK;FREAK;KAZE;AKAZE;LUCID;LATCH;DAISY;SuperPointTorch", "2:Brief;ORB;SIFT;SURF;BRISK;FREAK;KAZE;AKAZE;LUCID;LATCH;DAISY;SuperPointTorch", "Keypoint descriptor.");
+#else // >=4.4 >=3.4.11: SIFT is always available
+	PARAMETER(Feature2D, 1Detector, QString, "5:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK;AGAST;KAZE;AKAZE;SuperPointTorch", "Keypoint detector.");
+	PARAMETER(Feature2D, 2Descriptor, QString, "2:Brief;ORB;SIFT;SURF;BRISK;FREAK;KAZE;AKAZE;LUCID;LATCH;DAISY;SuperPointTorch", "Keypoint descriptor.");
 #endif
 	PARAMETER(Feature2D, 3MaxFeatures, int, 0, "Maximum features per image. If the number of features extracted is over this threshold, only X features with the highest response are kept. 0 means all features are kept.");
 	PARAMETER(Feature2D, 4Affine, bool, false, "(ASIFT) Extract features on multiple affine transformations of the image.");
@@ -249,7 +256,7 @@ class FINDOBJECT_EXP Settings
 	PARAMETER(NearestNeighbor, 4nndrRatio, float, 0.8f, "Nearest neighbor distance ratio.");
 	PARAMETER(NearestNeighbor, 5minDistanceUsed, bool, false, "Minimum distance with the nearest descriptor to accept a match.");
 	PARAMETER(NearestNeighbor, 6minDistance, float, 1.6f, "Minimum distance. You can look at top of this panel where minimum and maximum distances are shown to properly set this parameter depending of the descriptor used.");
-	PARAMETER(NearestNeighbor, 7ConvertBinToFloat, bool, false, "Convert binary descriptor to float before quantization, so you can use FLANN strategies with them.");
+	PARAMETER(NearestNeighbor, 7ConvertBinToFloat, bool, false, "Convert binary descriptors to float (each bit becomes 0 or 1) before quantization. This is done automatically with FLANN strategies other than Lsh, set to true to also do it with BruteForce.");
 
 
 	PARAMETER(NearestNeighbor, BruteForce_gpu, bool, false, "Brute force GPU");

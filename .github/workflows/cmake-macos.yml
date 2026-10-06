@@ -1,0 +1,74 @@
+name: CMake-MacOS
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - '**'
+  workflow_dispatch:
+
+env:
+  BUILD_TYPE: Release
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    name: ${{ matrix.build_name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        build_name: [macos-sequoia-apple-silicon, macos-tahoe-apple-silicon, macos-tahoe-apple-silicon-cv5]
+        include:
+        - build_name: macos-sequoia-apple-silicon
+          os: macos-15
+          cv: opencv@4
+        - build_name: macos-tahoe-apple-silicon
+          os: macos-26
+          cv: opencv@4
+        - build_name: macos-tahoe-apple-silicon-cv5
+          os: macos-26
+          cv: opencv
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Brew Dependencies
+      run: |
+        brew install qt ${{ matrix.cv }}
+
+    - name: Configure CMake
+      run: |
+        cmake -B ${{github.workspace}}/build \
+          -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
+          -DCMAKE_PREFIX_PATH="$(brew --prefix ${{ matrix.cv }});$(brew --prefix qt)" \
+          -DWITH_TORCH=OFF \
+          -DBUILD_TESTING=ON \
+          -DBUILD_AS_BUNDLE=ON
+
+    - name: Build
+      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+
+    - name: Test
+      # Detection tests on the sample images with all features available (see tests/CMakeLists.txt)
+      working-directory: ${{github.workspace}}/build
+      run: ctest -C ${{env.BUILD_TYPE}} -j4 --output-on-failure
+
+    - name: Build MacOS Package
+      run: |
+        cmake --build ${{ github.workspace }}/build --config ${{ env.BUILD_TYPE }} --target package
+
+    - name: Upload Find-Object Artifacts (DMG)
+      uses: actions/upload-artifact@v4
+      with:
+        name: Find-Object-Binaries-${{ matrix.build_name }}-nonsigned-dmg
+        path: |
+          build/Find-Object-*.dmg
+        compression-level: 0
+        if-no-files-found: warn
+        retention-days: ${{ github.event_name == 'pull_request' && 1 || 90 }}

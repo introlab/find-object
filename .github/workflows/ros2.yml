@@ -6,44 +6,39 @@ on:
     branches: [ master ]
   pull_request:
     branches: [ master ]
+  workflow_dispatch:
 
 env:
-  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Release
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
-    # The CMake configure and build commands are platform agnostic and should work equally
-    # well on Windows or Mac.  You can convert this to a matrix build if you need
-    # cross-platform coverage.
-    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
-    name: Build on ros2 ${{ matrix.ros_distro }} and ${{ matrix.ubuntu_distro }}
+    name: Build ros2 ${{ matrix.ros_distro }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        ros_distro: [humble, jazzy, rolling]
+        ros_distro: [humble, jazzy, kilted, lyrical, rolling]
         include:
-        - ros_distro: 'humble'
-          ubuntu_distro: jammy
-        - ros_distro: 'jazzy'
-          ubuntu_distro: noble
-        - ros_distro: 'rolling'
-          ubuntu_distro: noble
+        - ros_distro: rolling
+          use_ros2_testing: true # Rolling on Ubuntu resolute is only in ros2-testing (nightly)
       fail-fast: false
     container:
-      image: rostooling/setup-ros-docker:ubuntu-${{ matrix.ubuntu_distro }}-ros-${{ matrix.ros_distro }}-desktop-latest
-    steps:   
+      image: osrf/ros:${{ matrix.ros_distro }}-desktop
+    steps:
     - uses: actions/checkout@v4
     - uses: ros-tooling/setup-ros@v0.7
       with:
         required-ros-distributions: ${{ matrix.ros_distro }}
-    
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get -y install ros-${{ matrix.ros_distro }}-cv-bridge qtbase5-dev
-                
-    - uses: ros-tooling/action-ros-ci@v0.3
+        use-ros2-testing: ${{ matrix.use_ros2_testing || false }}
+    - run: |
+        DEBIAN_FRONTEND=noninteractive
+        sudo apt update
+        sudo apt upgrade -y
+    - uses: ros-tooling/action-ros-ci@v0.4
       with:
         package-name: find_object_2d
         target-ros2-distro: ${{ matrix.ros_distro }}

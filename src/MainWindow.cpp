@@ -47,7 +47,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <iostream>
 #include <stdio.h>
 
-#include "opencv2/calib3d/calib3d.hpp"
+#include <opencv2/core/version.hpp>
+#if CV_MAJOR_VERSION < 5
+#include <opencv2/calib3d/calib3d.hpp>
+#else
+#include <opencv2/geometry.hpp>
+#endif
 #include "opencv2/imgproc/imgproc.hpp"
 #include <opencv2/opencv_modules.hpp>
 #if CV_MAJOR_VERSION < 3
@@ -58,6 +63,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <QtCore/QTextStream>
 #include <QtCore/QFile>
+#include <QtCore/QFileInfo>
+#include <QtCore/QDir>
 #include <QtCore/QBuffer>
 #include <QtCore/QThread>
 #include <QtCore/QLineF>
@@ -572,9 +579,10 @@ int MainWindow::saveObjects(const QString & dirPath)
 
 void MainWindow::loadObjects()
 {
-	QString dirPath = QFileDialog::getExistingDirectory(this, tr("Loading objects... Select a directory."), Settings::workingDirectory());
+	QString dirPath = QFileDialog::getExistingDirectory(this, tr("Loading objects... Select a directory."), imagesDirectory());
 	if(!dirPath.isEmpty())
 	{
+		lastImagesDirectory_ = dirPath;
 		QDir d(dirPath);
 		bool recursive = false;
 		if(d.entryList(QDir::AllDirs | QDir::NoDotAndDotDot).size())
@@ -832,10 +840,20 @@ void MainWindow::addObjectFromScene()
 	delete dialog;
 }
 
+QString MainWindow::imagesDirectory() const
+{
+	if(!lastImagesDirectory_.isEmpty() && QDir(lastImagesDirectory_).exists())
+	{
+		return lastImagesDirectory_;
+	}
+	return Settings::workingDirectory();
+}
+
 void MainWindow::addObjectsFromFiles(const QStringList & fileNames)
 {
 	if(fileNames.size())
 	{
+		lastImagesDirectory_ = QFileInfo(fileNames.last()).absolutePath();
 		QList<int> ids;
 		for(int i=0; i<fileNames.size(); ++i)
 		{
@@ -855,7 +873,7 @@ void MainWindow::addObjectsFromFiles(const QStringList & fileNames)
 
 void MainWindow::addObjectsFromFiles()
 {
-	addObjectsFromFiles(QFileDialog::getOpenFileNames(this, tr("Add objects..."), Settings::workingDirectory(), tr("Image Files (%1)").arg(Settings::getGeneral_imageFormats())));
+	addObjectsFromFiles(QFileDialog::getOpenFileNames(this, tr("Add objects..."), imagesDirectory(), tr("Image Files (%1)").arg(Settings::getGeneral_imageFormats())));
 }
 
 int MainWindow::addObjectFromFile(const QString & filePath)
@@ -906,6 +924,7 @@ void MainWindow::loadSceneFromFile(const QStringList & fileNames)
 	//take the first
 	if(fileNames.size())
 	{
+		lastImagesDirectory_ = QFileInfo(fileNames.first()).absolutePath();
 		cv::Mat img = cv::imread(fileNames.first().toStdString().c_str());
 		if(!img.empty())
 		{
@@ -917,9 +936,10 @@ void MainWindow::loadSceneFromFile(const QStringList & fileNames)
 
 void MainWindow::loadSceneFromFile()
 {
-	QString fileName = QFileDialog::getOpenFileName(this, tr("Load scene..."), Settings::workingDirectory(), tr("Image Files (%1)").arg(Settings::getGeneral_imageFormats()));
+	QString fileName = QFileDialog::getOpenFileName(this, tr("Load scene..."), imagesDirectory(), tr("Image Files (%1)").arg(Settings::getGeneral_imageFormats()));
 	if(!fileName.isEmpty())
 	{
+		lastImagesDirectory_ = QFileInfo(fileName).absolutePath();
 		cv::Mat img = cv::imread(fileName.toStdString().c_str());
 		if(!img.empty())
 		{
@@ -938,9 +958,10 @@ void MainWindow::setupCameraFromVideoFile()
 	}
 	else
 	{
-		QString fileName = QFileDialog::getOpenFileName(this, tr("Setup camera from video file..."), Settings::workingDirectory(), tr("Video Files (%1)").arg(Settings::getGeneral_videoFormats()));
+		QString fileName = QFileDialog::getOpenFileName(this, tr("Setup camera from video file..."), imagesDirectory(), tr("Video Files (%1)").arg(Settings::getGeneral_videoFormats()));
 		if(!fileName.isEmpty())
 		{
+			lastImagesDirectory_ = QFileInfo(fileName).absolutePath();
 			Settings::setCamera_6useTcpCamera(false);
 			ui_->toolBox->updateParameter(Settings::kCamera_6useTcpCamera());
 
@@ -969,9 +990,10 @@ void MainWindow::setupCameraFromImagesDirectory()
 	}
 	else
 	{
-		QString directory = QFileDialog::getExistingDirectory(this, tr("Setup camera from directory of images..."), Settings::workingDirectory());
+		QString directory = QFileDialog::getExistingDirectory(this, tr("Setup camera from directory of images..."), imagesDirectory());
 		if(!directory.isEmpty())
 		{
+			lastImagesDirectory_ = directory;
 			Settings::setCamera_6useTcpCamera(false);
 			ui_->toolBox->updateParameter(Settings::kCamera_6useTcpCamera());
 
@@ -1561,7 +1583,7 @@ void MainWindow::update(const cv::Mat & image, const Header & header, const cv::
 		{
 			Q_EMIT objectsFound(info, header, depth, depthConstant);
 		}
-		ui_->label_objectsDetected->setNum(info.objDetected_.size());
+		ui_->label_objectsDetected->setNum((int)info.objDetected_.size());
 	}
 	else
 	{

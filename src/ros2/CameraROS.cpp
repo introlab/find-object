@@ -44,11 +44,17 @@ CameraROS::CameraROS(bool subscribeDepth, rclcpp::Node * node) :
 
 	if(!subscribeDepth_)
 	{
+#ifdef PRE_ROS_LYRICAL
 		image_transport::TransportHints hints(node);
+#else
+		image_transport::TransportHints hints(*node);
+#endif
 #ifdef PRE_ROS_KILTED
 		imageSub_ = image_transport::create_subscription(node, "image", std::bind(&CameraROS::imgReceivedCallback, this, std::placeholders::_1), hints.getTransport(), rclcpp::QoS(1).reliability((rmw_qos_reliability_policy_t)1).get_rmw_qos_profile());
-#else
+#elif defined(PRE_ROS_LYRICAL)
 		imageSub_ = image_transport::create_subscription(node, "image", std::bind(&CameraROS::imgReceivedCallback, this, std::placeholders::_1), hints.getTransport(), rclcpp::QoS(1).reliability(rclcpp::ReliabilityPolicy::Reliable).get_rmw_qos_profile());
+#else
+		imageSub_ = image_transport::create_subscription(*node, "image", std::bind(&CameraROS::imgReceivedCallback, this, std::placeholders::_1), hints.getTransport(), rclcpp::QoS(1).reliability(rclcpp::ReliabilityPolicy::Reliable));
 #endif
 	}
 	else
@@ -61,9 +67,18 @@ CameraROS::CameraROS(bool subscribeDepth, rclcpp::Node * node) :
 		RCLCPP_INFO(node->get_logger(), "find_object_ros: approx_sync = %s", approxSync?"true":"false");
 
 
+#ifdef PRE_ROS_LYRICAL
 		image_transport::TransportHints hints(node);
+#else
+		image_transport::TransportHints hints(*node);
+#endif
+#ifdef PRE_ROS_LYRICAL
 		rgbSub_.subscribe(node, "rgb/image_rect_color", hints.getTransport(), rclcpp::QoS(1).reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE).get_rmw_qos_profile());
 		depthSub_.subscribe(node, "depth_registered/image_raw", hints.getTransport(), rclcpp::QoS(1).reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE).get_rmw_qos_profile());
+#else
+		rgbSub_.subscribe(*node, "rgb/image_rect_color", hints.getTransport(), rclcpp::QoS(1).reliability(rclcpp::ReliabilityPolicy::Reliable));
+		depthSub_.subscribe(*node, "depth_registered/image_raw", hints.getTransport(), rclcpp::QoS(1).reliability(rclcpp::ReliabilityPolicy::Reliable));
+#endif
 #ifdef PRE_ROS_KILTED
 		cameraInfoSub_.subscribe(node, "depth_registered/camera_info", rclcpp::QoS(1).reliability((rmw_qos_reliability_policy_t)1).get_rmw_qos_profile());
 #else

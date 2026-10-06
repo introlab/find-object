@@ -5,8 +5,10 @@ SET(headers_ui
 
 IF(QT4_FOUND)
     QT4_WRAP_CPP(moc_srcs ${headers_ui})
-ELSE()
+ELSEIF(Qt5_FOUND)
     QT5_WRAP_CPP(moc_srcs ${headers_ui})
+ELSE()
+    QT6_WRAP_CPP(moc_srcs ${headers_ui})
 ENDIF()
 
 SET(INCLUDE_DIRS
@@ -70,9 +72,6 @@ ELSE()
 ENDIF()
 # Linking with Qt libraries
 TARGET_LINK_LIBRARIES(find_object_app find_object ${LIBRARIES})
-IF(Qt5_FOUND)
-    QT5_USE_MODULES(find_object_app Widgets Core Gui Network PrintSupport)
-ENDIF(Qt5_FOUND)
 
 IF(APPLE AND BUILD_AS_BUNDLE)
   SET_TARGET_PROPERTIES(find_object_app PROPERTIES
@@ -119,6 +118,35 @@ IF((APPLE AND BUILD_AS_BUNDLE) OR WIN32)
           COMPONENT runtime 
           REGEX ".*d4.dll" EXCLUDE
           REGEX ".*d4.a" EXCLUDE)
+  ELSEIF(Qt6_FOUND)
+    # Find the plugins directory from the platform plugin, then install the
+    # plugin types the app needs. fixup_bundle() below deploys the libraries.
+    IF(WIN32)
+      SET(qt_platform_plugin Qt6::QWindowsIntegrationPlugin)
+    ELSE()
+      SET(qt_platform_plugin Qt6::QCocoaIntegrationPlugin)
+    ENDIF()
+    IF(TARGET ${qt_platform_plugin})
+      get_target_property(qt_plugins_dir ${qt_platform_plugin} LOCATION)
+      get_filename_component(qt_plugins_dir "${qt_plugins_dir}" DIRECTORY) # .../plugins/platforms
+      get_filename_component(qt_plugins_dir "${qt_plugins_dir}" DIRECTORY) # .../plugins
+      foreach(plugin_type platforms styles imageformats iconengines)
+        file(GLOB plugin_files "${qt_plugins_dir}/${plugin_type}/*${CMAKE_SHARED_LIBRARY_SUFFIX}")
+        SET(plugin_real_files "")
+        foreach(plugin_file ${plugin_files})
+          # Homebrew plugins are symlinks into the Cellar, install the real files
+          get_filename_component(plugin_file "${plugin_file}" REALPATH)
+          LIST(APPEND plugin_real_files "${plugin_file}")
+        endforeach()
+        IF(plugin_real_files)
+          INSTALL(FILES ${plugin_real_files}
+            DESTINATION ${plugin_dest_dir}/plugins/${plugin_type}
+            COMPONENT runtime)
+        ENDIF()
+      endforeach()
+    ELSE()
+      MESSAGE(WARNING "${qt_platform_plugin} target not found: Qt plugins will be missing from the package")
+    ENDIF()
   ELSE()
 	#Qt5
 	foreach(plugin ${Qt5Gui_PLUGINS})
@@ -146,7 +174,7 @@ IF((APPLE AND BUILD_AS_BUNDLE) OR WIN32)
   # directories to look for dependencies
   SET(DIRS ${QT_LIBRARY_DIRS} ${PROJECT_SOURCE_DIR}/bin)
   IF(APPLE)
-    SET(DIRS ${DIRS} /usr/local /usr/local/lib)
+    SET(DIRS ${DIRS} /usr/local /usr/local/lib /opt/homebrew /opt/homebrew/lib /opt/homebrew/lib/gcc/current)
   ENDIF(APPLE)
 
   # Now the work of copying dependencies into the bundle/package
@@ -157,7 +185,16 @@ IF((APPLE AND BUILD_AS_BUNDLE) OR WIN32)
   # To find dependencies, cmake use "otool" on Apple and "dumpbin" on Windows (make sure you have one of them).
   install(CODE "
    file(GLOB_RECURSE QTPLUGINS \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${plugin_dest_dir}/plugins/*${CMAKE_SHARED_LIBRARY_SUFFIX}\")
+    # Homebrew libraries are read-only, make the copies writable so they can be fixed up
+    set(BU_CHMOD_BUNDLE_ITEMS ON)
     include(\"BundleUtilities\")
+    # nvcuda.dll, nvcuvid.dll and nvEncodeAPI64.dll ship with the NVIDIA driver, not
+    # the CUDA toolkit: never bundle them, they are resolved from the user's driver.
+    function(gp_resolved_file_type_override resolved_file type_var)
+      if(resolved_file MATCHES \"(nvcuvid|nvEncodeAPI64|nvcuda)\")
+        set(\${type_var} \"system\" PARENT_SCOPE)
+      endif()
+    endfunction()
     fixup_bundle(\"${APPS}\" \"\${QTPLUGINS}\" \"${DIRS}\")
   " COMPONENT runtime)
 ENDIF((APPLE AND BUILD_AS_BUNDLE) OR WIN32)

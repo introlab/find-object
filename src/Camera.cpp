@@ -33,7 +33,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdio.h>
 #include <opencv2/imgproc/imgproc.hpp>
 #if CV_MAJOR_VERSION > 3
-#include <opencv2/videoio/videoio_c.h>
 #endif
 #include <QtCore/QFile>
 #include "utilite/UDirectory.h"
@@ -82,7 +81,7 @@ int Camera::getTotalFrames()
 	}
 	else if(capture_.isOpened())
 	{
-		return (int)capture_.get(CV_CAP_PROP_FRAME_COUNT);
+		return (int)capture_.get(cv::CAP_PROP_FRAME_COUNT);
 	}
 	return 0;
 }
@@ -95,7 +94,7 @@ int Camera::getCurrentFrameIndex()
 	}
 	else if(capture_.isOpened())
 	{
-		return (int)capture_.get(CV_CAP_PROP_POS_FRAMES);
+		return (int)capture_.get(cv::CAP_PROP_POS_FRAMES);
 	}
 	return 0;
 }
@@ -106,9 +105,9 @@ void Camera::moveToFrame(int frame)
 	{
 		currentImageIndex_ = frame;
 	}
-	else if(capture_.isOpened() && frame < (int)capture_.get(CV_CAP_PROP_FRAME_COUNT))
+	else if(capture_.isOpened() && frame < (int)capture_.get(cv::CAP_PROP_FRAME_COUNT))
 	{
-		capture_.set(CV_CAP_PROP_POS_FRAMES, frame);
+		capture_.set(cv::CAP_PROP_POS_FRAMES, frame);
 	}
 }
 
@@ -252,8 +251,8 @@ bool Camera::start()
 				capture_.open(Settings::getCamera_1deviceId());
 				if(Settings::getCamera_2imageWidth() && Settings::getCamera_3imageHeight())
 				{
-					capture_.set(CV_CAP_PROP_FRAME_WIDTH, double(Settings::getCamera_2imageWidth()));
-					capture_.set(CV_CAP_PROP_FRAME_HEIGHT, double(Settings::getCamera_3imageHeight()));
+					capture_.set(cv::CAP_PROP_FRAME_WIDTH, double(Settings::getCamera_2imageWidth()));
+					capture_.set(cv::CAP_PROP_FRAME_HEIGHT, double(Settings::getCamera_3imageHeight()));
 				}
 				UINFO("Camera: Reading from camera device %d...", Settings::getCamera_1deviceId());
 			}

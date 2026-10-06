@@ -51,10 +51,14 @@ IF(QT4_FOUND)
     #This will generate moc_* for Qt
     QT4_WRAP_CPP(moc_srcs ${headers_ui})
     ### Qt Gui stuff  end###
-ELSE()
+ELSEIF(Qt5_FOUND)
     QT5_ADD_RESOURCES(srcs_qrc ${qrc})
     QT5_WRAP_UI(moc_uis ${uis})
     QT5_WRAP_CPP(moc_srcs ${headers_ui})
+ELSE()
+    QT6_ADD_RESOURCES(srcs_qrc ${qrc})
+    QT6_WRAP_UI(moc_uis ${uis})
+    QT6_WRAP_CPP(moc_srcs ${headers_ui})
 ENDIF()
 
 SET(SRC_FILES
@@ -168,10 +172,6 @@ ENDIF(CATKIN_BUILD)
 
 # create a library from the source files
 ADD_LIBRARY(find_object ${SRC_FILES})
-# Linking with Qt libraries
-IF(Qt5_FOUND)
-    target_link_libraries(find_object Qt5::Core Qt5::Widgets Qt5::Gui Qt5::Network Qt5::PrintSupport)
-ENDIF(Qt5_FOUND)
 
 IF(NOT COLCON_BUILD)
    TARGET_LINK_LIBRARIES(find_object ${LIBRARIES})
@@ -216,12 +216,6 @@ ELSEIF(CATKIN_BUILD)
    add_executable(tf_example ros1/tf_example_node.cpp)
    target_link_libraries(tf_example ${LIBRARIES})
    add_dependencies(tf_example ${${PROJECT_NAME}_EXPORTED_TARGETS})
-
-   IF(Qt5_FOUND)
-      QT5_USE_MODULES(find_object_2d Widgets Core Gui Network PrintSupport)
-      QT5_USE_MODULES(print_objects_detected Widgets Core Gui Network PrintSupport)
-      QT5_USE_MODULES(tf_example Widgets Core Gui Network PrintSupport)
-   ENDIF(Qt5_FOUND)
 
    ## Mark executables and/or libraries for installation
    install(TARGETS

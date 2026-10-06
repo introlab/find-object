@@ -44,7 +44,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgproc/imgproc_c.h>
 
 namespace find_object {
 
@@ -392,7 +391,7 @@ void AddObjectDialog::update(const cv::Mat & image, const Header & header, const
 		// convert to grayscale
 		if(image.channels() != 1 || image.depth() != CV_8U)
 		{
-			cv::cvtColor(image, cameraImage_, CV_BGR2GRAY);
+			cv::cvtColor(image, cameraImage_, cv::COLOR_BGR2GRAY);
 		}
 		else
 		{

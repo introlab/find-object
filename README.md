@@ -1,19 +1,22 @@
 # find-object
 
-<table>
-    <tbody>
-        <tr>
-           <td>Linux</td>
-           <td><a href="https://github.com/introlab/find-object/actions/workflows/cmake.yml"><img src="https://github.com/introlab/find-object/actions/workflows/cmake.yml/badge.svg" alt="Build Status"/> <br> <a href="https://github.com/introlab/find-object/actions/workflows/ros1.yml"><img src="https://github.com/introlab/find-object/actions/workflows/ros1.yml/badge.svg" alt="Build Status"/> <br> <a href="https://github.com/introlab/find-object/actions/workflows/ros2.yml"><img src="https://github.com/introlab/find-object/actions/workflows/ros2.yml/badge.svg" alt="Build Status"/>
-           </td>
-        </tr>
-        <tr>
-           <td>Windows</td>
-           <td><a href="https://ci.appveyor.com/project/matlabbe/find-object/branch/master"><img src="https://ci.appveyor.com/api/projects/status/hn51r6p5c0peqctb/branch/master?svg=true" alt="Build Status"/>
-           </td>
-        </tr>
-     </tbody>
-  </table>
+#### CI Latest
+
+| | Build |
+|---|---|
+| Desktop | [![Linux](https://github.com/introlab/find-object/actions/workflows/cmake.yml/badge.svg)](https://github.com/introlab/find-object/actions/workflows/cmake.yml) [![Windows](https://github.com/introlab/find-object/actions/workflows/cmake-windows.yml/badge.svg)](https://github.com/introlab/find-object/actions/workflows/cmake-windows.yml) [![macOS](https://github.com/introlab/find-object/actions/workflows/cmake-macos.yml/badge.svg)](https://github.com/introlab/find-object/actions/workflows/cmake-macos.yml) |
+| ROS 2 | [![ROS 2](https://github.com/introlab/find-object/actions/workflows/ros2.yml/badge.svg)](https://github.com/introlab/find-object/actions/workflows/ros2.yml) |
+
+#### ROS Binaries
+
+| | Distro | Ubuntu | Released | In apt | Build |
+|---|---|---|---|---|---|
+| ROS 1 | Noetic (EOL) | 20.04 | [![released](https://img.shields.io/badge/dynamic/yaml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fros%2Frosdistro%2Fmaster%2Fnoetic%2Fdistribution.yaml&query=%24.repositories.find_object_2d.release.version&label=%20)](https://github.com/ros/rosdistro/blob/master/noetic/distribution.yaml) | [![apt](https://img.shields.io/ros/v/noetic/find_object_2d?label=%20)](https://index.ros.org/p/find_object_2d/#noetic) |  |
+| ROS 2 | Humble | 22.04 | [![released](https://img.shields.io/badge/dynamic/yaml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fros%2Frosdistro%2Fmaster%2Fhumble%2Fdistribution.yaml&query=%24.repositories.find_object_2d.release.version&label=%20)](https://github.com/ros/rosdistro/blob/master/humble/distribution.yaml) | [![apt](https://img.shields.io/ros/v/humble/find_object_2d?label=%20)](https://index.ros.org/p/find_object_2d/#humble) | [![build](http://build.ros2.org/buildStatus/icon?job=Hbin_uJ64__find_object_2d__ubuntu_jammy_amd64__binary)](http://build.ros2.org/job/Hbin_uJ64__find_object_2d__ubuntu_jammy_amd64__binary/) |
+| ROS 2 | Jazzy | 24.04 | [![released](https://img.shields.io/badge/dynamic/yaml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fros%2Frosdistro%2Fmaster%2Fjazzy%2Fdistribution.yaml&query=%24.repositories.find_object_2d.release.version&label=%20)](https://github.com/ros/rosdistro/blob/master/jazzy/distribution.yaml) | [![apt](https://img.shields.io/ros/v/jazzy/find_object_2d?label=%20)](https://index.ros.org/p/find_object_2d/#jazzy) | [![build](http://build.ros2.org/buildStatus/icon?job=Jbin_uN64__find_object_2d__ubuntu_noble_amd64__binary)](http://build.ros2.org/job/Jbin_uN64__find_object_2d__ubuntu_noble_amd64__binary/) |
+| ROS 2 | Kilted | 24.04 | [![released](https://img.shields.io/badge/dynamic/yaml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fros%2Frosdistro%2Fmaster%2Fkilted%2Fdistribution.yaml&query=%24.repositories.find_object_2d.release.version&label=%20)](https://github.com/ros/rosdistro/blob/master/kilted/distribution.yaml) | [![apt](https://img.shields.io/ros/v/kilted/find_object_2d?label=%20)](https://index.ros.org/p/find_object_2d/#kilted) | [![build](http://build.ros2.org/buildStatus/icon?job=Kbin_uN64__find_object_2d__ubuntu_noble_amd64__binary)](http://build.ros2.org/job/Kbin_uN64__find_object_2d__ubuntu_noble_amd64__binary/) |
+| ROS 2 | Lyrical | 26.04 | [![released](https://img.shields.io/badge/dynamic/yaml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fros%2Frosdistro%2Fmaster%2Flyrical%2Fdistribution.yaml&query=%24.repositories.find_object_2d.release.version&label=%20)](https://github.com/ros/rosdistro/blob/master/lyrical/distribution.yaml) | [![apt](https://img.shields.io/ros/v/lyrical/find_object_2d?label=%20)](https://index.ros.org/p/find_object_2d/#lyrical) |  |
+| ROS 2 | Rolling | 26.04 | [![released](https://img.shields.io/badge/dynamic/yaml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fros%2Frosdistro%2Fmaster%2Frolling%2Fdistribution.yaml&query=%24.repositories.find_object_2d.release.version&label=%20)](https://github.com/ros/rosdistro/blob/master/rolling/distribution.yaml) | [![apt](https://img.shields.io/ros/v/rolling/find_object_2d?label=%20)](https://index.ros.org/p/find_object_2d/#rolling) |  |
 
 ## Standalone
 Find-Object project, visit the [home page](http://introlab.github.io/find-object/) for more information.

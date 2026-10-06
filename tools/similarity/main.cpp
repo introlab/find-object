@@ -31,8 +31,20 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // OpenCV stuff
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
+#include <opencv2/core/version.hpp>
+#if CV_MAJOR_VERSION < 3
 #include <opencv2/features2d/features2d.hpp>
+#elif CV_MAJOR_VERSION < 5
+#include <opencv2/features2d.hpp>
+#else
+#include <opencv2/features.hpp>
+#endif
+#include <opencv2/core/version.hpp>
+#if CV_MAJOR_VERSION < 5
 #include <opencv2/calib3d/calib3d.hpp> // for homography
+#else
+#include <opencv2/geometry.hpp> // for homography
+#endif
 #include <opencv2/opencv_modules.hpp>
 
 #ifdef HAVE_OPENCV_NONFREE
