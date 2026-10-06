@@ -33,8 +33,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <opencv2/core/version.hpp>
 #if CV_MAJOR_VERSION < 3
 #include <opencv2/features2d/features2d.hpp>
+#elif CV_MAJOR_VERSION < 5
+#include <opencv2/features2d.hpp>
 #else
-#include <opencv2/features2d.hpp> // features module in OpenCV 5
+#include <opencv2/features.hpp>
 #endif
 #include <opencv2/core/core.hpp>
 #include "find_object/Header.h"

@@ -47,7 +47,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <iostream>
 #include <stdio.h>
 
-#include "opencv2/calib3d/calib3d.hpp"
+#include <opencv2/core/version.hpp>
+#if CV_MAJOR_VERSION < 5
+#include <opencv2/calib3d/calib3d.hpp>
+#else
+#include <opencv2/geometry.hpp>
+#endif
 #include "opencv2/imgproc/imgproc.hpp"
 #include <opencv2/opencv_modules.hpp>
 #if CV_MAJOR_VERSION < 3

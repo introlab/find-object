@@ -44,7 +44,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdio.h>
 
 #include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/core/version.hpp>
+#if CV_MAJOR_VERSION < 5
 #include <opencv2/calib3d/calib3d.hpp> // for homography
+#else
+#include <opencv2/geometry.hpp> // for homography
+#endif
 
 namespace find_object {
 
