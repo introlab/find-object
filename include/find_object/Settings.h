@@ -34,7 +34,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QtCore/QMap>
 #include <QtCore/QVariant>
 #include <QtCore/QByteArray>
+#include <opencv2/core/version.hpp>
+#if CV_MAJOR_VERSION < 3
 #include <opencv2/features2d/features2d.hpp>
+#else
+#include <opencv2/features2d.hpp> // features module in OpenCV 5
+#endif
 
 namespace find_object {
 

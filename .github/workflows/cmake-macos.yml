@@ -23,7 +23,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        build_name: [macos-sequoia-apple-silicon, macos-tahoe-apple-silicon]
+        build_name: [macos-sequoia-apple-silicon, macos-tahoe-apple-silicon, macos-tahoe-apple-silicon-cv5]
         include:
         - build_name: macos-sequoia-apple-silicon
           os: macos-15
@@ -31,6 +31,9 @@ jobs:
         - build_name: macos-tahoe-apple-silicon
           os: macos-26
           cv: opencv@4
+        - build_name: macos-tahoe-apple-silicon-cv5
+          os: macos-26
+          cv: opencv
 
     steps:
     - uses: actions/checkout@v4

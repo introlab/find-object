@@ -43,9 +43,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QGraphicsRectItem>
 #include <stdio.h>
 
-#if CV_MAJOR_VERSION > 3
-#include <opencv2/core/types_c.h>
-#endif
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/calib3d/calib3d.hpp> // for homography
 
 namespace find_object {
 
@@ -590,19 +589,22 @@ void FindObject::affineSkew(
         phi = phi*CV_PI/180.0f; // deg2rad
         float s = std::sin(phi);
         float c = std::cos(phi);
-        cv::Mat A22 = (cv::Mat_<float>(2, 2) <<
+        float a22[] = {
         		c, -s,
-        		s, c);
-        cv::Mat cornersIn = (cv::Mat_<float>(4, 2) <<
+        		s, c};
+        cv::Mat A22 = cv::Mat(2, 2, CV_32F, a22).clone();
+        float corners[] = {
         		0,0,
-        		w,0,
-        		w,h,
-        		0,h);
+        		float(w),0,
+        		float(w),float(h),
+        		0,float(h)};
+        cv::Mat cornersIn = cv::Mat(4, 2, CV_32F, corners).clone();
         cv::Mat cornersOut = cornersIn * A22.t();
         cv::Rect rect = cv::boundingRect(cornersOut.reshape(2,4));
-        A = (cv::Mat_<float>(2, 3) <<
-				c, -s, -rect.x,
-				s, c, -rect.y);
+        float a[] = {
+				c, -s, -float(rect.x),
+				s, c, -float(rect.y)};
+        A = cv::Mat(2, 3, CV_32F, a).clone();
         cv::warpAffine(image, skewImage, A, cv::Size(rect.width, rect.height), cv::INTER_LINEAR, cv::BORDER_REPLICATE);
     }
     else
@@ -680,7 +682,8 @@ protected:
 		// Transform points to original image coordinates
 		for(unsigned int i=0; i<keypoints_.size(); ++i)
 		{
-			cv::Mat p = (cv::Mat_<float>(3, 1) << keypoints_[i].pt.x, keypoints_[i].pt.y, 1);
+			float pt[] = {keypoints_[i].pt.x, keypoints_[i].pt.y, 1.0f};
+			cv::Mat p(3, 1, CV_32F, pt);
 			cv::Mat pa = Ai * p;
 			keypoints_[i].pt.x = pa.at<float>(0,0);
 			keypoints_[i].pt.y = pa.at<float>(1,0);
@@ -695,7 +698,7 @@ protected:
 					corners,
 					cv::Size(Settings::getFeature2D_7SubPixWinSize(), Settings::getFeature2D_7SubPixWinSize()),
 					cv::Size(-1,-1),
-					cv::TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, Settings::getFeature2D_8SubPixIterations(), Settings::getFeature2D_9SubPixEps() ));
+					cv::TermCriteria( cv::TermCriteria::EPS + cv::TermCriteria::COUNT, Settings::getFeature2D_8SubPixIterations(), Settings::getFeature2D_9SubPixEps() ));
 			UASSERT(corners.size() == keypoints_.size());
 			for(unsigned int i=0; i<corners.size(); ++i)
 			{
@@ -787,7 +790,7 @@ protected:
 							corners,
 							cv::Size(Settings::getFeature2D_7SubPixWinSize(), Settings::getFeature2D_7SubPixWinSize()),
 							cv::Size(-1,-1),
-							cv::TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, Settings::getFeature2D_8SubPixIterations(), Settings::getFeature2D_9SubPixEps() ));
+							cv::TermCriteria( cv::TermCriteria::EPS + cv::TermCriteria::COUNT, Settings::getFeature2D_8SubPixIterations(), Settings::getFeature2D_9SubPixEps() ));
 					UASSERT(corners.size() == keypoints_.size());
 					for(unsigned int i=0; i<corners.size(); ++i)
 					{
