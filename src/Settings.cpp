@@ -233,31 +233,6 @@ ParametersMap Settings::loadSettings(const QString & fileName)
 			}
 		}
 
-		//validate descriptors and nearest neighbor compatibilities
-		bool isBinaryDescriptor = currentDescriptorType().compare("ORB") == 0 ||
-								  currentDescriptorType().compare("Brief") == 0 ||
-								  currentDescriptorType().compare("BRISK") == 0 ||
-								  currentDescriptorType().compare("FREAK") == 0 ||
-								  currentDescriptorType().compare("AKAZE") == 0 ||
-								  currentDescriptorType().compare("LATCH") == 0 ||
-								  currentDescriptorType().compare("LUCID") == 0;
-		bool binToFloat = getNearestNeighbor_7ConvertBinToFloat();
-		if(isBinaryDescriptor && !binToFloat && currentNearestNeighborType().compare("Lsh") != 0 && currentNearestNeighborType().compare("BruteForce") != 0)
-		{
-			UWARN("Current selected descriptor type (\"%s\") is binary while nearest neighbor strategy is not (\"%s\").\n"
-				   "Falling back to \"BruteForce\" nearest neighbor strategy with Hamming distance (by default).",
-				   currentDescriptorType().toStdString().c_str(),
-				   currentNearestNeighborType().toStdString().c_str());
-			QString tmp = Settings::getNearestNeighbor_1Strategy();
-			*tmp.begin() = '6'; // set BruteForce
-			setNearestNeighbor_1Strategy(tmp);
-			loadedParameters.insert(Settings::kNearestNeighbor_1Strategy(), tmp);
-			tmp = Settings::getNearestNeighbor_2Distance_type();
-			*tmp.begin() = '8'; // set HAMMING
-			setNearestNeighbor_2Distance_type(tmp);
-			loadedParameters.insert(Settings::kNearestNeighbor_2Distance_type(), tmp);
-		}
-
 		UINFO("Settings loaded from %s.", path.toStdString().c_str());
 	}
 	else

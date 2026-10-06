@@ -972,6 +972,8 @@ void FindObject::updateVocabulary(const QList<int> & ids)
 	int count = 0;
 	int dim = -1;
 	int type = -1;
+	int vocabularyDim = -1;
+	int vocabularyType = -1;
 	QList<ObjSignature*> objectsList;
 	if(ids.size())
 	{
@@ -988,8 +990,8 @@ void FindObject::updateVocabulary(const QList<int> & ids)
 		}
 		if(vocabulary_->size())
 		{
-			dim = vocabulary_->dim();
-			type = vocabulary_->type();
+			vocabularyDim = vocabulary_->dim();
+			vocabularyType = vocabulary_->type();
 		}
 	}
 	else
@@ -1003,6 +1005,23 @@ void FindObject::updateVocabulary(const QList<int> & ids)
 	{
 		if(!objectsList.at(i)->descriptors().empty())
 		{
+			if(vocabularyDim >= 0)
+			{
+				// compare as stored in the vocabulary (binary descriptors may be converted to float)
+				int objDim = objectsList.at(i)->descriptors().cols;
+				int objType = objectsList.at(i)->descriptors().type();
+				if(Vocabulary::isBinToFloatConverted(objType))
+				{
+					objDim *= 8;
+					objType = CV_32FC1;
+				}
+				if(objDim != vocabularyDim || objType != vocabularyType)
+				{
+					UERROR("Descriptors of the objects are not the same size/type than the vocabulary! Objects "
+							"opened must have been processed by the same descriptor extractor.");
+					return;
+				}
+			}
 			if(dim >= 0 && objectsList.at(i)->descriptors().cols != dim)
 			{
 				UERROR("Descriptors of the objects are not all the same size! Objects "
@@ -1487,9 +1506,11 @@ bool FindObject::detect(const cv::Mat & image, find_object::DetectionInfo & info
 		bool vocabularyValid = Settings::getGeneral_invertedSearch() &&
 								vocabulary_->size() &&
 								!vocabulary_->indexedDescriptors().empty() &&
-								vocabulary_->indexedDescriptors().cols == info.sceneDescriptors_.cols &&
-								(vocabulary_->indexedDescriptors().type() == info.sceneDescriptors_.type() ||
-										(Settings::getNearestNeighbor_7ConvertBinToFloat() && vocabulary_->indexedDescriptors().type() == CV_32FC1));
+								((vocabulary_->indexedDescriptors().cols == info.sceneDescriptors_.cols &&
+								  vocabulary_->indexedDescriptors().type() == info.sceneDescriptors_.type()) ||
+								 (Vocabulary::isBinToFloatConverted(info.sceneDescriptors_.type()) &&
+								  vocabulary_->indexedDescriptors().cols == info.sceneDescriptors_.cols*8 &&
+								  vocabulary_->indexedDescriptors().type() == CV_32FC1));
 
 		// COMPARE
 		UDEBUG("COMPARE");

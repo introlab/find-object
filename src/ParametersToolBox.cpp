@@ -676,36 +676,7 @@ void ParametersToolBox::changeParameter(QObject * sender, int value)
 									  descriptorBox->currentText().compare("LATCH") == 0 ||
 									  descriptorBox->currentText().compare("LUCID") == 0;
 			bool binToFloat = binToFloatCheckbox->isChecked();
-			if(isBinaryDescriptor && !binToFloat && nnBox->currentText().compare("Lsh") != 0 && nnBox->currentText().compare("BruteForce") != 0)
-			{
-				QMessageBox::warning(this,
-						tr("Warning"),
-						tr("Current selected descriptor type (\"%1\") is binary while nearest neighbor strategy is not (\"%2\").\n"
-						   "Falling back to \"BruteForce\" nearest neighbor strategy with Hamming distance (by default).")
-						   .arg(descriptorBox->currentText())
-						   .arg(nnBox->currentText()));
-				QString tmp = Settings::getNearestNeighbor_1Strategy();
-				*tmp.begin() = '6'; // set BruteForce
-				Settings::setNearestNeighbor_1Strategy(tmp);
-				tmp = Settings::getNearestNeighbor_2Distance_type();
-				*tmp.begin() = '8'; // set HAMMING
-				Settings::setNearestNeighbor_2Distance_type(tmp);
-				nnBox->blockSignals(true);
-				distBox->blockSignals(true);
-				this->updateParameter(Settings::kNearestNeighbor_1Strategy());
-				this->updateParameter(Settings::kNearestNeighbor_2Distance_type());
-				nnBox->blockSignals(false);
-				distBox->blockSignals(false);
-				if(sender == nnBox)
-				{
-					this->updateParametersVisibility();
-					return;
-				}
-				nnStrategyChanged = true;
-				paramChanged.append(Settings::kNearestNeighbor_1Strategy());
-				paramChanged.append(Settings::kNearestNeighbor_2Distance_type());
-			}
-			else if((!isBinaryDescriptor || binToFloat) && nnBox->currentText().compare("Lsh") == 0)
+			if((!isBinaryDescriptor || binToFloat) && nnBox->currentText().compare("Lsh") == 0)
 			{
 				if(binToFloat)
 				{

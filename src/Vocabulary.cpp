@@ -217,9 +217,9 @@ QMultiMap<int, int> Vocabulary::addWords(const cv::Mat & descriptorsIn, int obje
 	}
 
 	cv::Mat descriptors;
-	if(descriptorsIn.type() == CV_8U && Settings::getNearestNeighbor_7ConvertBinToFloat())
+	if(isBinToFloatConverted(descriptorsIn.type()))
 	{
-		descriptorsIn.convertTo(descriptors, CV_32F);
+		descriptors = convertBinTo32F(descriptorsIn);
 	}
 	else
 	{
@@ -422,10 +422,16 @@ void Vocabulary::update()
 	if(!indexedDescriptors_.empty() && !Settings::isBruteForceNearestNeighbor())
 	{
 		cv::flann::IndexParams * params = Settings::createFlannIndexParams();
+		cvflann::flann_distance_t distanceType = Settings::getFlannDistanceType();
+		if(indexedDescriptors_.type() == CV_32F && distanceType == cvflann::FLANN_DIST_HAMMING)
+		{
+			// binary descriptors converted to float
+			distanceType = cvflann::FLANN_DIST_L2;
+		}
 #if CV_MAJOR_VERSION == 2 and CV_MINOR_VERSION == 4 and CV_SUBMINOR_VERSION >= 12
-		flannIndex_.build(indexedDescriptors_, cv::Mat(), *params, Settings::getFlannDistanceType());
+		flannIndex_.build(indexedDescriptors_, cv::Mat(), *params, distanceType);
 #else
-		flannIndex_.build(indexedDescriptors_, *params, Settings::getFlannDistanceType());
+		flannIndex_.build(indexedDescriptors_, *params, distanceType);
 #endif
 		delete params;
 	}
@@ -436,9 +442,9 @@ void Vocabulary::search(const cv::Mat & descriptorsIn, cv::Mat & results, cv::Ma
 	if(!indexedDescriptors_.empty())
 	{
 		cv::Mat descriptors;
-		if(descriptorsIn.type() == CV_8U && Settings::getNearestNeighbor_7ConvertBinToFloat())
+		if(isBinToFloatConverted(descriptorsIn.type()))
 		{
-			descriptorsIn.convertTo(descriptors, CV_32F);
+			descriptors = convertBinTo32F(descriptorsIn);
 		}
 		else
 		{
@@ -529,6 +535,32 @@ void Vocabulary::search(const cv::Mat & descriptorsIn, cv::Mat & results, cv::Ma
 			dists = temp;
 		}
 	}
+}
+
+bool Vocabulary::isBinToFloatConverted(int descriptorsType)
+{
+	return descriptorsType == CV_8U &&
+		Settings::currentNearestNeighborType().compare("Lsh") != 0 && // Lsh requires binary descriptors
+		(Settings::getNearestNeighbor_7ConvertBinToFloat() || !Settings::isBruteForceNearestNeighbor());
+}
+
+cv::Mat Vocabulary::convertBinTo32F(const cv::Mat & descriptorsIn)
+{
+	UASSERT(descriptorsIn.type() == CV_8UC1);
+	cv::Mat descriptorsOut(descriptorsIn.rows, descriptorsIn.cols*8, CV_32FC1);
+	for(int i=0; i<descriptorsIn.rows; ++i)
+	{
+		const unsigned char * ptrIn = descriptorsIn.ptr(i);
+		float * ptrOut = descriptorsOut.ptr<float>(i);
+		for(int j=0; j<descriptorsIn.cols; ++j)
+		{
+			for(int b=0; b<8; ++b)
+			{
+				ptrOut[j*8+b] = (ptrIn[j] & (1<<b)) != 0?1.0f:0.0f;
+			}
+		}
+	}
+	return descriptorsOut;
 }
 
 } // namespace find_object
