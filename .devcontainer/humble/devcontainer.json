@@ -1,10 +1,39 @@
 {
-    "image": "osrf/ros:humble-desktop",
+    "build": {
+      "dockerfile": "Dockerfile",
+      "pull": true
+    },
+    "remoteUser": "vscode",
     "customizations": {
         "vscode": {
-          "extensions": ["ms-vscode.cpptools-themes", "ms-vscode.cmake-tools", "ms-vscode.cpptools-extension-pack"]
+          "extensions": [
+            "ms-vscode.cpptools-themes",
+            "ms-vscode.cmake-tools",
+            "ms-vscode.cpptools-extension-pack",
+            "ms-azuretools.vscode-docker",
+            "ms-python.python"]
         }
       },
-    "workspaceMount": "source=${localWorkspaceFolder},target=/ros2_ws/src/find_object_2d,type=bind",
-    "workspaceFolder": "/ros2_ws"
+    "settings": {
+      "python.autoComplete.extraPaths": [
+        "/opt/ros/humble/lib/python3/dist-packages"
+      ],
+      "terminal.integrated.defaultProfile.linux": "bash"
+    },
+    "workspaceMount": "source=${localWorkspaceFolder},target=/home/vscode/ros2_ws/src/find_object_2d,type=bind",
+    "workspaceFolder": "/home/vscode/ros2_ws",
+    "postCreateCommand": "rosdep update && sudo apt update && rosdep install --from-paths ~/ros2_ws/src/find_object_2d -i -y && echo 'Initialize: colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release'",
+    "hostRequirements": {
+        "gpu": "optional"
+    },
+    "runArgs": ["--privileged",
+                "--network=host",
+                "--gpus=all",
+                //"--runtime=nvidia", // uncommment this if find_object doesn't show up in nvidia-smi on the host computer
+                "--env=DISPLAY",
+                "--env=QT_X11_NO_MITSHM=1",
+                "--volume=/tmp/.X11-unix:/tmp/.X11-unix"],
+    "containerEnv": {
+        "NVIDIA_VISIBLE_DEVICES": "all"
+    }
 }
