@@ -601,22 +601,22 @@ int main(int argc, char* argv[])
 		if(!scene.empty())
 		{
 			// process the scene and exit
-			QTime time;
+			QElapsedTimer time;
 			time.start();
 			find_object::DetectionInfo info;
 			findObject->detect(scene, info);
 
 			if(info.objDetected_.size() > 1)
 			{
-				UINFO("%d objects detected! (%d ms)", (int)info.objDetected_.size(), time.elapsed());
+				UINFO("%d objects detected! (%d ms)", (int)info.objDetected_.size(), (int)time.elapsed());
 			}
 			else if(info.objDetected_.size() == 1)
 			{
-				UINFO("Object %d detected! (%d ms)", (int)info.objDetected_.begin().key(), time.elapsed());
+				UINFO("Object %d detected! (%d ms)", (int)info.objDetected_.begin().key(), (int)time.elapsed());
 			}
 			else if(find_object::Settings::getGeneral_sendNoObjDetectedEvents())
 			{
-				UINFO("No objects detected. (%d ms)", time.elapsed());
+				UINFO("No objects detected. (%d ms)", (int)time.elapsed());
 			}
 
 			if(!jsonPath.isEmpty())

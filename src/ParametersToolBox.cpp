@@ -434,7 +434,10 @@ void ParametersToolBox::addParameter(QVBoxLayout * layout,
 	int decimalValue = 0;
 
 	QString str = QString::number(Settings::getDefaultParameters().value(key).toDouble());
-	str.remove( QRegExp("0+$") );
+	while(str.endsWith('0'))
+	{
+		str.chop(1);
+	}
 
 	if(!str.isEmpty())
 	{

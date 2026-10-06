@@ -25,9 +25,6 @@ INCLUDE_DIRECTORIES(${INCLUDE_DIRS})
 # The extension is automatically found.
 ADD_EXECUTABLE(tcpService ${SRC_FILES})
 TARGET_LINK_LIBRARIES(tcpService find_object ${LIBRARIES})
-IF(Qt5_FOUND)
-    QT5_USE_MODULES(tcpService Widgets Core Gui Network PrintSupport)
-ENDIF(Qt5_FOUND)
 
 SET_TARGET_PROPERTIES( tcpService 
   PROPERTIES OUTPUT_NAME ${PROJECT_PREFIX}-tcpService)

@@ -28,7 +28,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdio.h>
 
 // Qt stuff
-#include <QtCore/QTime>
+#include <QtCore/QElapsedTimer>
 #include <QtCore/QTimer>
 #include <QApplication>
 #include <QGraphicsRectItem>
@@ -75,7 +75,7 @@ int main(int argc, char * argv[])
 	{
 		showUsage();
 	}
-	QTime time;
+	QElapsedTimer time;
 
 	// GUI stuff
 	QApplication app(argc, argv);
@@ -87,7 +87,7 @@ int main(int argc, char * argv[])
 
 	if(!objectImg.empty() && !sceneImg.empty())
 	{
-		printf("Loading images: %d ms\n", time.restart());
+		printf("Loading images: %d ms\n", (int)time.restart());
 		std::vector<cv::KeyPoint> objectKeypoints;
 		std::vector<cv::KeyPoint> sceneKeypoints;
 		cv::Mat objectDescriptors;
@@ -114,9 +114,9 @@ int main(int argc, char * argv[])
         detector = cv::SIFT::create();
 #endif
 		detector->detect(objectImg, objectKeypoints);
-		printf("Object: %d keypoints detected in %d ms\n", (int)objectKeypoints.size(), time.restart());
+		printf("Object: %d keypoints detected in %d ms\n", (int)objectKeypoints.size(), (int)time.restart());
 		detector->detect(sceneImg, sceneKeypoints);
-		printf("Scene: %d keypoints detected in %d ms\n", (int)sceneKeypoints.size(), time.restart());
+		printf("Scene: %d keypoints detected in %d ms\n", (int)sceneKeypoints.size(), (int)time.restart());
 
 		////////////////////////////
 		// EXTRACT DESCRIPTORS
@@ -136,9 +136,9 @@ int main(int argc, char * argv[])
         extractor = cv::SIFT::create();
 #endif
 		extractor->compute(objectImg, objectKeypoints, objectDescriptors);
-		printf("Object: %d descriptors extracted in %d ms\n", objectDescriptors.rows, time.restart());
+		printf("Object: %d descriptors extracted in %d ms\n", objectDescriptors.rows, (int)time.restart());
 		extractor->compute(sceneImg, sceneKeypoints, sceneDescriptors);
-		printf("Scene: %d descriptors extracted in %d ms\n", sceneDescriptors.rows, time.restart());
+		printf("Scene: %d descriptors extracted in %d ms\n", sceneDescriptors.rows, (int)time.restart());
 
 		////////////////////////////
 		// NEAREST NEIGHBOR MATCHING USING FLANN LIBRARY (included in OpenCV)
@@ -161,7 +161,7 @@ int main(int argc, char * argv[])
 			{
 				// Create Flann LSH index
 				cv::flann::Index flannIndex(sceneDescriptors, cv::flann::LshIndexParams(12, 20, 2), cvflann::FLANN_DIST_HAMMING);
-				printf("Time creating FLANN LSH index = %d ms\n", time.restart());
+				printf("Time creating FLANN LSH index = %d ms\n", (int)time.restart());
 
 				// search (nearest neighbor)
 				flannIndex.knnSearch(objectDescriptors, results, dists, k, cv::flann::SearchParams() );
@@ -180,13 +180,13 @@ int main(int argc, char * argv[])
 			{
 				// Create Flann KDTree index
 				cv::flann::Index flannIndex(sceneDescriptors, cv::flann::KDTreeIndexParams(), cvflann::FLANN_DIST_EUCLIDEAN);
-				printf("Time creating FLANN KDTree index = %d ms\n", time.restart());
+				printf("Time creating FLANN KDTree index = %d ms\n", (int)time.restart());
 
 				// search (nearest neighbor)
 				flannIndex.knnSearch(objectDescriptors, results, dists, k, cv::flann::SearchParams() );
 			}
 		}
-		printf("Time nearest neighbor search = %d ms\n", time.restart());
+		printf("Time nearest neighbor search = %d ms\n", (int)time.restart());
 
 		// Conversion to CV_32F if needed
 		if(dists.type() == CV_32S)
@@ -255,7 +255,7 @@ int main(int argc, char * argv[])
 					cv::RANSAC,
 					1.0,
 					outlier_mask);
-			printf("Time finding homography = %d ms\n", time.restart());
+			printf("Time finding homography = %d ms\n", (int)time.restart());
 			int inliers=0, outliers=0;
 			for(unsigned int k=0; k<mpts_1.size();++k)
 			{
