@@ -1774,6 +1774,33 @@ void Feature2D::detect(const cv::Mat & image,
 	}
 }
 
+// Remove keypoints with invalid (NaN) float descriptors, e.g., KAZE
+// descriptors computed on keypoints from another detector (AKAZE).
+static void removeInvalidDescriptors(std::vector<cv::KeyPoint> & keypoints, cv::Mat & descriptors)
+{
+	if(descriptors.type() != CV_32FC1 || descriptors.rows != (int)keypoints.size())
+	{
+		return;
+	}
+	std::vector<cv::KeyPoint> validKeypoints;
+	cv::Mat validDescriptors;
+	for(int i=0; i<descriptors.rows; ++i)
+	{
+		if(cv::checkRange(descriptors.row(i), true))
+		{
+			validKeypoints.push_back(keypoints[i]);
+			validDescriptors.push_back(descriptors.row(i));
+		}
+	}
+	if(validDescriptors.rows != descriptors.rows)
+	{
+		UWARN("Removed %d/%d keypoints with invalid descriptors (NaN or infinite values).",
+				descriptors.rows-validDescriptors.rows, descriptors.rows);
+		keypoints = validKeypoints;
+		descriptors = validDescriptors;
+	}
+}
+
 void Feature2D::compute(const cv::Mat & image,
 		std::vector<cv::KeyPoint> & keypoints,
 		cv::Mat & descriptors)
@@ -1793,6 +1820,7 @@ void Feature2D::compute(const cv::Mat & image,
 	{
 		UERROR("Feature2D not set!?!?");
 	}
+	removeInvalidDescriptors(keypoints, descriptors);
 }
 
 void Feature2D::detectAndCompute(const cv::Mat & image,
@@ -1807,6 +1835,7 @@ void Feature2D::detectAndCompute(const cv::Mat & image,
 #else
 		feature2D_->detectAndCompute(image, mask, keypoints, descriptors);
 #endif
+		removeInvalidDescriptors(keypoints, descriptors);
 	}
 	else
 	{

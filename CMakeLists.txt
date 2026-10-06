@@ -223,6 +223,12 @@ IF(NOT ROS_BUILD)
    ADD_SUBDIRECTORY( example )
    ENDIF(NONFREE OR OpenCV_VERSION VERSION_GREATER "4.2.0")
 
+   OPTION(BUILD_TESTING "Build the detection tests (run with ctest)" OFF)
+   IF(BUILD_TESTING)
+      ENABLE_TESTING()
+      ADD_SUBDIRECTORY( tests )
+   ENDIF(BUILD_TESTING)
+
    #######################
    # Uninstall target, for "make uninstall"
    #######################

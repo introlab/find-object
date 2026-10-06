@@ -421,8 +421,19 @@ void Vocabulary::update()
 
 	if(!indexedDescriptors_.empty() && !Settings::isBruteForceNearestNeighbor())
 	{
-		cv::flann::IndexParams * params = Settings::createFlannIndexParams();
+		cv::flann::IndexParams * params = 0;
 		cvflann::flann_distance_t distanceType = Settings::getFlannDistanceType();
+		if(indexedDescriptors_.type() == CV_32F && Settings::currentNearestNeighborType().compare("Lsh") == 0)
+		{
+			UWARN("Lsh nearest neighbor strategy requires binary descriptors, "
+					"falling back to KDTree with Euclidean_L2 distance.");
+			params = new cv::flann::KDTreeIndexParams();
+			distanceType = cvflann::FLANN_DIST_L2;
+		}
+		else
+		{
+			params = Settings::createFlannIndexParams();
+		}
 		if(indexedDescriptors_.type() == CV_32F && distanceType == cvflann::FLANN_DIST_HAMMING)
 		{
 			// binary descriptors converted to float
