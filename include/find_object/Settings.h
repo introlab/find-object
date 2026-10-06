@@ -120,16 +120,16 @@ class FINDOBJECT_EXP Settings
 
 	//List format : [Index:item0;item1;item3;...]
 #if CV_MAJOR_VERSION < 3 || (CV_MAJOR_VERSION == 4 && CV_MINOR_VERSION <= 3) || (CV_MAJOR_VERSION == 3 && (CV_MINOR_VERSION < 4 || (CV_MINOR_VERSION==4 && CV_SUBMINOR_VERSION<11)))
-#if CV_MAJOR_VERSION >= 3 // NONFREE=SURF, DEFAULT=KAZE
-	PARAMETER_COND(Feature2D, 1Detector, QString, FINDOBJECT_NONFREE, "7:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK;AGAST;KAZE;AKAZE;SuperPointTorch" , "10:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK;AGAST;KAZE;AKAZE;SuperPointTorch", "Keypoint detector.");
-	PARAMETER_COND(Feature2D, 2Descriptor, QString, FINDOBJECT_NONFREE, "3:Brief;ORB;SIFT;SURF;BRISK;FREAK;KAZE;AKAZE;LUCID;LATCH;DAISY;SuperPointTorch", "6:Brief;ORB;SIFT;SURF;BRISK;FREAK;KAZE;AKAZE;LUCID;LATCH;DAISY;SuperPointTorch", "Keypoint descriptor.");
-#else // NONFREE=SURF, DEFAULT=ORB
-	PARAMETER_COND(Feature2D, 1Detector, QString, FINDOBJECT_NONFREE, "7:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK;AGAST;KAZE;AKAZE;SuperPointTorch" , "4:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK;AGAST;KAZE;AKAZE;SuperPointTorch", "Keypoint detector.");
-	PARAMETER_COND(Feature2D, 2Descriptor, QString, FINDOBJECT_NONFREE, "3:Brief;ORB;SIFT;SURF;BRISK;FREAK;KAZE;AKAZE;LUCID;LATCH;DAISY;SuperPointTorch", "1:Brief;ORB;SIFT;SURF;BRISK;FREAK;KAZE;AKAZE;LUCID;LATCH;DAISY;SuperPointTorch", "Keypoint descriptor.");
+#if CV_MAJOR_VERSION >= 3 // NONFREE=SIFT, DEFAULT=KAZE
+	PARAMETER_COND(Feature2D, 1Detector, QString, FINDOBJECT_NONFREE, "5:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK;AGAST;KAZE;AKAZE;SuperPointTorch" , "10:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK;AGAST;KAZE;AKAZE;SuperPointTorch", "Keypoint detector.");
+	PARAMETER_COND(Feature2D, 2Descriptor, QString, FINDOBJECT_NONFREE, "2:Brief;ORB;SIFT;SURF;BRISK;FREAK;KAZE;AKAZE;LUCID;LATCH;DAISY;SuperPointTorch", "6:Brief;ORB;SIFT;SURF;BRISK;FREAK;KAZE;AKAZE;LUCID;LATCH;DAISY;SuperPointTorch", "Keypoint descriptor.");
+#else // NONFREE=SIFT, DEFAULT=ORB
+	PARAMETER_COND(Feature2D, 1Detector, QString, FINDOBJECT_NONFREE, "5:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK;AGAST;KAZE;AKAZE;SuperPointTorch" , "4:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK;AGAST;KAZE;AKAZE;SuperPointTorch", "Keypoint detector.");
+	PARAMETER_COND(Feature2D, 2Descriptor, QString, FINDOBJECT_NONFREE, "2:Brief;ORB;SIFT;SURF;BRISK;FREAK;KAZE;AKAZE;LUCID;LATCH;DAISY;SuperPointTorch", "1:Brief;ORB;SIFT;SURF;BRISK;FREAK;KAZE;AKAZE;LUCID;LATCH;DAISY;SuperPointTorch", "Keypoint descriptor.");
 #endif
-#else // >=4.4 >=3.4.11: NONFREE=SURF, DEFAULT=SIFT
-	PARAMETER_COND(Feature2D, 1Detector, QString, FINDOBJECT_NONFREE, "7:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK;AGAST;KAZE;AKAZE;SuperPointTorch" , "5:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK;AGAST;KAZE;AKAZE;SuperPointTorch", "Keypoint detector.");
-	PARAMETER_COND(Feature2D, 2Descriptor, QString, FINDOBJECT_NONFREE, "3:Brief;ORB;SIFT;SURF;BRISK;FREAK;KAZE;AKAZE;LUCID;LATCH;DAISY;SuperPointTorch", "2:Brief;ORB;SIFT;SURF;BRISK;FREAK;KAZE;AKAZE;LUCID;LATCH;DAISY;SuperPointTorch", "Keypoint descriptor.");
+#else // >=4.4 >=3.4.11: SIFT is always available
+	PARAMETER(Feature2D, 1Detector, QString, "5:Dense;Fast;GFTT;MSER;ORB;SIFT;Star;SURF;BRISK;AGAST;KAZE;AKAZE;SuperPointTorch", "Keypoint detector.");
+	PARAMETER(Feature2D, 2Descriptor, QString, "2:Brief;ORB;SIFT;SURF;BRISK;FREAK;KAZE;AKAZE;LUCID;LATCH;DAISY;SuperPointTorch", "Keypoint descriptor.");
 #endif
 	PARAMETER(Feature2D, 3MaxFeatures, int, 0, "Maximum features per image. If the number of features extracted is over this threshold, only X features with the highest response are kept. 0 means all features are kept.");
 	PARAMETER(Feature2D, 4Affine, bool, false, "(ASIFT) Extract features on multiple affine transformations of the image.");
