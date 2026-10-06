@@ -188,6 +188,13 @@ IF((APPLE AND BUILD_AS_BUNDLE) OR WIN32)
     # Homebrew libraries are read-only, make the copies writable so they can be fixed up
     set(BU_CHMOD_BUNDLE_ITEMS ON)
     include(\"BundleUtilities\")
+    # nvcuda.dll, nvcuvid.dll and nvEncodeAPI64.dll ship with the NVIDIA driver, not
+    # the CUDA toolkit: never bundle them, they are resolved from the user's driver.
+    function(gp_resolved_file_type_override resolved_file type_var)
+      if(resolved_file MATCHES \"(nvcuvid|nvEncodeAPI64|nvcuda)\")
+        set(\${type_var} \"system\" PARENT_SCOPE)
+      endif()
+    endfunction()
     fixup_bundle(\"${APPS}\" \"\${QTPLUGINS}\" \"${DIRS}\")
   " COMPONENT runtime)
 ENDIF((APPLE AND BUILD_AS_BUNDLE) OR WIN32)
