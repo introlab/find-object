@@ -1,0 +1,8 @@
+theme: jekyll-theme-slate
+title: Find-Object
+description: Simple Qt interface to try OpenCV implementations of SIFT, SURF, FAST, BRIEF and other feature detectors and descriptors.
+show_downloads: true
+github:
+  # download buttons: latest source, not this gh-pages branch
+  zip_url: https://github.com/introlab/find-object/zipball/master
+  tar_url: https://github.com/introlab/find-object/tarball/master
