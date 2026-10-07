@@ -29,6 +29,10 @@ jobs:
       image: osrf/ros:${{ matrix.ros_distro }}-desktop
     steps:
     - uses: actions/checkout@v4
+    - name: Remove ros2 apt source
+      # The image's ros2-apt-source conflicts with the ros2-testing-apt-source installed by setup-ros
+      if: matrix.ros_repo == 'ros2-testing'
+      run: sudo apt-get remove -y ros2-apt-source
     - uses: ros-tooling/setup-ros@v0.7
       with:
         required-ros-distributions: ${{ matrix.ros_distro }}
