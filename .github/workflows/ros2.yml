@@ -3,9 +3,9 @@ name: ros2
 
 on:
   push:
-    branches: [ master ]
+    branches: [ humble-devel ]
   pull_request:
-    branches: [ master ]
+    branches: [ humble-devel ]
   workflow_dispatch:
 
 env:
@@ -21,10 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        ros_distro: [humble, jazzy, kilted, lyrical, rolling]
-        include:
-        - ros_distro: rolling
-          use_ros2_testing: true # Rolling on Ubuntu resolute is only in ros2-testing (nightly)
+        ros_distro: [humble]
       fail-fast: false
     container:
       image: osrf/ros:${{ matrix.ros_distro }}-desktop
@@ -33,7 +30,6 @@ jobs:
     - uses: ros-tooling/setup-ros@v0.7
       with:
         required-ros-distributions: ${{ matrix.ros_distro }}
-        use-ros2-testing: ${{ matrix.use_ros2_testing || false }}
     - run: |
         DEBIAN_FRONTEND=noninteractive
         sudo apt update
