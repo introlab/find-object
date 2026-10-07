@@ -3,9 +3,9 @@ name: ros2
 
 on:
   push:
-    branches: [ master ]
+    branches: [ jazzy-devel ]
   pull_request:
-    branches: [ master ]
+    branches: [ jazzy-devel ]
   workflow_dispatch:
 
 env:
@@ -17,14 +17,13 @@ concurrency:
 
 jobs:
   build:
-    name: Build ros2 ${{ matrix.ros_distro }}
+    name: Build ros2 ${{ matrix.ros_distro }} (${{ matrix.ros_repo }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        ros_distro: [humble, jazzy, kilted, lyrical, rolling]
-        include:
-        - ros_distro: rolling
-          use_ros2_testing: true # Rolling on Ubuntu resolute is only in ros2-testing (nightly)
+        ros_distro: [jazzy]
+        # ros2: released packages, ros2-testing: packages built since the last sync
+        ros_repo: [ros2, ros2-testing]
       fail-fast: false
     container:
       image: osrf/ros:${{ matrix.ros_distro }}-desktop
@@ -33,7 +32,7 @@ jobs:
     - uses: ros-tooling/setup-ros@v0.7
       with:
         required-ros-distributions: ${{ matrix.ros_distro }}
-        use-ros2-testing: ${{ matrix.use_ros2_testing || false }}
+        use-ros2-testing: ${{ matrix.ros_repo == 'ros2-testing' }}
     - run: |
         DEBIAN_FRONTEND=noninteractive
         sudo apt update
