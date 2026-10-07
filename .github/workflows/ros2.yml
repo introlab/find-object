@@ -17,11 +17,13 @@ concurrency:
 
 jobs:
   build:
-    name: Build ros2 ${{ matrix.ros_distro }}
+    name: Build ros2 ${{ matrix.ros_distro }} (${{ matrix.ros_repo }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
         ros_distro: [humble]
+        # ros2: released packages, ros2-testing: packages built since the last sync
+        ros_repo: [ros2, ros2-testing]
       fail-fast: false
     container:
       image: osrf/ros:${{ matrix.ros_distro }}-desktop
@@ -30,6 +32,7 @@ jobs:
     - uses: ros-tooling/setup-ros@v0.7
       with:
         required-ros-distributions: ${{ matrix.ros_distro }}
+        use-ros2-testing: ${{ matrix.ros_repo == 'ros2-testing' }}
     - run: |
         DEBIAN_FRONTEND=noninteractive
         sudo apt update
