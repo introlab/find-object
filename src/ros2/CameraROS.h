@@ -52,6 +52,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "find_object/Camera.h"
 #include <QtCore/QStringList>
 
+#include <atomic>
+#include <thread>
+
 class CameraROS : public find_object::Camera {
 	Q_OBJECT
 public:
@@ -59,15 +62,35 @@ public:
 	virtual ~CameraROS();
 	void setupExecutor(std::shared_ptr<rclcpp::Node> node);
 
+	// The images come from ROS callbacks, run by the executor in a thread of its own
+	// (no polling): start() starts it, stop() and pause() stop it.
 	virtual bool start();
 	virtual void stop();
+	virtual void pause();
+	virtual bool isRunning() {return running_;}
 
 	QStringList subscribedTopics() const;
 
+Q_SIGNALS:
+	// Emitted by handOver() after imageReceived(), see clearBusy().
+	void imageHandedOver();
+
 private Q_SLOTS:
-	virtual void takeImage();
+	// In the Qt thread, after the slots of imageReceived(): the image is processed.
+	void clearBusy();
 
 private:
+	// In the executor's thread: whether to process an image with this stamp. Not while
+	// the previous one is still waiting for or in processing in the Qt thread (the image
+	// is dropped), nor sooner than 1/Camera/4imageRate after the last one accepted,
+	// according to their stamps (0 Hz: no limit).
+	bool acceptImage(const builtin_interfaces::msg::Time & stamp);
+	// In the executor's thread: emits imageReceived(), then imageHandedOver(). Their
+	// slots are in the Qt thread, so both are queued, and run in the order they were
+	// emitted: clearBusy() after the detection (synchronous in its slot), as long as
+	// every slot of imageReceived() is in the Qt thread too.
+	void handOver(const cv::Mat & image, const find_object::Header & header, const cv::Mat & depth, float depthConstant);
+
 	void imgReceivedCallback(const sensor_msgs::msg::Image::ConstSharedPtr msg);
 	void imgDepthReceivedCallback(
 			const sensor_msgs::msg::Image::ConstSharedPtr rgbMsg,
@@ -95,6 +118,11 @@ private:
 			sensor_msgs::msg::Image,
 			sensor_msgs::msg::CameraInfo> MyExactSyncPolicy;
 	message_filters::Synchronizer<MyExactSyncPolicy> * exactSync_;
+
+	std::thread spinThread_;
+	std::atomic<bool> running_;
+	std::atomic<bool> busy_; // an image handed over is not processed yet
+	double lastStamp_; // of the last image accepted, used by the executor's thread only
 };
 
 #endif /* CAMERAROS_H_ */

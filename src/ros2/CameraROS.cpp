@@ -37,10 +37,14 @@ CameraROS::CameraROS(bool subscribeDepth, rclcpp::Node * node) :
 	node_(node),
 	subscribeDepth_(subscribeDepth),
 	approxSync_(0),
-	exactSync_(0)
+	exactSync_(0),
+	running_(false),
+	busy_(false),
+	lastStamp_(0.0)
 {
 	qRegisterMetaType<rclcpp::Time>("ros::Time");
 	qRegisterMetaType<cv::Mat>("cv::Mat");
+	connect(this, SIGNAL(imageHandedOver()), this, SLOT(clearBusy()), Qt::QueuedConnection);
 
 	if(!subscribeDepth_)
 	{
@@ -99,6 +103,7 @@ CameraROS::CameraROS(bool subscribeDepth, rclcpp::Node * node) :
 }
 CameraROS::~CameraROS()
 {
+	stop();
 	delete approxSync_;
 	delete exactSync_;
 }
@@ -126,23 +131,63 @@ QStringList CameraROS::subscribedTopics() const
 
 bool CameraROS::start()
 {
-	this->startTimer();
+	if(!running_)
+	{
+		running_ = true;
+		lastStamp_ = 0.0;
+		spinThread_ = std::thread([this]() { executor_.spin(); });
+	}
 	return true;
 }
 
 void CameraROS::stop()
 {
-	this->stopTimer();
+	running_ = false;
+	executor_.cancel();
+	if(spinThread_.joinable())
+	{
+		spinThread_.join();
+	}
+	busy_ = false;
 }
 
-void CameraROS::takeImage()
+void CameraROS::pause()
 {
-	executor_.spin_some();
+	stop();
+}
+
+bool CameraROS::acceptImage(const builtin_interfaces::msg::Time & stamp)
+{
+	if(!running_ || busy_)
+	{
+		return false;
+	}
+	double stampSec = double(stamp.sec) + double(stamp.nanosec) * 1e-9;
+	double rate = Settings::getCamera_4imageRate();
+	if(rate > 0.0 && lastStamp_ > 0.0 && stampSec >= lastStamp_ && stampSec - lastStamp_ < 1.0 / rate)
+	{
+		return false;
+	}
+	// A stamp going back (a bag played again) starts over.
+	lastStamp_ = stampSec;
+	return true;
+}
+
+void CameraROS::handOver(const cv::Mat & image, const Header & header, const cv::Mat & depth, float depthConstant)
+{
+	busy_ = true;
+	Q_EMIT imageReceived(image, header, depth, depthConstant);
+	Q_EMIT imageHandedOver();
+}
+
+void CameraROS::clearBusy()
+{
+	busy_ = false;
 }
 
 void CameraROS::imgReceivedCallback(const sensor_msgs::msg::Image::ConstSharedPtr msg)
 {
-	if(msg->data.size())
+	if(msg->data.size() && acceptImage(msg->header.stamp))
 	{
 		cv::Mat image;
 		cv_bridge::CvImageConstPtr imgPtr = cv_bridge::toCvShare(msg);
@@ -158,7 +203,7 @@ void CameraROS::imgReceivedCallback(const sensor_msgs::msg::Image::ConstSharedPt
 				image = cv_bridge::cvtColor(imgPtr, "bgr8")->image;
 			}
 
-			Q_EMIT imageReceived(image, Header(msg->header.frame_id.c_str(), msg->header.stamp.sec, msg->header.stamp.nanosec), cv::Mat(), 0.0f);
+			handOver(image, Header(msg->header.frame_id.c_str(), msg->header.stamp.sec, msg->header.stamp.nanosec), cv::Mat(), 0.0f);
 		}
 		catch(const cv_bridge::Exception & e)
 		{
@@ -179,7 +224,7 @@ void CameraROS::imgDepthReceivedCallback(
 			return;
 	}
 
-	if(rgbMsg->data.size())
+	if(rgbMsg->data.size() && acceptImage(rgbMsg->header.stamp))
 	{
 		cv_bridge::CvImageConstPtr ptr = cv_bridge::toCvShare(rgbMsg);
 		cv_bridge::CvImageConstPtr ptrDepth = cv_bridge::toCvShare(depthMsg);
@@ -199,7 +244,7 @@ void CameraROS::imgDepthReceivedCallback(
 				image = cv_bridge::cvtColor(imgPtr, "bgr8")->image;
 			}
 
-			Q_EMIT imageReceived(image, Header(rgbMsg->header.frame_id.c_str(), rgbMsg->header.stamp.sec, rgbMsg->header.stamp.nanosec), ptrDepth->image, depthConstant);
+			handOver(image, Header(rgbMsg->header.frame_id.c_str(), rgbMsg->header.stamp.sec, rgbMsg->header.stamp.nanosec), ptrDepth->image, depthConstant);
 		}
 		catch(const cv_bridge::Exception & e)
 		{

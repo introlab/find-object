@@ -49,7 +49,7 @@ public:
 	virtual void stop();
 	virtual bool isRunning() {return cameraTimer_.isActive();}
 
-	void pause();
+	virtual void pause();
 	int getTotalFrames();
 	int getCurrentFrameIndex();
 	int getPort();
